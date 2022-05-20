@@ -96,13 +96,13 @@ function parseFlags() {
                 IFS='.' read -ra strarr <<< $1
                 key="${strarr[1]}"
                 val="$2"
-                src_config[$key]=$val
+                src_config[$key]="${val}"
                 shift 2 ;;
             --dst.*)
                 IFS='.' read -ra strarr <<< $1
                 key="${strarr[1]}"
                 val="$2"
-                dst_config[$key]=$val
+                dst_config[$key]="${val}"
                 shift 2 ;;
             *)
                 POSITION+=("$1")
@@ -111,29 +111,16 @@ function parseFlags() {
     done
 }
 
-# TODO: arrays, objects
-function valType() {
-    if [[ $1 =~ ^[0-9]+$ ]] ; then
-        echo "integer"
-    elif [[ $1 =~ true|false ]]; then
-        echo "boolean"
-    elif [[ $1 == "["*"]" ]]; then
-        echo "array"
-    else
-        echo "string"
-    fi
-}
-
 function writeSrcConfig() {
-    configs=()
-    for k in "${!src_config[@]}"; do
-        val=${src_config[$k]}
-        if [[ $(valType ${src_config[$k]}) == "string" ]]; then
-            val="\"${src_config[$k]}\""
-        fi
-        configs+=("\"$k\":$val")
-    done
-    echo "{$(IFS=, ; echo "${configs[*]}")}" | jq > $src_config_filename
+    # https://stackoverflow.com/questions/44792241/constructing-a-json-hash-from-a-bash-associative-array
+    for key in "${!src_config[@]}"; do
+        printf '%s\0%s\0' "$key" "${src_config[$key]}"
+    done |
+    jq -Rs '
+      split("\u0000")
+      | . as $a
+      | reduce range(0; length/2) as $i
+          ({}; . + {($a[2*$i]): ($a[2*$i + 1]|fromjson? // .)})' > $src_config_filename
 }
 
 # TODO: take catalog as input parameter
