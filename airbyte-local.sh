@@ -117,6 +117,8 @@ function valType() {
         echo "integer"
     elif [[ $1 =~ true|false ]]; then
         echo "boolean"
+    elif [[ $1 == "["*"]" ]]; then
+        echo "array"
     else
         echo "string"
     fi
