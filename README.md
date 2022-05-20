@@ -1,2 +1,3 @@
-# airbyte-cli
-CLI for running Airbyte Sources with Airbyte Faros Destination locally
+# Airbyte Local CLI
+
+CLI for running Airbyte sources & destinations locally without an Airbyte server
