@@ -167,6 +167,7 @@ function writeDstCatalog() {
 }
 
 function sync() {
+    echo -e "\nRunning source image and piping output to destination image. Destination logs will be shown below."
     docker run --rm -v $(pwd):/configs $src_docker_image read --config /configs/$src_config_filename --catalog /configs/$src_catalog_filename | \
     jq -c -R $jq_cmd "fromjson? | select(.type == \"RECORD\") | .record.stream |= \"${stream_prefix}\" + ." | \
     docker run -i -v $(pwd):/configs $dst_docker_image write --config /configs/$dst_config_filename --catalog /configs/$dst_catalog_filename
