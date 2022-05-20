@@ -20,33 +20,29 @@ pagerduty_src_catalog=$(cat << EOF
       "stream": {
         "name": "incident_log_entries"
       },
-      "config": {
-        "syncMode": "incremental"
-      }
+      "sync_mode": "incremental",
+      "destination_sync_mode": "append"
     },
     {
       "stream": {
         "name": "incidents"
       },
-      "config": {
-        "syncMode": "incremental"
-      }
+      "sync_mode": "incremental",
+      "destination_sync_mode": "append"
     },
     {
       "stream": {
         "name": "users"
       },
-      "config": {
-        "syncMode": "full_refresh"
-      }
+      "sync_mode": "full_refresh",
+      "destination_sync_mode": "overwrite"
     },
     {
       "stream": {
         "name": "priorities_resource"
       },
-      "config": {
-        "syncMode": "full_refresh"
-      }
+      "sync_mode": "full_refresh",
+      "destination_sync_mode": "overwrite"
     }
   ]
 }
@@ -60,28 +56,31 @@ servicenow_src_catalog=$(cat << EOF
       "stream": {
         "name": "incidents"
       },
-      "config": {
-        "syncMode": "incremental"
-      }
+      "sync_mode": "incremental",
+      "destination_sync_mode": "append"
     },
     {
       "stream": {
         "name": "users"
       },
-      "config": {
-        "syncMode": "full_refresh"
-      }
+      "sync_mode": "full_refresh",
+      "destination_sync_mode": "overwrite"
     }
   ]
 }
 EOF
 )
 
+filename_prefix=faros_airbyte_cli
+src_config_filename=${filename_prefix}_src_config.json
+src_catalog_filename=${filename_prefix}_src_catalog.json
+dst_config_filename=${filename_prefix}_dst_config.json
+dst_catalog_filename=${filename_prefix}_dst_catalog.json
+
 function setDefaults() {
     declare -Ag src_config=()
-    declare -Ag dst_config=()
+    declare -Ag dst_config=( ["graph"]="default" )
     dst_docker_image="farosai/airbyte-faros-destination"
-    dst_graph="default"
 }
 
 function parseFlags() {
@@ -132,17 +131,18 @@ function writeSrcConfig() {
         fi
         configs+=("\"$k\":$val")
     done
-    echo "{$(IFS=, ; echo "${configs[*]}")}" | jq > src_config.json
+    echo "{$(IFS=, ; echo "${configs[*]}")}" | jq > $src_config_filename
 }
 
+# TODO: take catalog as input parameter
 function writeSrcCatalog() {
     case $src_docker_image in
         *pagerduty*)
-            echo $pagerduty_src_catalog | jq > src_catalog.json
+            echo $pagerduty_src_catalog | jq > $src_catalog_filename
             stream_prefix=mypagerdutysrc__pagerduty__
             ;;
         *servicenow*)
-            echo $servicenow_src_catalog | jq > src_catalog.json
+            echo $servicenow_src_catalog | jq > $src_catalog_filename
             stream_prefix=myservicenowsrc__servicenow__
             ;;
         *)
@@ -152,9 +152,25 @@ function writeSrcCatalog() {
     esac
 }
 
+# TODO: optional faros destination configs e.g. source-specific configs
+#       support CE
+function writeDstConfig() {
+    jq -n \
+        --arg api_url "${dst_config[faros_api_url]}" \
+        --arg api_key "${dst_config[faros_api_key]}" \
+        --arg graph "${dst_config[graph]}" \
+        '{edition_configs: {edition: "cloud", api_url: $api_url, api_key: $api_key, graph: $graph}}' > $dst_config_filename
+}
+
+function writeDstCatalog() {
+    cat $src_catalog_filename | jq ".streams[].stream.name |= \"${stream_prefix}\" + ." > $dst_catalog_filename
+}
+
 function sync() {
-    docker run --rm -v $(pwd):/configs $src_docker_image read --config /configs/src_config.json --catalog /configs/src_catalog.json | \
-        jq -c -R $jq_cmd "fromjson? | select(.type == \"RECORD\") | .record.stream = \"${stream_prefix}\(.record.stream)\""
+    docker run --rm -v $(pwd):/configs $src_docker_image read --config /configs/$src_config_filename --catalog /configs/$src_catalog_filename | \
+    jq -c -R $jq_cmd "fromjson? | select(.type == \"RECORD\") | .record.stream |= \"${stream_prefix}\" + ." | \
+    docker run -i -v $(pwd):/configs $dst_docker_image write --config /configs/$dst_config_filename --catalog /configs/$dst_catalog_filename
+
 }
 
 main() {
@@ -163,6 +179,8 @@ main() {
     parseFlags "$@"
     writeSrcConfig
     writeSrcCatalog
+    writeDstConfig
+    writeDstCatalog
     echo "Pulling source image $src_docker_image"
     docker pull $src_docker_image
     echo "Pulling destination image $dst_docker_image"
