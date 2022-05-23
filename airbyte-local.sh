@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-echo -e "Using bash version ${BASH_VERSION}. This script requires at least bash version 4.0\n"
+[ "${BASH_VERSINFO:-0}" -ge 4 ] || { echo "Error: Bash 4.0 or higher is required." && exit 1; }
 
 declare -a required_cmds=("docker" "jq")
 for i in "${required_cmds[@]}"; do
