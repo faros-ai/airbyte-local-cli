@@ -87,10 +87,10 @@ function parseFlags() {
     while (($#)); do
         case "$1" in
             --src)
-                src_docker_image="$2:latest"
+                src_docker_image="$2"
                 shift 2 ;;
             --dst)
-                dst_docker_image="$2:latest"
+                dst_docker_image="$2"
                 shift 2 ;;
             --src.*)
                 IFS='.' read -ra strarr <<< $1
