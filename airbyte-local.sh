@@ -148,11 +148,11 @@ function writeDstConfig() {
         --arg api_url "${dst_config[faros_api_url]}" \
         --arg api_key "${dst_config[faros_api_key]}" \
         --arg graph "${dst_config[graph]}" \
-        '{edition_configs: {edition: "cloud", api_url: $api_url, api_key: $api_key, graph: $graph}}' > $tempdir/$dst_config_filename
+        '{edition_configs: {edition: "cloud", api_url: $api_url, api_key: $api_key, graph: $graph}}' > "$tempdir/$dst_config_filename"
 }
 
 function writeDstCatalog() {
-    cat $src_catalog_filename | jq ".streams[].stream.name |= \"${stream_prefix}\" + ." > $tempdir/$dst_catalog_filename
+    cat "$tempdir/$src_catalog_filename" | jq ".streams[].stream.name |= \"${stream_prefix}\" + ." > "$tempdir/$dst_catalog_filename"
 }
 
 function sync() {
