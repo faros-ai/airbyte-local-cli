@@ -104,6 +104,9 @@ function parseFlags() {
                 val="$2"
                 dst_config[$key]="${val}"
                 shift 2 ;;
+            --src-only)
+                run_src_only=true
+                shift 1 ;;
             *)
                 POSITION+=("$1")
                 shift ;;
@@ -156,10 +159,13 @@ function writeDstCatalog() {
 }
 
 function sync() {
-    echo -e "\nRunning source image and piping output to destination image. Destination logs will be shown below."
-    docker run --rm -v "$tempdir:/configs" "$src_docker_image" read --config "/configs/$src_config_filename" --catalog "/configs/$src_catalog_filename" | \
+    runSrc | \
     jq -c -R $jq_cmd "fromjson? | select(.type == \"RECORD\") | .record.stream |= \"${stream_prefix}\" + ." | \
     docker run -i -v "$tempdir:/configs" "$dst_docker_image" write --config "/configs/$dst_config_filename" --catalog "/configs/$dst_catalog_filename"
+}
+
+function runSrc() {
+    docker run --rm -v "$tempdir:/configs" "$src_docker_image" read --config "/configs/$src_config_filename" --catalog "/configs/$src_catalog_filename"
 }
 
 tempdir=$(mktemp -d)
@@ -185,7 +191,13 @@ main() {
     docker pull $src_docker_image
     echo "Pulling destination image $dst_docker_image"
     docker pull $dst_docker_image
-    sync
+    if [ "$run_src_only" = true ]; then
+        echo -e "\nOnly running source image. Source logs will be shown below."
+        runSrc
+    else
+        echo -e "\nRunning source image and piping output to destination image. Destination logs will be shown below."
+        sync
+    fi
 }
 
 main "$@"; exit
