@@ -144,8 +144,7 @@ function writeSrcCatalog() {
     esac
 }
 
-# TODO: optional faros destination configs e.g. source-specific configs
-#       support CE
+# TODO: support CE
 function writeDstConfig() {
     declare -A edition_configs=( ["edition"]="cloud" ["api_url"]="${dst_config[faros_api_url]}" ["api_key"]="${dst_config[faros_api_key]}" ["graph"]="${dst_config[graph]}" )
     dst_config["edition_configs"]=$(cat << EOF
