@@ -144,14 +144,31 @@ function writeSrcCatalog() {
     esac
 }
 
-# TODO: optional faros destination configs e.g. source-specific configs
-#       support CE
+# TODO: support CE
 function writeDstConfig() {
-    jq -n \
-        --arg api_url "${dst_config[faros_api_url]}" \
-        --arg api_key "${dst_config[faros_api_key]}" \
-        --arg graph "${dst_config[graph]}" \
-        '{edition_configs: {edition: "cloud", api_url: $api_url, api_key: $api_key, graph: $graph}}' > "$tempdir/$dst_config_filename"
+    declare -A edition_configs=( ["edition"]="cloud" ["api_url"]="${dst_config[faros_api_url]}" ["api_key"]="${dst_config[faros_api_key]}" ["graph"]="${dst_config[graph]}" )
+    dst_config["edition_configs"]=$(cat << EOF
+{
+    "edition": "cloud",
+    "api_url": "${dst_config[faros_api_url]}",
+    "api_key": "${dst_config[faros_api_key]}",
+    "graph": "${dst_config[graph]}"
+}
+EOF
+)
+    unset dst_config[faros_api_url]
+    unset dst_config[faros_api_key]
+    unset dst_config[graph]
+
+    # https://stackoverflow.com/questions/44792241/constructing-a-json-hash-from-a-bash-associative-array
+    for key in "${!dst_config[@]}"; do
+        printf '%s\0%s\0' "$key" "${dst_config[$key]}"
+    done |
+    jq -Rs '
+      split("\u0000")
+      | . as $a
+      | reduce range(0; length/2) as $i
+          ({}; . + {($a[2*$i]): ($a[2*$i + 1]|fromjson? // .)})' > "$tempdir/$dst_config_filename"
 }
 
 function writeDstCatalog() {
