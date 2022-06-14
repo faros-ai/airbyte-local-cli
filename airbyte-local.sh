@@ -179,11 +179,8 @@ function sync() {
     source_output_file="$tempdir/source_output.txt"
     runSrc | tee "$source_output_file"
 
-    converted_source_output_file="$tempdir/converted_source_output.txt"
     cat "$source_output_file" | \
-    jq -c -R $jq_cmd "fromjson? | select(.type == \"RECORD\") | .record.stream |= \"${stream_prefix}\" + ." > "$converted_source_output_file"
-
-    cat "$converted_source_output_file" | \
+    jq -c -R $jq_cmd "fromjson? | select(.type == \"RECORD\") | .record.stream |= \"${stream_prefix}\" + ." | \
     docker run -i -v "$tempdir:/configs" "$dst_docker_image" write --config "/configs/$dst_config_filename" --catalog "/configs/$dst_catalog_filename"
 }
 
