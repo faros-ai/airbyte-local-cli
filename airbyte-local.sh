@@ -176,7 +176,10 @@ function writeDstCatalog() {
 }
 
 function sync() {
-    runSrc | \
+    source_output_file="$tempdir/source_output.txt"
+    runSrc | tee "$source_output_file"
+
+    cat "$source_output_file" | \
     jq -c -R $jq_cmd "fromjson? | select(.type == \"RECORD\") | .record.stream |= \"${stream_prefix}\" + ." | \
     docker run -i -v "$tempdir:/configs" "$dst_docker_image" write --config "/configs/$dst_config_filename" --catalog "/configs/$dst_catalog_filename"
 }
@@ -208,11 +211,20 @@ main() {
     docker pull $src_docker_image
     echo "Pulling destination image $dst_docker_image"
     docker pull $dst_docker_image
+    
+    echo "Validating connection to source"
+    connectionStatusInfo=$(docker run --rm -v "$tempdir:/configs" "$src_docker_image" check --config "/configs/$src_config_filename")
+    connectionStatus=$(echo $connectionStatusInfo | jq -r '.connectionStatus.status')
+    if [ $connectionStatus != 'SUCCEEDED' ]; then
+      echo $connectionStatusInfo
+      exit 1;
+    fi
+
     if [ "$run_src_only" = true ]; then
         echo -e "\nOnly running source image. Source logs will be shown below."
         runSrc
     else
-        echo -e "\nRunning source image and piping output to destination image. Destination logs will be shown below."
+        echo -e "\nRunning source image and piping output to destination image."
         sync
     fi
 }
