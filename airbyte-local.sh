@@ -63,8 +63,8 @@ servicenow_src_catalog=$(cat << EOF
       "stream": {
         "name": "users"
       },
-      "sync_mode": "full_refresh",
-      "destination_sync_mode": "overwrite"
+      "sync_mode": "incremental",
+      "destination_sync_mode": "append"
     }
   ]
 }
@@ -73,6 +73,7 @@ EOF
 
 filename_prefix=faros_airbyte_cli
 src_config_filename=${filename_prefix}_src_config.json
+src_state_filename=${filename_prefix}_src_state.json
 src_catalog_filename=${filename_prefix}_src_catalog.json
 dst_config_filename=${filename_prefix}_dst_config.json
 dst_catalog_filename=${filename_prefix}_dst_catalog.json
@@ -91,6 +92,9 @@ function parseFlags() {
                 shift 2 ;;
             --dst)
                 dst_docker_image="$2"
+                shift 2 ;;
+            --state)
+                src_state_filepath="$2"
                 shift 2 ;;
             --src.*)
                 IFS='.' read -ra strarr <<< $1
@@ -175,21 +179,38 @@ function writeDstCatalog() {
     cat "$tempdir/$src_catalog_filename" | jq ".streams[].stream.name |= \"${stream_prefix}\" + ." > "$tempdir/$dst_catalog_filename"
 }
 
+function loadState() {
+    if [ -s "$src_state_filepath" ]; then
+      cat "$src_state_filepath" > "$tempdir/$src_state_filename"
+    else
+      echo "State file did not exist or was empty."
+      echo "{}" > "$tempdir/$src_state_filename"
+    fi
+}
+
 function sync() {
     source_output_file="$tempdir/source_output.txt"
-    runSrc | tee "$source_output_file"
+    readSrc | tee "$source_output_file"
+
+    cat "$source_output_file" | \
+    jq -c -R $jq_cmd "fromjson? | select(.type == \"STATE\") | .state.data" | tail -n 1 > "$src_state_filepath"
 
     cat "$source_output_file" | \
     jq -c -R $jq_cmd "fromjson? | select(.type == \"RECORD\") | .record.stream |= \"${stream_prefix}\" + ." | \
-    docker run -i -v "$tempdir:/configs" "$dst_docker_image" write --config "/configs/$dst_config_filename" --catalog "/configs/$dst_catalog_filename"
+    docker run -i -v "$tempdir:/configs" "$dst_docker_image" write \
+    --config "/configs/$dst_config_filename" \
+    --catalog "/configs/$dst_catalog_filename"
 }
 
-function runSrc() {
-    docker run --rm -v "$tempdir:/configs" "$src_docker_image" read --config "/configs/$src_config_filename" --catalog "/configs/$src_catalog_filename"
+function readSrc() {
+    docker run --rm -v "$tempdir:/configs" "$src_docker_image" read \
+      --config "/configs/$src_config_filename" \
+      --catalog "/configs/$src_catalog_filename" \
+      --state "/configs/$src_state_filename"
 }
 
-function validateSrc() {
-    echo "Validating connection to source"
+function checkSrc() {
+    echo "Validating connection to source..."
     connectionStatusInfo=$(docker run --rm -v "$tempdir:/configs" "$src_docker_image" check --config "/configs/$src_config_filename")
     connectionStatus=$(echo $connectionStatusInfo | jq -r '.connectionStatus.status')
     if [ $connectionStatus != 'SUCCEEDED' ]; then
@@ -221,13 +242,14 @@ main() {
     docker pull $src_docker_image
     echo "Pulling destination image $dst_docker_image"
     docker pull $dst_docker_image
-    validateSrc
+    checkSrc
+    loadState
 
     if [ "$run_src_only" = true ]; then
-        echo -e "\nOnly running source image. Source logs will be shown below."
-        runSrc
+        echo -e "\nOnly running source image."
+        readSrc
     else
-        echo -e "\nRunning source image and piping output to destination image."
+        echo -e "\nRunning source image and passing output to destination image."
         sync
     fi
 }
