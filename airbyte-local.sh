@@ -112,6 +112,9 @@ function parseFlags() {
             --src-only)
                 run_src_only=true
                 shift 1 ;;
+            --check-connection)
+                check_src_connection=true
+                shift 1 ;;
             *)
                 POSITION+=("$1")
                 shift ;;
@@ -183,9 +186,9 @@ function writeDstCatalog() {
 function loadState() {
     echo "Using state file: $src_state_filepath"
     if [ -s "$src_state_filepath" ]; then
-      cat "$src_state_filepath" > "$tempdir/$src_state_filename"
+        cat "$src_state_filepath" > "$tempdir/$src_state_filename"
     else
-      echo "{}" > "$tempdir/$src_state_filename"
+        echo "{}" > "$tempdir/$src_state_filename"
     fi
 }
 
@@ -211,12 +214,14 @@ function readSrc() {
 }
 
 function checkSrc() {
-    echo "Validating connection to source..."
-    connectionStatusInfo=$(docker run --rm -v "$tempdir:/configs" "$src_docker_image" check --config "/configs/$src_config_filename")
-    connectionStatus=$(echo $connectionStatusInfo | jq -r '.connectionStatus.status')
-    if [ $connectionStatus != 'SUCCEEDED' ]; then
-      echo $connectionStatusInfo
-      exit 1;
+    if [ "$check_src_connection" = true ]; then
+        echo "Validating connection to source..."
+        connectionStatusInfo=$(docker run --rm -v "$tempdir:/configs" "$src_docker_image" check --config "/configs/$src_config_filename")
+        connectionStatus=$(echo $connectionStatusInfo | jq -r '.connectionStatus.status')
+        if [ $connectionStatus != 'SUCCEEDED' ]; then
+            echo $connectionStatusInfo
+            exit 1;
+        fi
     fi
 }
 
