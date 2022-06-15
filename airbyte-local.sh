@@ -217,11 +217,12 @@ function checkSrc() {
     if [ "$check_src_connection" = true ]; then
         echo "Validating connection to source..."
         connectionStatusInfo=$(docker run --rm -v "$tempdir:/configs" "$src_docker_image" check --config "/configs/$src_config_filename")
-        connectionStatus=$(echo $connectionStatusInfo | jq -r '.connectionStatus.status')
+        connectionStatus=$(echo "$connectionStatusInfo" | jq -r '.connectionStatus.status')
         if [ "$connectionStatus" != 'SUCCEEDED' ]; then
-            echo "$connectionStatusInfo"
+            echo $(echo "$connectionStatusInfo" | jq -r '.connectionStatus.message')
             exit 1;
         fi
+        echo "Connection validation successful"
     fi
 }
 
@@ -252,10 +253,10 @@ main() {
     loadState
 
     if [ "$run_src_only" = true ]; then
-        echo -e "\nOnly running source."
+        echo -e "\nOnly running source"
         readSrc
     else
-        echo -e "\nRunning source and passing output to destination."
+        echo -e "\nRunning source and passing output to destination"
         sync
     fi
 }
