@@ -4,7 +4,7 @@ CLI for running Airbyte sources & destinations locally without Airbyte server
 
 ## Example Usage
 
-Note: The source arguments may differ depending on the source being used.
+**Note**: The source arguments may differ depending on the source being used.
 
 ```sh
 ./airbyte-local.sh \
