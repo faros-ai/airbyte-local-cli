@@ -82,6 +82,7 @@ function setDefaults() {
     declare -Ag src_config=()
     declare -Ag dst_config=( ["graph"]="default" )
     dst_docker_image="farosai/airbyte-faros-destination"
+    src_state_filepath="state.json"
 }
 
 function parseFlags() {
