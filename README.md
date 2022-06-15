@@ -16,5 +16,6 @@ CLI for running Airbyte sources & destinations locally without Airbyte server
 --dst.faros_api_url '<faros_api_url>' \
 --dst.faros_api_key '<faros_api_key>' \
 --dst.graph 'default' \
---state state.json
+--state state.json \
+--check-connection
 ```
