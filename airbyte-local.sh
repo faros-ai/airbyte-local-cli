@@ -218,8 +218,8 @@ function checkSrc() {
         echo "Validating connection to source..."
         connectionStatusInfo=$(docker run --rm -v "$tempdir:/configs" "$src_docker_image" check --config "/configs/$src_config_filename")
         connectionStatus=$(echo $connectionStatusInfo | jq -r '.connectionStatus.status')
-        if [ $connectionStatus != 'SUCCEEDED' ]; then
-            echo $connectionStatusInfo
+        if [ "$connectionStatus" != 'SUCCEEDED' ]; then
+            echo "$connectionStatusInfo"
             exit 1;
         fi
     fi
