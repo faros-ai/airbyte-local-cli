@@ -188,6 +188,16 @@ function runSrc() {
     docker run --rm -v "$tempdir:/configs" "$src_docker_image" read --config "/configs/$src_config_filename" --catalog "/configs/$src_catalog_filename"
 }
 
+function validateSrc() {
+    echo "Validating connection to source"
+    connectionStatusInfo=$(docker run --rm -v "$tempdir:/configs" "$src_docker_image" check --config "/configs/$src_config_filename")
+    connectionStatus=$(echo $connectionStatusInfo | jq -r '.connectionStatus.status')
+    if [ $connectionStatus != 'SUCCEEDED' ]; then
+      echo $connectionStatusInfo
+      exit 1;
+    fi
+}
+
 tempdir=$(mktemp -d)
 echo "Created folder $tempdir for temporary airbyte files"
 
@@ -211,14 +221,7 @@ main() {
     docker pull $src_docker_image
     echo "Pulling destination image $dst_docker_image"
     docker pull $dst_docker_image
-    
-    echo "Validating connection to source"
-    connectionStatusInfo=$(docker run --rm -v "$tempdir:/configs" "$src_docker_image" check --config "/configs/$src_config_filename")
-    connectionStatus=$(echo $connectionStatusInfo | jq -r '.connectionStatus.status')
-    if [ $connectionStatus != 'SUCCEEDED' ]; then
-      echo $connectionStatusInfo
-      exit 1;
-    fi
+    validateSrc
 
     if [ "$run_src_only" = true ]; then
         echo -e "\nOnly running source image. Source logs will be shown below."
