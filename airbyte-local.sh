@@ -181,10 +181,10 @@ function writeDstCatalog() {
 }
 
 function loadState() {
+    echo "Using state file: $src_state_filepath"
     if [ -s "$src_state_filepath" ]; then
       cat "$src_state_filepath" > "$tempdir/$src_state_filename"
     else
-      echo "State file did not exist or was empty."
       echo "{}" > "$tempdir/$src_state_filename"
     fi
 }
@@ -247,10 +247,10 @@ main() {
     loadState
 
     if [ "$run_src_only" = true ]; then
-        echo -e "\nOnly running source image."
+        echo -e "\nOnly running source."
         readSrc
     else
-        echo -e "\nRunning source image and passing output to destination image."
+        echo -e "\nRunning source and passing output to destination."
         sync
     fi
 }
