@@ -2,7 +2,7 @@
 
 [ "${BASH_VERSINFO:-0}" -ge 4 ] || { echo "Error: Bash 4.0 or higher is required." && exit 1; }
 
-declare -a required_cmds=("docker" "jq")
+declare -a required_cmds=("docker" "jq" "sed")
 for i in "${required_cmds[@]}"; do
     which "$i" &> /dev/null ||
         { echo "Error: $i is required." && missing_require=1; }
@@ -12,64 +12,6 @@ if ((${missing_require:-0})); then
     echo "Please ensure docker and jq are available before running the script."
     exit 1
 fi
-
-pagerduty_src_catalog=$(cat << EOF
-{
-  "streams": [
-    {
-      "stream": {
-        "name": "incident_log_entries"
-      },
-      "sync_mode": "incremental",
-      "destination_sync_mode": "append"
-    },
-    {
-      "stream": {
-        "name": "incidents"
-      },
-      "sync_mode": "incremental",
-      "destination_sync_mode": "append"
-    },
-    {
-      "stream": {
-        "name": "users"
-      },
-      "sync_mode": "full_refresh",
-      "destination_sync_mode": "overwrite"
-    },
-    {
-      "stream": {
-        "name": "priorities_resource"
-      },
-      "sync_mode": "full_refresh",
-      "destination_sync_mode": "overwrite"
-    }
-  ]
-}
-EOF
-)
-
-servicenow_src_catalog=$(cat << EOF
-{
-  "streams": [
-    {
-      "stream": {
-        "name": "incidents"
-      },
-      "sync_mode": "incremental",
-      "destination_sync_mode": "append"
-    },
-    {
-      "stream": {
-        "name": "users"
-      },
-      "sync_mode": "incremental",
-      "destination_sync_mode": "append"
-    }
-  ]
-}
-EOF
-)
 
 filename_prefix=faros_airbyte_cli
 src_config_filename=${filename_prefix}_src_config.json
@@ -91,11 +33,14 @@ function parseFlags() {
             --src)
                 src_docker_image="$2"
                 shift 2 ;;
-            --dst)
-                dst_docker_image="$2"
+            --catalog)
+                src_catalog_filepath="$2"
                 shift 2 ;;
             --state)
                 src_state_filepath="$2"
+                shift 2 ;;
+            --dst)
+                dst_docker_image="$2"
                 shift 2 ;;
             --src.*)
                 IFS='.' read -ra strarr <<< $1
@@ -134,22 +79,37 @@ function writeSrcConfig() {
           ({}; . + {($a[2*$i]): ($a[2*$i + 1]|fromjson? // .)})' > "$tempdir/$src_config_filename"
 }
 
-# TODO: take catalog as input parameter
 function writeSrcCatalog() {
-    case $src_docker_image in
-        *pagerduty*)
-            echo $pagerduty_src_catalog | jq > $tempdir/$src_catalog_filename
-            stream_prefix=mypagerdutysrc__pagerduty__
-            ;;
-        *servicenow*)
-            echo $servicenow_src_catalog | jq > $tempdir/$src_catalog_filename
-            stream_prefix=myservicenowsrc__servicenow__
-            ;;
-        *)
-            echo "Error: $src_docker_image is currently not supported"
-            exit 1
-            ;;
-    esac
+    supported_src="pagerduty|servicenow|phabricator"
+    src_docker_image_regex="^.*airbyte-($supported_src)-source$"
+    if [[ "$src_docker_image" =~ $src_docker_image_regex ]]; then
+        source_type="$(sed 's/.*airbyte-\(.*\)-source/\1/' <<< "$src_docker_image")"
+        stream_prefix="my${source_type}src__${source_type}__"
+
+        if [ -s "$src_catalog_filepath" ]; then
+            echo "Using catalog: $src_catalog_filepath"
+            cat "$src_catalog_filepath" | jq > "$tempdir/$src_catalog_filename"
+        else
+            echo "Retrieve catalog from faros-ai/airbyte-connectors-configs..."
+            http_response=$(curl -s --write-out "HTTPSTATUS:%{http_code}" \
+                          "https://raw.githubusercontent.com/faros-ai/airbyte-connectors-configs/main/catalogs/${source_type}.json")
+
+            http_response_status=$(echo "$http_response" | tr -d '\n' | sed -e 's/.*HTTPSTATUS://')
+            http_response_body=$(echo "$http_response" | sed -e 's/HTTPSTATUS\:.*//g')
+
+            if [ ! "$http_response_status" -eq 200 ]; then
+                echo "Failed to retrieve catalog"
+                echo "[HTTP status: $http_response_status]"
+                echo "$http_response_body"
+                exit 1
+            fi
+            
+            echo $http_response_body | jq > "$tempdir/$src_catalog_filename"
+        fi
+    else
+        echo "Error: $src_docker_image is currently not supported"
+        exit 1
+    fi
 }
 
 # TODO: support CE
