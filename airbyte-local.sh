@@ -90,7 +90,7 @@ function writeSrcCatalog() {
             echo "Using catalog: $src_catalog_filepath"
             cat "$src_catalog_filepath" | jq > "$tempdir/$src_catalog_filename"
         else
-            echo "Retrieve catalog from faros-ai/airbyte-connectors-configs..."
+            echo "Retrieving catalog from faros-ai/airbyte-connectors-configs"
             http_response=$(curl -s --write-out "HTTPSTATUS:%{http_code}" \
                           "https://raw.githubusercontent.com/faros-ai/airbyte-connectors-configs/main/catalogs/${source_type}.json")
 
