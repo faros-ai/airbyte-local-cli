@@ -92,7 +92,7 @@ function writeSrcCatalog() {
         else
             echo "Retrieving catalog from faros-ai/airbyte-connectors-configs"
             http_response=$(curl -s --write-out "HTTPSTATUS:%{http_code}" \
-                          "https://raw.githubusercontent.com/faros-ai/airbyte-connectors-configs/main/catalogs/${source_type}.json?token=GHSAT0AAAAAABVTX6NBUUZCEKCUY4YFJHJEYVQ3MWQ")
+                          "https://raw.githubusercontent.com/faros-ai/airbyte-connectors-configs/main/catalogs/${source_type}.json")
 
             http_response_status=$(echo "$http_response" | tr -d '\n' | sed -e 's/.*HTTPSTATUS://')
             http_response_body=$(echo "$http_response" | sed -e 's/HTTPSTATUS\:.*//g')
