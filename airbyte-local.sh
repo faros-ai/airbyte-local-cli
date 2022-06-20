@@ -92,7 +92,7 @@ function writeSrcCatalog() {
         else
             echo "Retrieving catalog from faros-ai/airbyte-connectors-configs"
             http_response=$(curl -s --write-out "HTTPSTATUS:%{http_code}" \
-                          "https://raw.githubusercontent.com/faros-ai/airbyte-connectors-configs/main/catalogs/${source_type}.json")
+                          "https://raw.githubusercontent.com/faros-ai/airbyte-connectors-configs/main/catalogs/${source_type}.json?token=GHSAT0AAAAAABVTX6NBUUZCEKCUY4YFJHJEYVQ3MWQ")
 
             http_response_status=$(echo "$http_response" | tr -d '\n' | sed -e 's/.*HTTPSTATUS://')
             http_response_body=$(echo "$http_response" | sed -e 's/HTTPSTATUS\:.*//g')
@@ -104,7 +104,9 @@ function writeSrcCatalog() {
                 exit 1
             fi
             
-            echo $http_response_body | jq > "$tempdir/$src_catalog_filename"
+            src_catalog=$(echo "$http_response_body" | \
+                          jq '.streams = [.streams[] |= {stream: {name: .stream.name}, sync_mode: .config.syncMode, destination_sync_mode: .config.destinationSyncMode}]')
+            echo $src_catalog | jq > "$tempdir/$src_catalog_filename"
         fi
     else
         echo "Error: $src_docker_image is currently not supported"
