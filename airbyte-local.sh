@@ -104,10 +104,9 @@ function writeSrcCatalog() {
                 exit 1
             fi
             
-            echo "$http_response_body" | jq '.streams'
             src_catalog=$(echo "$http_response_body" | \
                           jq '.streams[] |= {stream: {name: .stream.name}, sync_mode: .config.syncMode, destination_sync_mode: .config.destinationSyncMode}')
-            echo $src_catalog | jq > "$tempdir/$src_catalog_filename"
+            echo $src_catalog > "$tempdir/$src_catalog_filename"
         fi
     else
         echo "Error: $src_docker_image is currently not supported"
