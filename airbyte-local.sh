@@ -85,7 +85,6 @@ function discoverSrc() {
       --config "/configs/$src_config_filename"
 }
 
-# TODO: take catalog as input parameter
 function writeSrcCatalog() {
     discoverSrc | jq --argjson src_catalog_overrides "$src_catalog_overrides" '{
       streams: [
