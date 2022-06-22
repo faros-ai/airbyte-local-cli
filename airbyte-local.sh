@@ -13,64 +13,6 @@ if ((${missing_require:-0})); then
     exit 1
 fi
 
-pagerduty_src_catalog=$(cat << EOF
-{
-  "streams": [
-    {
-      "stream": {
-        "name": "incident_log_entries"
-      },
-      "sync_mode": "incremental",
-      "destination_sync_mode": "append"
-    },
-    {
-      "stream": {
-        "name": "incidents"
-      },
-      "sync_mode": "incremental",
-      "destination_sync_mode": "append"
-    },
-    {
-      "stream": {
-        "name": "users"
-      },
-      "sync_mode": "full_refresh",
-      "destination_sync_mode": "overwrite"
-    },
-    {
-      "stream": {
-        "name": "priorities_resource"
-      },
-      "sync_mode": "full_refresh",
-      "destination_sync_mode": "overwrite"
-    }
-  ]
-}
-EOF
-)
-
-servicenow_src_catalog=$(cat << EOF
-{
-  "streams": [
-    {
-      "stream": {
-        "name": "incidents"
-      },
-      "sync_mode": "incremental",
-      "destination_sync_mode": "append"
-    },
-    {
-      "stream": {
-        "name": "users"
-      },
-      "sync_mode": "incremental",
-      "destination_sync_mode": "append"
-    }
-  ]
-}
-EOF
-)
-
 filename_prefix=faros_airbyte_cli
 src_config_filename=${filename_prefix}_src_config.json
 src_state_filename=${filename_prefix}_src_state.json
@@ -83,6 +25,7 @@ function setDefaults() {
     declare -Ag dst_config=( ["graph"]="default" )
     dst_docker_image="farosai/airbyte-faros-destination"
     src_state_filepath="state.json"
+    src_catalog_overrides="{}"
 }
 
 function parseFlags() {
@@ -96,6 +39,9 @@ function parseFlags() {
                 shift 2 ;;
             --state)
                 src_state_filepath="$2"
+                shift 2 ;;
+            --src.catalog)
+                src_catalog_overrides="$2"
                 shift 2 ;;
             --src.*)
                 IFS='.' read -ra strarr <<< $1
@@ -134,22 +80,32 @@ function writeSrcConfig() {
           ({}; . + {($a[2*$i]): ($a[2*$i + 1]|fromjson? // .)})' > "$tempdir/$src_config_filename"
 }
 
-# TODO: take catalog as input parameter
+function discoverSrc() {
+    docker run --rm -v "$tempdir:/configs" "$src_docker_image" discover \
+      --config "/configs/$src_config_filename"
+}
+
 function writeSrcCatalog() {
-    case $src_docker_image in
-        *pagerduty*)
-            echo $pagerduty_src_catalog | jq > $tempdir/$src_catalog_filename
-            stream_prefix=mypagerdutysrc__pagerduty__
-            ;;
-        *servicenow*)
-            echo $servicenow_src_catalog | jq > $tempdir/$src_catalog_filename
-            stream_prefix=myservicenowsrc__servicenow__
-            ;;
-        *)
-            echo "Error: $src_docker_image is currently not supported"
-            exit 1
-            ;;
-    esac
+    discoverSrc | jq --argjson src_catalog_overrides "$src_catalog_overrides" '{
+      streams: [
+        .catalog.streams[]
+          | select($src_catalog_overrides[.name] != "disabled")
+          | .incremental = ((.supported_sync_modes|contains(["incremental"])) and ($src_catalog_overrides[.name] != "full_refresh"))
+          | {
+              stream: {name: .name},
+              sync_mode: (if .incremental then "incremental" else "full_refresh" end),
+              destination_sync_mode: (if .incremental then "append" else "overwrite" end)
+            }
+      ]
+    }' > $tempdir/$src_catalog_filename
+    IFS='-' read -ra src_docker_image_parts <<< $src_docker_image
+    if [[ $dst_docker_image == farosai/airbyte-faros-destination* ]] && [[ ${src_docker_image_parts[0]} == farosai/airbyte ]]; then
+        src_type=${src_docker_image_parts[1]}
+        stream_prefix="my${src_type}src__${src_type}__"
+    else
+        echo "Error: $src_docker_image is currently not supported"
+        exit 1
+    fi
 }
 
 # TODO: support CE
@@ -241,14 +197,14 @@ set -eo pipefail
 main() {
     setDefaults
     parseFlags "$@"
-    writeSrcConfig
-    writeSrcCatalog
-    writeDstConfig
-    writeDstCatalog
     echo "Pulling source image $src_docker_image"
     docker pull $src_docker_image
+    writeSrcConfig
+    writeSrcCatalog
     echo "Pulling destination image $dst_docker_image"
     docker pull $dst_docker_image
+    writeDstConfig
+    writeDstCatalog
     checkSrc
     loadState
 
