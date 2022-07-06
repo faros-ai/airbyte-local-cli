@@ -150,16 +150,15 @@ function loadState() {
 
 function sync() {
     source_output_file="$tempdir/source_output.txt"
-    readSrc | tee "$source_output_file"
-
-    cat "$source_output_file" | \
-    jq -c -R $jq_cmd "fromjson? | select(.type == \"STATE\") | .state.data" | tail -n 1 > "$src_state_filepath"
-
-    cat "$source_output_file" | \
-    jq -c -R $jq_cmd "fromjson? | select(.type == \"RECORD\") | .record.stream |= \"${stream_prefix}\" + ." | \
-    docker run -i -v "$tempdir:/configs" "$dst_docker_image" write \
-    --config "/configs/$dst_config_filename" \
-    --catalog "/configs/$dst_catalog_filename"
+    new_source_state_file="$tempdir/new_state.json"
+    readSrc | \
+        tee >(jq -c -R $jq_cmd "fromjson? | select(.type == \"STATE\") | .state.data" | tail -n 1 > "$new_source_state_file") | \
+        tee /dev/tty | \
+        jq -c -R $jq_cmd "fromjson? | select(.type == \"RECORD\") | .record.stream |= \"${stream_prefix}\" + ." | \
+        docker run -i -v "$tempdir:/configs" "$dst_docker_image" write \
+        --config "/configs/$dst_config_filename" \
+        --catalog "/configs/$dst_catalog_filename"
+    cp "$new_source_state_file" "$src_state_filepath"
 }
 
 function readSrc() {
