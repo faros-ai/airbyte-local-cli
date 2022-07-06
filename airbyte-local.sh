@@ -100,8 +100,13 @@ function writeSrcCatalog() {
     }' > $tempdir/$src_catalog_filename
     IFS='-' read -ra src_docker_image_parts <<< $src_docker_image
     if [[ $dst_docker_image == farosai/airbyte-faros-destination* ]] && [[ ${src_docker_image_parts[0]} == farosai/airbyte ]]; then
-        src_type=${src_docker_image_parts[1]}
-        stream_prefix="my${src_type}src__${src_type}__"
+        # Remove first and last elements
+        src_docker_image_parts=("${src_docker_image_parts[@]:1}")
+        src_docker_image_parts=("${src_docker_image_parts[@]::${#src_docker_image_parts[@]}-1}");
+
+        src_origin=$(IFS= ; echo "${src_docker_image_parts[*]}")
+        src_type=$(IFS=_ ; echo "${src_docker_image_parts[*]}")
+        stream_prefix="my${src_origin}src__${src_type}__"
     else
         echo "Error: $src_docker_image is currently not supported"
         exit 1
