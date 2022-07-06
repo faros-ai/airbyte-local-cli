@@ -154,7 +154,6 @@ function loadState() {
 }
 
 function sync() {
-    source_output_file="$tempdir/source_output.txt"
     new_source_state_file="$tempdir/new_state.json"
     readSrc | \
         tee >(jq -c -R $jq_cmd "fromjson? | select(.type == \"STATE\") | .state.data" | tail -n 1 > "$new_source_state_file") | \
