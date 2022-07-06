@@ -100,8 +100,13 @@ function writeSrcCatalog() {
     }' > $tempdir/$src_catalog_filename
     IFS='-' read -ra src_docker_image_parts <<< $src_docker_image
     if [[ $dst_docker_image == farosai/airbyte-faros-destination* ]] && [[ ${src_docker_image_parts[0]} == farosai/airbyte ]]; then
-        src_type=${src_docker_image_parts[1]}
-        stream_prefix="my${src_type}src__${src_type}__"
+        # Remove first and last elements
+        src_docker_image_parts=("${src_docker_image_parts[@]:1}")
+        src_docker_image_parts=("${src_docker_image_parts[@]::${#src_docker_image_parts[@]}-1}");
+
+        src_origin=$(IFS= ; echo "${src_docker_image_parts[*]}")
+        src_type=$(IFS=_ ; echo "${src_docker_image_parts[*]}")
+        stream_prefix="my${src_origin}src__${src_type}__"
     else
         echo "Error: $src_docker_image is currently not supported"
         exit 1
@@ -149,17 +154,15 @@ function loadState() {
 }
 
 function sync() {
-    source_output_file="$tempdir/source_output.txt"
-    readSrc | tee "$source_output_file"
-
-    cat "$source_output_file" | \
-    jq -c -R $jq_cmd "fromjson? | select(.type == \"STATE\") | .state.data" | tail -n 1 > "$src_state_filepath"
-
-    cat "$source_output_file" | \
-    jq -c -R $jq_cmd "fromjson? | select(.type == \"RECORD\") | .record.stream |= \"${stream_prefix}\" + ." | \
-    docker run -i -v "$tempdir:/configs" "$dst_docker_image" write \
-    --config "/configs/$dst_config_filename" \
-    --catalog "/configs/$dst_catalog_filename"
+    new_source_state_file="$tempdir/new_state.json"
+    readSrc | \
+        tee >(jq -c -R $jq_cmd "fromjson? | select(.type == \"STATE\") | .state.data" | tail -n 1 > "$new_source_state_file") | \
+        tee /dev/tty | \
+        jq -c -R $jq_cmd "fromjson? | select(.type == \"RECORD\") | .record.stream |= \"${stream_prefix}\" + ." | \
+        docker run -i -v "$tempdir:/configs" "$dst_docker_image" write \
+        --config "/configs/$dst_config_filename" \
+        --catalog "/configs/$dst_catalog_filename"
+    cp "$new_source_state_file" "$src_state_filepath"
 }
 
 function readSrc() {
