@@ -178,7 +178,7 @@ function sync() {
 }
 
 function readSrc() {
-    docker run --rm -v "$tempdir:/configs" --log-opt max-size=50m "$src_docker_image" read \
+    docker run --rm -v "$tempdir:/configs" "$src_docker_image" read \
       --config "/configs/$src_config_filename" \
       --catalog "/configs/$src_catalog_filename" \
       --state "/configs/$src_state_filename"
