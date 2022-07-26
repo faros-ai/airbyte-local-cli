@@ -26,6 +26,7 @@ function setDefaults() {
     dst_docker_image="farosai/airbyte-faros-destination"
     src_state_filepath="state.json"
     src_catalog_overrides="{}"
+    max_log_size="10m"
 }
 
 function parseFlags() {
@@ -61,6 +62,9 @@ function parseFlags() {
             --check-connection)
                 check_src_connection=true
                 shift 1 ;;
+            --max-log-size)
+                max_log_size="$2"
+                shift 2 ;;
             *)
                 POSITION+=("$1")
                 shift ;;
@@ -159,14 +163,14 @@ function sync() {
         tee >(jq -c -R $jq_cmd "fromjson? | select(.type == \"STATE\") | .state.data" | tail -n 1 > "$new_source_state_file") | \
         tee /dev/tty | \
         jq -c -R $jq_cmd "fromjson? | select(.type == \"RECORD\") | .record.stream |= \"${stream_prefix}\" + ." | \
-        docker run -i -v "$tempdir:/configs" "$dst_docker_image" write \
+        docker run -i -v "$tempdir:/configs" --log-opt max-size="$max_log_size" "$dst_docker_image" write \
         --config "/configs/$dst_config_filename" \
         --catalog "/configs/$dst_catalog_filename"
     cp "$new_source_state_file" "$src_state_filepath"
 }
 
 function readSrc() {
-    docker run --rm -v "$tempdir:/configs" "$src_docker_image" read \
+    docker run --rm -v "$tempdir:/configs" --log-opt max-size="$max_log_size" "$src_docker_image" read \
       --config "/configs/$src_config_filename" \
       --catalog "/configs/$src_catalog_filename" \
       --state "/configs/$src_state_filename"
