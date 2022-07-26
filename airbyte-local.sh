@@ -67,8 +67,8 @@ function parseFlags() {
             --skip-dst-pull)
                 skip_dst_pull=true
                 shift 1 ;;
-            --origin)
-                src_origin="$2"
+            --connection-name)
+                connection_name="$2"
                 shift 2 ;;
             --max-log-size)
                 max_log_size="$2"
@@ -119,9 +119,9 @@ function parseStreamPrefix() {
         src_docker_image_parts=("${src_docker_image_parts[@]:1}")
         src_docker_image_parts=("${src_docker_image_parts[@]::${#src_docker_image_parts[@]}-1}");
 
-        [ -z "$src_origin" ] && src_origin="my$(IFS= ; echo "${src_docker_image_parts[*]}")src"
+        [ -z "$connection_name" ] && connection_name="my$(IFS= ; echo "${src_docker_image_parts[*]}")src"
         src_type=$(IFS=_ ; echo "${src_docker_image_parts[*]}")
-        stream_prefix="${src_origin}__${src_type}__"
+        stream_prefix="${connection_name}__${src_type}__"
     else
         echo "Error: $src_docker_image is currently not supported"
         exit 1
@@ -160,7 +160,7 @@ function writeDstCatalog() {
 }
 
 function loadState() {
-    src_state_filepath="${src_origin}__state.json"
+    src_state_filepath="${connection_name}__state.json"
     echo "Using state file: $src_state_filepath"
     if [ -s "$src_state_filepath" ]; then
         cat "$src_state_filepath" > "$tempdir/$src_state_filename"
