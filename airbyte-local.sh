@@ -61,11 +61,11 @@ function parseFlags() {
             --check-connection)
                 check_src_connection=true
                 shift 1 ;;
-            --skip-src-pull)
-                skip_src_pull=true
+            --no-src-pull)
+                no_src_pull=true
                 shift 1 ;;
-            --skip-dst-pull)
-                skip_dst_pull=true
+            --no-dst-pull)
+                no_dst_pull=true
                 shift 1 ;;
             --connection-name)
                 connection_name="$2"
@@ -216,7 +216,7 @@ set -eo pipefail
 main() {
     setDefaults
     parseFlags "$@"
-    if [ "$skip_src_pull" = true ]; then
+    if [ "$no_src_pull" = true ]; then
         echo "Skipping pull of source image $src_docker_image"
     else
         echo "Pulling source image $src_docker_image"
@@ -225,7 +225,7 @@ main() {
     writeSrcConfig
     writeSrcCatalog
     parseStreamPrefix
-    if [ "$skip_dst_pull" = true ]; then
+    if [ "$no_dst_pull" = true ]; then
         echo "Skipping pull of destination image $dst_docker_image"
     else
         echo "Pulling destination image $dst_docker_image"
