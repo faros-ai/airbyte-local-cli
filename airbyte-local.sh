@@ -24,7 +24,6 @@ function setDefaults() {
     declare -Ag src_config=()
     declare -Ag dst_config=( ["graph"]="default" )
     dst_docker_image="farosai/airbyte-faros-destination"
-    src_state_filepath="state.json"
     src_catalog_overrides="{}"
     max_log_size="10m"
 }
@@ -62,6 +61,15 @@ function parseFlags() {
             --check-connection)
                 check_src_connection=true
                 shift 1 ;;
+            --no-src-pull)
+                no_src_pull=true
+                shift 1 ;;
+            --no-dst-pull)
+                no_dst_pull=true
+                shift 1 ;;
+            --connection-name)
+                connection_name="$2"
+                shift 2 ;;
             --max-log-size)
                 max_log_size="$2"
                 shift 2 ;;
@@ -102,15 +110,18 @@ function writeSrcCatalog() {
             }
       ]
     }' > $tempdir/$src_catalog_filename
+}
+
+function parseStreamPrefix() {
     IFS='-' read -ra src_docker_image_parts <<< $src_docker_image
     if [[ $dst_docker_image == farosai/airbyte-faros-destination* ]] && [[ ${src_docker_image_parts[0]} == farosai/airbyte ]]; then
         # Remove first and last elements
         src_docker_image_parts=("${src_docker_image_parts[@]:1}")
         src_docker_image_parts=("${src_docker_image_parts[@]::${#src_docker_image_parts[@]}-1}");
 
-        src_origin=$(IFS= ; echo "${src_docker_image_parts[*]}")
+        [ -z "$connection_name" ] && connection_name="my$(IFS= ; echo "${src_docker_image_parts[*]}")src"
         src_type=$(IFS=_ ; echo "${src_docker_image_parts[*]}")
-        stream_prefix="my${src_origin}src__${src_type}__"
+        stream_prefix="${connection_name}__${src_type}__"
     else
         echo "Error: $src_docker_image is currently not supported"
         exit 1
@@ -149,6 +160,7 @@ function writeDstCatalog() {
 }
 
 function loadState() {
+    src_state_filepath="${connection_name}__state.json"
     echo "Using state file: $src_state_filepath"
     if [ -s "$src_state_filepath" ]; then
         cat "$src_state_filepath" > "$tempdir/$src_state_filename"
@@ -161,7 +173,7 @@ function sync() {
     new_source_state_file="$tempdir/new_state.json"
     readSrc | \
         tee >(jq -c -R $jq_cmd "fromjson? | select(.type == \"STATE\") | .state.data" | tail -n 1 > "$new_source_state_file") | \
-        tee /dev/tty | \
+        tee >(jq -c -R $jq_cmd "fromjson? | select(.type != \"RECORD\" and .type != \"STATE\")" > /dev/tty) | \
         jq -c -R $jq_cmd "fromjson? | select(.type == \"RECORD\") | .record.stream |= \"${stream_prefix}\" + ." | \
         docker run -i -v "$tempdir:/configs" --log-opt max-size="$max_log_size" "$dst_docker_image" write \
         --config "/configs/$dst_config_filename" \
@@ -204,12 +216,21 @@ set -eo pipefail
 main() {
     setDefaults
     parseFlags "$@"
-    echo "Pulling source image $src_docker_image"
-    docker pull $src_docker_image
+    if [ "$no_src_pull" = true ]; then
+        echo "Skipping pull of source image $src_docker_image"
+    else
+        echo "Pulling source image $src_docker_image"
+        docker pull $src_docker_image
+    fi
     writeSrcConfig
     writeSrcCatalog
-    echo "Pulling destination image $dst_docker_image"
-    docker pull $dst_docker_image
+    parseStreamPrefix
+    if [ "$no_dst_pull" = true ]; then
+        echo "Skipping pull of destination image $dst_docker_image"
+    else
+        echo "Pulling destination image $dst_docker_image"
+        docker pull $dst_docker_image
+    fi
     writeDstConfig
     writeDstCatalog
     checkSrc
