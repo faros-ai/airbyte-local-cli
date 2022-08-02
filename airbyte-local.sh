@@ -70,6 +70,9 @@ function parseFlags() {
             --connection-name)
                 connection_name="$2"
                 shift 2 ;;
+            --dst-stream-prefix)
+                dst_stream_prefix="$2"
+                shift 2 ;;
             --max-log-size)
                 max_log_size="$2"
                 shift 2 ;;
@@ -98,33 +101,37 @@ function discoverSrc() {
 }
 
 function writeSrcCatalog() {
-    discoverSrc | jq --argjson src_catalog_overrides "$src_catalog_overrides" '{
-      streams: [
-        .catalog.streams[]
-          | select($src_catalog_overrides[.name] != "disabled")
-          | .incremental = ((.supported_sync_modes|contains(["incremental"])) and ($src_catalog_overrides[.name] != "full_refresh"))
-          | {
-              stream: {name: .name},
-              sync_mode: (if .incremental then "incremental" else "full_refresh" end),
-              destination_sync_mode: (if .incremental then "append" else "overwrite" end)
-            }
-      ]
-    }' > $tempdir/$src_catalog_filename
+    discoverSrc | \
+        tee >(jq -c -R $jq_cmd "fromjson? | select(.type != \"CATALOG\")" > /dev/tty) | \
+        jq --argjson src_catalog_overrides "$src_catalog_overrides" '{
+          streams: [
+            .catalog.streams[]
+              | select($src_catalog_overrides[.name] != "disabled")
+              | .incremental = ((.supported_sync_modes|contains(["incremental"])) and ($src_catalog_overrides[.name] != "full_refresh"))
+              | {
+                  stream: {name: .name},
+                  sync_mode: (if .incremental then "incremental" else "full_refresh" end),
+                  destination_sync_mode: (if .incremental then "append" else "overwrite" end)
+                }
+          ]
+        }' > $tempdir/$src_catalog_filename
 }
 
 function parseStreamPrefix() {
     IFS='-' read -ra src_docker_image_parts <<< $src_docker_image
-    if [[ $dst_docker_image == farosai/airbyte-faros-destination* ]] && [[ ${src_docker_image_parts[0]} == farosai/airbyte ]]; then
-        # Remove first and last elements
-        src_docker_image_parts=("${src_docker_image_parts[@]:1}")
-        src_docker_image_parts=("${src_docker_image_parts[@]::${#src_docker_image_parts[@]}-1}");
+    if [[ $dst_docker_image == farosai/airbyte-faros-destination* ]]; then
+        if [[ ${src_docker_image_parts[0]} == farosai/airbyte ]]; then
+            # Remove first and last elements
+            src_docker_image_parts=("${src_docker_image_parts[@]:1}")
+            src_docker_image_parts=("${src_docker_image_parts[@]::${#src_docker_image_parts[@]}-1}");
 
-        [ -z "$connection_name" ] && connection_name="my$(IFS= ; echo "${src_docker_image_parts[*]}")src"
-        src_type=$(IFS=_ ; echo "${src_docker_image_parts[*]}")
-        stream_prefix="${connection_name}__${src_type}__"
-    else
-        echo "Error: $src_docker_image is currently not supported"
-        exit 1
+            [ -z "$connection_name" ] && connection_name="my$(IFS= ; echo "${src_docker_image_parts[*]}")src"
+            src_type=$(IFS=_ ; echo "${src_docker_image_parts[*]}")
+            dst_stream_prefix="${connection_name}__${src_type}__"
+        elif [ -z "$dst_stream_prefix" ]; then
+            echo "Error: $dst_docker_image requires a destination stream prefix. Specify this by adding '--dst-stream-prefix <value>'"
+            exit 1
+        fi
     fi
 }
 
@@ -156,7 +163,7 @@ EOF
 }
 
 function writeDstCatalog() {
-    cat "$tempdir/$src_catalog_filename" | jq ".streams[].stream.name |= \"${stream_prefix}\" + ." > "$tempdir/$dst_catalog_filename"
+    cat "$tempdir/$src_catalog_filename" | jq ".streams[].stream.name |= \"${dst_stream_prefix}\" + ." > "$tempdir/$dst_catalog_filename"
 }
 
 function loadState() {
@@ -174,7 +181,7 @@ function sync() {
     readSrc | \
         tee >(jq -c -R $jq_cmd "fromjson? | select(.type == \"STATE\") | .state.data" | tail -n 1 > "$new_source_state_file") | \
         tee >(jq -c -R $jq_cmd "fromjson? | select(.type != \"RECORD\" and .type != \"STATE\")" > /dev/tty) | \
-        jq -c -R $jq_cmd "fromjson? | select(.type == \"RECORD\") | .record.stream |= \"${stream_prefix}\" + ." | \
+        jq -c -R $jq_cmd "fromjson? | select(.type == \"RECORD\") | .record.stream |= \"${dst_stream_prefix}\" + ." | \
         docker run -i -v "$tempdir:/configs" --log-opt max-size="$max_log_size" "$dst_docker_image" write \
         --config "/configs/$dst_config_filename" \
         --catalog "/configs/$dst_catalog_filename"
