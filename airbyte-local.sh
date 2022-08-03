@@ -167,7 +167,7 @@ function writeDstCatalog() {
 }
 
 function loadState() {
-    src_state_filepath="${connection_name}__state.json"
+    [ -z "$src_state_filepath" ] && src_state_filepath="${connection_name}__state.json"
     echo "Using state file: $src_state_filepath"
     if [ -s "$src_state_filepath" ]; then
         cat "$src_state_filepath" > "$tempdir/$src_state_filename"
