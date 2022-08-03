@@ -61,6 +61,9 @@ function parseFlags() {
             --check-connection)
                 check_src_connection=true
                 shift 1 ;;
+            --full-refresh)
+                full_refresh=true
+                shift 1 ;;
             --no-src-pull)
                 no_src_pull=true
                 shift 1 ;;
@@ -103,11 +106,12 @@ function discoverSrc() {
 function writeSrcCatalog() {
     discoverSrc | \
         tee >(jq -c -R $jq_cmd "fromjson? | select(.type != \"CATALOG\")" > /dev/tty) | \
-        jq --argjson src_catalog_overrides "$src_catalog_overrides" '{
+        jq --arg full_refresh "$full_refresh" \
+           --argjson src_catalog_overrides "$src_catalog_overrides" '{
           streams: [
             .catalog.streams[]
               | select($src_catalog_overrides[.name] != "disabled")
-              | .incremental = ((.supported_sync_modes|contains(["incremental"])) and ($src_catalog_overrides[.name] != "full_refresh"))
+              | .incremental = ((.supported_sync_modes|contains(["incremental"])) and ($src_catalog_overrides[.name] != "full_refresh") and ($full_refresh != "true"))
               | {
                   stream: {name: .name},
                   sync_mode: (if .incremental then "incremental" else "full_refresh" end),
