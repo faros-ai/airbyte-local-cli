@@ -105,7 +105,7 @@ function discoverSrc() {
 
 function writeSrcCatalog() {
     discoverSrc | \
-        tee >(jq -c -R $jq_cmd "fromjson? | select(.type != \"CATALOG\")" > /dev/tty) | \
+        tee >(jq -c -R $jq_cmd "fromjson? | select(.type != \"CATALOG\")" 1>&2) | \
         jq --arg full_refresh "$full_refresh" \
            --argjson src_catalog_overrides "$src_catalog_overrides" '{
           streams: [
@@ -184,7 +184,7 @@ function sync() {
     new_source_state_file="$tempdir/new_state.json"
     readSrc | \
         tee >(jq -c -R $jq_cmd "fromjson? | select(.type == \"STATE\") | .state.data" | tail -n 1 > "$new_source_state_file") | \
-        tee >(jq -c -R $jq_cmd "fromjson? | select(.type != \"RECORD\" and .type != \"STATE\")" > /dev/tty) | \
+        tee >(jq -c -R $jq_cmd "fromjson? | select(.type != \"RECORD\" and .type != \"STATE\")" 1>&2) | \
         jq -c -R $jq_cmd "fromjson? | select(.type == \"RECORD\") | .record.stream |= \"${dst_stream_prefix}\" + ." | \
         docker run -i -v "$tempdir:/configs" --log-opt max-size="$max_log_size" "$dst_docker_image" write \
         --config "/configs/$dst_config_filename" \
