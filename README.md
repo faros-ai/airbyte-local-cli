@@ -30,3 +30,5 @@ To generate the Airbyte catalog needed for running the source and destination co
    "<stream name 2>": ...
 }
 ```
+
+You can also force full_refresh mode for all streams by setting the `--full-refresh` flag.
