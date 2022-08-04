@@ -22,13 +22,22 @@ CLI for running Airbyte sources & destinations locally without Airbyte server
 
 ## Overriding Default Catalog
 
-To generate the Airbyte catalog needed for running the source and destination connectors, the script runs the `discover` command on the source to get the list of all supported streams. It then creates an Airbyte catalog, enabling all of the streams and using incremental mode for all the streams that support it. To disable or force full_refresh mode on any of the streams, pass a `--src-catalog` option whose value is a JSON string in the following format:
+To generate the Airbyte catalog needed for running the source and destination
+connectors, the script runs the `discover` command on the source to get the list
+of all supported streams. It then creates an Airbyte configured catalog,
+enabling all of the streams and using "incremental" sync mode for all the
+streams that support it. Each stream's destination sync mode defaults to
+"append" for incremental streams and "overwrite" for full_refresh streams. To
+disable or customize the sync mode or destination sync mode on any of the
+streams, pass a `--src-catalog-overrides` option whose value is a JSON string in
+the following format:
 
 ```
 {
-   "<stream name 1>": "disabled" or "full_refresh",
-   "<stream name 2>": ...
+   "<stream name 1>": {"disabled": true},
+   "<stream name 2>": {"sync_mode": "full_refresh", "destination_sync_mode": "append"}
 }
 ```
 
-You can also force full_refresh mode for all streams by setting the `--full-refresh` flag.
+You can also force full_refresh mode for all streams by setting the
+`--full-refresh` flag.

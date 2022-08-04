@@ -46,7 +46,7 @@ function parseFlags() {
             --state)
                 src_state_filepath="$2"
                 shift 2 ;;
-            --src-catalog)
+            --src-catalog-overrides)
                 src_catalog_overrides="$2"
                 shift 2 ;;
             --src-catalog-file)
@@ -132,12 +132,12 @@ function writeSrcCatalog() {
                --argjson src_catalog_overrides "$src_catalog_overrides" '{
               streams: [
                 .catalog.streams[]
-                  | select($src_catalog_overrides[.name] != "disabled")
-                  | .incremental = ((.supported_sync_modes|contains(["incremental"])) and ($src_catalog_overrides[.name] != "full_refresh") and ($full_refresh != "true"))
+                  | select($src_catalog_overrides[.name].disabled != true)
+                  | .incremental = ((.supported_sync_modes|contains(["incremental"])) and ($src_catalog_overrides[.name].sync_mode != "full_refresh") and ($full_refresh != "true"))
                   | {
                       stream: {name: .name},
                       sync_mode: (if .incremental then "incremental" else "full_refresh" end),
-                      destination_sync_mode: (if .incremental then "append" else "overwrite" end)
+                      destination_sync_mode: ($src_catalog_overrides[.name].destination_sync_mode? // if .incremental then "append" else "overwrite" end)
                     }
               ]
             }' > $tempdir/$src_catalog_filename
