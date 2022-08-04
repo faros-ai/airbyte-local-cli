@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+set -eo pipefail
+
 [ "${BASH_VERSINFO:-0}" -ge 4 ] || { echo "Error: Bash 4.0 or higher is required." && exit 1; }
 
 declare -a required_cmds=("docker" "jq")
@@ -26,6 +28,36 @@ GREEN='\033[0;32m'
 YELLOW='\033[0;33m'
 BLUE='\033[0;34m'
 NC='\033[0m' # No Color
+
+function help() {
+    echo
+    echo "usage:"
+    echo
+    echo "./airbyte-local.sh --src <image> --dst <image> [options]"
+    echo
+    echo "options:"
+    echo
+    echo "--src <image> (required)          Airbyte source docker image"
+    echo "--dst <image> (required)          Airbyte destination docker image"
+    echo "--src.<key> <value>               Add \"key\": \"value\" into the source config" 
+    echo "--dst.<key> <value>               Add \"key\": \"value\" into the destination config"
+    echo "--check-connection                Validate the Airbyte source connection"
+    echo "--full-refresh                    Force full_refresh and overwrite mode"
+    echo "--state <path>                    Override state file path for incremental sync"
+    echo "--src-catalog-overrides <json>    JSON string of sync mode overrides"
+    echo "--src-catalog-file <path>         Source catalog file path"
+    echo "--src-catalog-json <json>         Source catalog as a JSON string"
+    echo "--dst-catalog-file <path>         Destination catalog file path"
+    echo "--dst-catalog-json <json>         Destination catalog as a JSON string"
+    echo "--dst-stream-prefix <prefix>      Destination stream prefix"
+    echo "--no-src-pull                     Skip pulling Airbyte source image"
+    echo "--no-dst-pull                     Skip pulling Airbyte destination image"
+    echo "--src-only                        Only run the Airbyte source"
+    echo "--connection-name                 Connection name used in various places"
+    echo "--max-log-size <size>             Set docker max log size"
+    echo "--debug                           Enable debug logging"
+    exit
+}
 
 function setDefaults() {
     declare -Ag src_config=()
@@ -100,66 +132,26 @@ function parseFlags() {
             --debug)
                 debug=1
                 shift 1 ;;
+            --help)
+                help ;;
             *)
-                POSITION+=("$1")
+                warn "Unrecognized arg: $1"
                 shift ;;
         esac
     done
 }
 
+function validateInput() {
+    if [[ -z "$src_docker_image" ]]; then
+        err "Airbyte source docker image must be set using '--src <image>'"
+    fi
+    if [[ -z "$dst_docker_image" ]]; then
+        err "Airbyte destination docker image must be set using '--dst <image>'"
+    fi
+}
+
 function writeSrcConfig() {
     writeConfig src_config "$tempdir/$src_config_filename"
-}
-
-function discoverSrc() {
-    docker run --rm -v "$tempdir:/configs" "$src_docker_image" discover \
-      --config "/configs/$src_config_filename"
-}
-
-function writeSrcCatalog() {
-    if [[ "$src_catalog_file" ]]; then
-        if [[ -s "$src_catalog_file" ]]; then
-            cp "$src_catalog_file" "$tempdir/$src_catalog_filename"
-        else
-            err "Source catalog file $src_catalog_file doesn't exist"
-        fi
-    elif [[ "$src_catalog_json" ]]; then
-        echo "$src_catalog_json" > "$tempdir/$src_catalog_filename"
-    else
-        discoverSrc | \
-            tee >(jq -c -R $jq_cmd "fromjson? | select(.type != \"CATALOG\")" 1>&2) | \
-            jq --arg full_refresh "$full_refresh" \
-               --argjson src_catalog_overrides "$src_catalog_overrides" '{
-              streams: [
-                .catalog.streams[]
-                  | select($src_catalog_overrides[.name].disabled != true)
-                  | .incremental = ((.supported_sync_modes|contains(["incremental"])) and ($src_catalog_overrides[.name].sync_mode != "full_refresh") and ($full_refresh != "true"))
-                  | {
-                      stream: {name: .name},
-                      sync_mode: (if .incremental then "incremental" else "full_refresh" end),
-                      destination_sync_mode: ($src_catalog_overrides[.name].destination_sync_mode? // if .incremental then "append" else "overwrite" end)
-                    }
-              ]
-            }' > $tempdir/$src_catalog_filename
-    fi
-    debug "Using source configured catalog: $(jq -c < $tempdir/$src_catalog_filename)"
-}
-
-function parseStreamPrefix() {
-    IFS='-' read -ra src_docker_image_parts <<< $src_docker_image
-    if [[ $dst_docker_image == farosai/airbyte-faros-destination* ]]; then
-        if [[ ${src_docker_image_parts[0]} == farosai/airbyte ]]; then
-            # Remove first and last elements
-            src_docker_image_parts=("${src_docker_image_parts[@]:1}")
-            src_docker_image_parts=("${src_docker_image_parts[@]::${#src_docker_image_parts[@]}-1}");
-
-            [ -z "$connection_name" ] && connection_name="my$(IFS= ; echo "${src_docker_image_parts[*]}")src"
-            src_type=$(IFS=_ ; echo "${src_docker_image_parts[*]}")
-            dst_stream_prefix="${connection_name}__${src_type}__"
-        elif [[ -z "$dst_stream_prefix" ]]; then
-            err "$dst_docker_image requires a destination stream prefix. Specify this by adding '--dst-stream-prefix <value>'"
-        fi
-    fi
 }
 
 function writeDstConfig() {
@@ -196,6 +188,35 @@ function writeConfig() {
           ({}; . + {($a[2*$i]): ($a[2*$i + 1]|fromjson? // if . == "true" then true elif . == "false" then false else . end)})' > "$2"
 }
 
+function writeSrcCatalog() {
+    if [[ "$src_catalog_file" ]]; then
+        if [[ -s "$src_catalog_file" ]]; then
+            cp "$src_catalog_file" "$tempdir/$src_catalog_filename"
+        else
+            err "Source catalog file $src_catalog_file doesn't exist"
+        fi
+    elif [[ "$src_catalog_json" ]]; then
+        echo "$src_catalog_json" > "$tempdir/$src_catalog_filename"
+    else
+        discoverSrc | \
+            tee >(jq -c -R $jq_cmd "fromjson? | select(.type != \"CATALOG\")" 1>&2) | \
+            jq --arg full_refresh "$full_refresh" \
+               --argjson src_catalog_overrides "$src_catalog_overrides" '{
+              streams: [
+                .catalog.streams[]
+                  | select($src_catalog_overrides[.name].disabled != true)
+                  | .incremental = ((.supported_sync_modes|contains(["incremental"])) and ($src_catalog_overrides[.name].sync_mode != "full_refresh") and ($full_refresh != "true"))
+                  | {
+                      stream: {name: .name},
+                      sync_mode: (if .incremental then "incremental" else "full_refresh" end),
+                      destination_sync_mode: ($src_catalog_overrides[.name].destination_sync_mode? // if .incremental then "append" else "overwrite" end)
+                    }
+              ]
+            }' > $tempdir/$src_catalog_filename
+    fi
+    debug "Using source configured catalog: $(jq -c < $tempdir/$src_catalog_filename)"
+}
+
 function writeDstCatalog() {
     if [[ "$dst_catalog_file" ]]; then
         if [[ -s "$dst_catalog_file" ]]; then
@@ -209,6 +230,23 @@ function writeDstCatalog() {
         cat "$tempdir/$src_catalog_filename" | jq ".streams[].stream.name |= \"${dst_stream_prefix}\" + ." > "$tempdir/$dst_catalog_filename"
     fi
     debug "Using destination configured catalog: $(jq -c < $tempdir/$dst_catalog_filename)"
+}
+
+function parseStreamPrefix() {
+    IFS='-' read -ra src_docker_image_parts <<< $src_docker_image
+    if [[ $dst_docker_image == farosai/airbyte-faros-destination* ]]; then
+        if [[ ${src_docker_image_parts[0]} == farosai/airbyte ]]; then
+            # Remove first and last elements
+            src_docker_image_parts=("${src_docker_image_parts[@]:1}")
+            src_docker_image_parts=("${src_docker_image_parts[@]::${#src_docker_image_parts[@]}-1}");
+
+            [ -z "$connection_name" ] && connection_name="my$(IFS= ; echo "${src_docker_image_parts[*]}")src"
+            src_type=$(IFS=_ ; echo "${src_docker_image_parts[*]}")
+            dst_stream_prefix="${connection_name}__${src_type}__"
+        elif [[ -z "$dst_stream_prefix" ]]; then
+            err "$dst_docker_image requires a destination stream prefix. Specify this by adding '--dst-stream-prefix <value>'"
+        fi
+    fi
 }
 
 function loadState() {
@@ -227,25 +265,6 @@ function loadState() {
     fi
 }
 
-function sync() {
-    new_source_state_file="$tempdir/new_state.json"
-    readSrc | \
-        tee >(jq -c -R $jq_cmd "fromjson? | select(.type == \"STATE\") | .state.data" | tail -n 1 > "$new_source_state_file") | \
-        tee >(jq -c -R $jq_cmd "fromjson? | select(.type != \"RECORD\" and .type != \"STATE\")" 1>&2) | \
-        jq -c -R $jq_cmd "fromjson? | select(.type == \"RECORD\") | .record.stream |= \"${dst_stream_prefix}\" + ." | \
-        docker run -i -v "$tempdir:/configs" --log-opt max-size="$max_log_size" "$dst_docker_image" write \
-        --config "/configs/$dst_config_filename" \
-        --catalog "/configs/$dst_catalog_filename"
-    cp "$new_source_state_file" "$src_state_filepath"
-}
-
-function readSrc() {
-    docker run --rm -v "$tempdir:/configs" --log-opt max-size="$max_log_size" "$src_docker_image" read \
-      --config "/configs/$src_config_filename" \
-      --catalog "/configs/$src_catalog_filename" \
-      --state "/configs/$src_state_filename"
-}
-
 function checkSrc() {
     if ((check_src_connection)); then
         log "Validating connection to source..."
@@ -258,48 +277,32 @@ function checkSrc() {
     fi
 }
 
-tempdir=$(mktemp -d)
-echo "Created folder $tempdir for temporary airbyte files"
+function discoverSrc() {
+    docker run --rm -v "$tempdir:/configs" "$src_docker_image" discover \
+      --config "/configs/$src_config_filename"
+}
+
+function readSrc() {
+    docker run --rm -v "$tempdir:/configs" --log-opt max-size="$max_log_size" "$src_docker_image" read \
+      --config "/configs/$src_config_filename" \
+      --catalog "/configs/$src_catalog_filename" \
+      --state "/configs/$src_state_filename"
+}
+
+function sync() {
+    new_source_state_file="$tempdir/new_state.json"
+    readSrc | \
+        tee >(jq -c -R $jq_cmd "fromjson? | select(.type == \"STATE\") | .state.data" | tail -n 1 > "$new_source_state_file") | \
+        tee >(jq -c -R $jq_cmd "fromjson? | select(.type != \"RECORD\" and .type != \"STATE\")" 1>&2) | \
+        jq -c -R $jq_cmd "fromjson? | select(.type == \"RECORD\") | .record.stream |= \"${dst_stream_prefix}\" + ." | \
+        docker run -i -v "$tempdir:/configs" --log-opt max-size="$max_log_size" "$dst_docker_image" write \
+        --config "/configs/$dst_config_filename" \
+        --catalog "/configs/$dst_catalog_filename"
+    cp "$new_source_state_file" "$src_state_filepath"
+}
 
 function cleanup() {
     rm -rf "$tempdir"
-}
-
-trap cleanup EXIT
-trap cleanup SIGINT
-
-set -eo pipefail
-
-main() {
-    setDefaults
-    parseFlags "$@"
-    if ((no_src_pull)); then
-        log "Skipping pull of source image $src_docker_image"
-    else
-        log "Pulling source image $src_docker_image"
-        docker pull $src_docker_image
-    fi
-    writeSrcConfig
-    writeSrcCatalog
-    parseStreamPrefix
-    if ((no_dst_pull)); then
-        log "Skipping pull of destination image $dst_docker_image"
-    else
-        log "Pulling destination image $dst_docker_image"
-        docker pull $dst_docker_image
-    fi
-    writeDstConfig
-    writeDstCatalog
-    checkSrc
-    loadState
-
-    if ((run_src_only)); then
-        log "Only running source"
-        readSrc
-    else
-        log "Running source and passing output to destination"
-        sync
-    fi
 }
 
 function fmtLog(){
@@ -327,7 +330,6 @@ function debug() {
     fi
 }
 
-
 function log() {
     fmtLog "info"
     printLog "$*"
@@ -342,6 +344,46 @@ function err() {
     fmtLog "error"
     printLog "$*"
     exit 1
+}
+
+main() {
+    setDefaults
+    parseFlags "$@"
+    validateInput
+    tempdir=$(mktemp -d)
+    trap cleanup EXIT
+    trap cleanup SIGINT
+    echo "Created folder $tempdir for temporary airbyte files"
+
+    if ((no_src_pull)); then
+        log "Skipping pull of source image $src_docker_image"
+    else
+        log "Pulling source image $src_docker_image"
+        docker pull $src_docker_image
+    fi
+    writeSrcConfig
+    writeSrcCatalog
+
+    if ((no_dst_pull)); then
+        log "Skipping pull of destination image $dst_docker_image"
+    else
+        log "Pulling destination image $dst_docker_image"
+        docker pull $dst_docker_image
+    fi
+    parseStreamPrefix
+    writeDstConfig
+    writeDstCatalog
+    
+    checkSrc
+    loadState
+    if ((run_src_only)); then
+        log "Only running source"
+        readSrc
+    else
+        log "Running source and passing output to destination"
+        sync
+    fi
+    log "Done"
 }
 
 main "$@"; exit
