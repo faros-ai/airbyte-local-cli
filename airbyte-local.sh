@@ -99,7 +99,7 @@ function parseFlags() {
                 max_log_size="$2"
                 shift 2 ;;
             --debug)
-                debug=true
+                debug=1
                 shift 1 ;;
             *)
                 POSITION+=("$1")
@@ -317,7 +317,7 @@ function printLog() {
 }
 
 function debug() {
-    if [[ "$debug" = true ]]; then
+    if ((debug)); then
         fmtLog "debug"
         printLog "$*"
     fi
