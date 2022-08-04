@@ -29,8 +29,7 @@ NC='\033[0m' # No Color
 
 function setDefaults() {
     declare -Ag src_config=()
-    declare -Ag dst_config=( ["graph"]="default" )
-    dst_docker_image="farosai/airbyte-faros-destination"
+    declare -Ag dst_config=()
     src_catalog_overrides="{}"
     max_log_size="10m"
 }
@@ -47,7 +46,7 @@ function parseFlags() {
             --state)
                 src_state_filepath="$2"
                 shift 2 ;;
-            --src-catalog)
+            --src-catalog-overrides)
                 src_catalog_overrides="$2"
                 shift 2 ;;
             --src-catalog-file)
@@ -69,19 +68,19 @@ function parseFlags() {
                 dst_config[$key]="${val}"
                 shift 2 ;;
             --src-only)
-                run_src_only=true
+                run_src_only=1
                 shift 1 ;;
             --check-connection)
-                check_src_connection=true
+                check_src_connection=1
                 shift 1 ;;
             --full-refresh)
                 full_refresh=true
                 shift 1 ;;
             --no-src-pull)
-                no_src_pull=true
+                no_src_pull=1
                 shift 1 ;;
             --no-dst-pull)
-                no_dst_pull=true
+                no_dst_pull=1
                 shift 1 ;;
             --connection-name)
                 connection_name="$2"
@@ -109,15 +108,7 @@ function parseFlags() {
 }
 
 function writeSrcConfig() {
-    # https://stackoverflow.com/questions/44792241/constructing-a-json-hash-from-a-bash-associative-array
-    for key in "${!src_config[@]}"; do
-        printf '%s\0%s\0' "$key" "${src_config[$key]}"
-    done |
-    jq -Rs '
-      split("\u0000")
-      | . as $a
-      | reduce range(0; length/2) as $i
-          ({}; . + {($a[2*$i]): ($a[2*$i + 1]|fromjson? // .)})' > "$tempdir/$src_config_filename"
+    writeConfig src_config "$tempdir/$src_config_filename"
 }
 
 function discoverSrc() {
@@ -141,12 +132,12 @@ function writeSrcCatalog() {
                --argjson src_catalog_overrides "$src_catalog_overrides" '{
               streams: [
                 .catalog.streams[]
-                  | select($src_catalog_overrides[.name] != "disabled")
-                  | .incremental = ((.supported_sync_modes|contains(["incremental"])) and ($src_catalog_overrides[.name] != "full_refresh") and ($full_refresh != "true"))
+                  | select($src_catalog_overrides[.name].disabled != true)
+                  | .incremental = ((.supported_sync_modes|contains(["incremental"])) and ($src_catalog_overrides[.name].sync_mode != "full_refresh") and ($full_refresh != "true"))
                   | {
                       stream: {name: .name},
                       sync_mode: (if .incremental then "incremental" else "full_refresh" end),
-                      destination_sync_mode: (if .incremental then "append" else "overwrite" end)
+                      destination_sync_mode: ($src_catalog_overrides[.name].destination_sync_mode? // if .incremental then "append" else "overwrite" end)
                     }
               ]
             }' > $tempdir/$src_catalog_filename
@@ -171,10 +162,11 @@ function parseStreamPrefix() {
     fi
 }
 
-# TODO: support CE
 function writeDstConfig() {
-    declare -A edition_configs=( ["edition"]="cloud" ["api_url"]="${dst_config[faros_api_url]}" ["api_key"]="${dst_config[faros_api_key]}" ["graph"]="${dst_config[graph]}" )
-    dst_config["edition_configs"]=$(cat << EOF
+    if [[ $dst_docker_image == farosai/airbyte-faros-destination* ]]; then
+        # TODO: support CE
+        declare -A edition_configs=( ["edition"]="cloud" ["api_url"]="${dst_config[faros_api_url]}" ["api_key"]="${dst_config[faros_api_key]}" ["graph"]="${dst_config[graph]}" )
+        dst_config["edition_configs"]=$(cat << EOF
 {
     "edition": "cloud",
     "api_url": "${dst_config[faros_api_url]}",
@@ -183,19 +175,25 @@ function writeDstConfig() {
 }
 EOF
 )
-    unset dst_config[faros_api_url]
-    unset dst_config[faros_api_key]
-    unset dst_config[graph]
+        unset dst_config[faros_api_url]
+        unset dst_config[faros_api_key]
+        unset dst_config[graph]
+    fi
 
+    writeConfig dst_config "$tempdir/$dst_config_filename"
+}
+
+function writeConfig() {
+    local -n config=$1
     # https://stackoverflow.com/questions/44792241/constructing-a-json-hash-from-a-bash-associative-array
-    for key in "${!dst_config[@]}"; do
-        printf '%s\0%s\0' "$key" "${dst_config[$key]}"
+    for key in "${!config[@]}"; do
+        printf '%s\0%s\0' "$key" "${config[$key]}"
     done |
     jq -Rs '
       split("\u0000")
       | . as $a
       | reduce range(0; length/2) as $i
-          ({}; . + {($a[2*$i]): ($a[2*$i + 1]|fromjson? // .)})' > "$tempdir/$dst_config_filename"
+          ({}; . + {($a[2*$i]): ($a[2*$i + 1]|fromjson? // if . == "true" then true elif . == "false" then false else . end)})' > "$2"
 }
 
 function writeDstCatalog() {
@@ -214,7 +212,13 @@ function writeDstCatalog() {
 }
 
 function loadState() {
-    [ -z "$src_state_filepath" ] && src_state_filepath="${connection_name}__state.json"
+    if [[ -z "$src_state_filepath" ]]; then
+        if [[ -z "$connection_name" ]]; then
+            src_state_filepath="state.json"
+        else
+            src_state_filepath="${connection_name}__state.json"
+        fi
+    fi
     log "Using state file: $src_state_filepath"
     if [[ -s "$src_state_filepath" ]]; then
         cat "$src_state_filepath" > "$tempdir/$src_state_filename"
@@ -243,7 +247,7 @@ function readSrc() {
 }
 
 function checkSrc() {
-    if [[ "$check_src_connection" = true ]]; then
+    if ((check_src_connection)); then
         log "Validating connection to source..."
         connectionStatusInfo=$(docker run --rm -v "$tempdir:/configs" "$src_docker_image" check --config "/configs/$src_config_filename")
         connectionStatus=$(echo "$connectionStatusInfo" | jq -r '.connectionStatus.status')
@@ -269,7 +273,7 @@ set -eo pipefail
 main() {
     setDefaults
     parseFlags "$@"
-    if [[ "$no_src_pull" = true ]]; then
+    if ((no_src_pull)); then
         log "Skipping pull of source image $src_docker_image"
     else
         log "Pulling source image $src_docker_image"
@@ -278,7 +282,7 @@ main() {
     writeSrcConfig
     writeSrcCatalog
     parseStreamPrefix
-    if [[ "$no_dst_pull" = true ]]; then
+    if ((no_dst_pull)); then
         log "Skipping pull of destination image $dst_docker_image"
     else
         log "Pulling destination image $dst_docker_image"
@@ -289,7 +293,7 @@ main() {
     checkSrc
     loadState
 
-    if [[ "$run_src_only" = true ]]; then
+    if ((run_src_only)); then
         log "Only running source"
         readSrc
     else
