@@ -22,8 +22,9 @@ dst_catalog_filename=${filename_prefix}_dst_catalog.json
 
 # Theme
 RED='\033[0;31m'
-BLUE='\033[0;34m'
+GREEN='\033[0;32m'
 YELLOW='\033[0;33m'
+BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
 function setDefaults() {
@@ -130,7 +131,6 @@ function writeSrcCatalog() {
             cp "$src_catalog_file" "$tempdir/$src_catalog_filename"
         else
             err "Source catalog file $src_catalog_file doesn't exist"
-            fail
         fi
     elif [[ "$src_catalog_json" ]]; then
         echo "$src_catalog_json" > "$tempdir/$src_catalog_filename"
@@ -167,7 +167,6 @@ function parseStreamPrefix() {
             dst_stream_prefix="${connection_name}__${src_type}__"
         elif [[ -z "$dst_stream_prefix" ]]; then
             err "$dst_docker_image requires a destination stream prefix. Specify this by adding '--dst-stream-prefix <value>'"
-            fail
         fi
     fi
 }
@@ -205,7 +204,6 @@ function writeDstCatalog() {
             cp "$dst_catalog_file" "$tempdir/$dst_catalog_filename"
         else
             err "Destination catalog file $dst_catalog_file doesn't exist"
-            fail
         fi
     elif [[ "$dst_catalog_json" ]]; then
         echo "$dst_catalog_json" > "$tempdir/$dst_catalog_filename"
@@ -251,15 +249,8 @@ function checkSrc() {
         connectionStatus=$(echo "$connectionStatusInfo" | jq -r '.connectionStatus.status')
         if [[ "$connectionStatus" != 'SUCCEEDED' ]]; then
             err $(echo "$connectionStatusInfo" | jq -r '.connectionStatus.message')
-            fail
         fi
         log "Connection validation successful"
-    fi
-}
-
-function debug() {
-    if [[ "$debug" = true ]]; then
-        log "$*"
     fi
 }
 
@@ -308,56 +299,44 @@ main() {
 }
 
 function fmtLog(){
-    if ((no_format)); then
-        fmtLog=""
+    fmtTime="[$(jq -r -n 'now|strflocaltime("%Y-%m-%d %T")')]"
+    if [ "$1" == "error" ]; then
+        fmtLog="$fmtTime ${RED}ERROR${NC} "
+    elif [ "$1" == "warn" ]; then
+        fmtLog="$fmtTime ${YELLOW}WARN${NC} "
+    elif [ "$1" == "debug" ]; then
+        fmtLog="$fmtTime ${GREEN}DEBUG${NC} "
     else
-        fmtTime="[$(jq -r -n 'now|strflocaltime("%Y-%m-%d %T")')]"
-        if [ "$1" == "error" ]; then
-            fmtLog="$fmtTime ${RED}ERROR${NC} "
-        elif [ "$1" == "warn" ]; then
-            fmtLog="$fmtTime ${YELLOW}WARN${NC} "
-        else
-            fmtLog="$fmtTime ${BLUE}INFO${NC} "
-        fi
+        fmtLog="$fmtTime ${BLUE}INFO${NC} "
     fi
 }
 
 function printLog() {
-    if jq -e . >/dev/null 2>&1 <<< "$1"; then
-        if ! ((no_format)); then
-            printf "$fmtLog \n"
-            echo "$*" | jq .
-        else
-            # Minify JSON
-            echo "$*" | jq -c .
-        fi
-    else
-        printf "$fmtLog"
-        printf "$* \n"
+    printf "$fmtLog"
+    printf "$* \n"
+}
+
+function debug() {
+    if [[ "$debug" = true ]]; then
+        fmtLog "debug"
+        printLog "$*"
     fi
 }
 
+
 function log() {
-    if ! ((silent)); then
-        fmtLog "info"
-        printLog "$*"
-    fi
+    fmtLog "info"
+    printLog "$*"
 }
 
 function warn() {
-    if ! ((silent)); then
-        fmtLog "warn"
-        printLog "$*"
-    fi
+    fmtLog "warn"
+    printLog "$*"
 }
 
 function err() {
     fmtLog "error"
     printLog "$*"
-}
-
-function fail() {
-    err "Failed."
     exit 1
 }
 
