@@ -68,19 +68,19 @@ function parseFlags() {
                 dst_config[$key]="${val}"
                 shift 2 ;;
             --src-only)
-                run_src_only=true
+                run_src_only=1
                 shift 1 ;;
             --check-connection)
-                check_src_connection=true
+                check_src_connection=1
                 shift 1 ;;
             --full-refresh)
                 full_refresh=true
                 shift 1 ;;
             --no-src-pull)
-                no_src_pull=true
+                no_src_pull=1
                 shift 1 ;;
             --no-dst-pull)
-                no_dst_pull=true
+                no_dst_pull=1
                 shift 1 ;;
             --connection-name)
                 connection_name="$2"
@@ -247,7 +247,7 @@ function readSrc() {
 }
 
 function checkSrc() {
-    if [[ "$check_src_connection" = true ]]; then
+    if ((check_src_connection)); then
         log "Validating connection to source..."
         connectionStatusInfo=$(docker run --rm -v "$tempdir:/configs" "$src_docker_image" check --config "/configs/$src_config_filename")
         connectionStatus=$(echo "$connectionStatusInfo" | jq -r '.connectionStatus.status')
@@ -273,7 +273,7 @@ set -eo pipefail
 main() {
     setDefaults
     parseFlags "$@"
-    if [[ "$no_src_pull" = true ]]; then
+    if ((no_src_pull)); then
         log "Skipping pull of source image $src_docker_image"
     else
         log "Pulling source image $src_docker_image"
@@ -282,7 +282,7 @@ main() {
     writeSrcConfig
     writeSrcCatalog
     parseStreamPrefix
-    if [[ "$no_dst_pull" = true ]]; then
+    if ((no_dst_pull)); then
         log "Skipping pull of destination image $dst_docker_image"
     else
         log "Pulling destination image $dst_docker_image"
@@ -293,7 +293,7 @@ main() {
     checkSrc
     loadState
 
-    if [[ "$run_src_only" = true ]]; then
+    if ((run_src_only)); then
         log "Only running source"
         readSrc
     else
