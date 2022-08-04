@@ -29,8 +29,7 @@ NC='\033[0m' # No Color
 
 function setDefaults() {
     declare -Ag src_config=()
-    declare -Ag dst_config=( ["graph"]="default" )
-    dst_docker_image="farosai/airbyte-faros-destination"
+    declare -Ag dst_config=()
     src_catalog_overrides="{}"
     max_log_size="10m"
 }
@@ -109,15 +108,7 @@ function parseFlags() {
 }
 
 function writeSrcConfig() {
-    # https://stackoverflow.com/questions/44792241/constructing-a-json-hash-from-a-bash-associative-array
-    for key in "${!src_config[@]}"; do
-        printf '%s\0%s\0' "$key" "${src_config[$key]}"
-    done |
-    jq -Rs '
-      split("\u0000")
-      | . as $a
-      | reduce range(0; length/2) as $i
-          ({}; . + {($a[2*$i]): ($a[2*$i + 1]|fromjson? // .)})' > "$tempdir/$src_config_filename"
+    writeConfig src_config "$tempdir/$src_config_filename"
 }
 
 function discoverSrc() {
@@ -173,8 +164,9 @@ function parseStreamPrefix() {
 
 # TODO: support CE
 function writeDstConfig() {
-    declare -A edition_configs=( ["edition"]="cloud" ["api_url"]="${dst_config[faros_api_url]}" ["api_key"]="${dst_config[faros_api_key]}" ["graph"]="${dst_config[graph]}" )
-    dst_config["edition_configs"]=$(cat << EOF
+    if [[ $dst_docker_image == farosai/airbyte-faros-destination* ]]; then
+        declare -A edition_configs=( ["edition"]="cloud" ["api_url"]="${dst_config[faros_api_url]}" ["api_key"]="${dst_config[faros_api_key]}" ["graph"]="${dst_config[graph]}" )
+        dst_config["edition_configs"]=$(cat << EOF
 {
     "edition": "cloud",
     "api_url": "${dst_config[faros_api_url]}",
@@ -183,19 +175,25 @@ function writeDstConfig() {
 }
 EOF
 )
-    unset dst_config[faros_api_url]
-    unset dst_config[faros_api_key]
-    unset dst_config[graph]
+        unset dst_config[faros_api_url]
+        unset dst_config[faros_api_key]
+        unset dst_config[graph]
+    fi
 
+    writeConfig dst_config "$tempdir/$dst_config_filename"
+}
+
+function writeConfig() {
+    local -n config=$1
     # https://stackoverflow.com/questions/44792241/constructing-a-json-hash-from-a-bash-associative-array
-    for key in "${!dst_config[@]}"; do
-        printf '%s\0%s\0' "$key" "${dst_config[$key]}"
+    for key in "${!config[@]}"; do
+        printf '%s\0%s\0' "$key" "${config[$key]}"
     done |
     jq -Rs '
       split("\u0000")
       | . as $a
       | reduce range(0; length/2) as $i
-          ({}; . + {($a[2*$i]): ($a[2*$i + 1]|fromjson? // .)})' > "$tempdir/$dst_config_filename"
+          ({}; . + {($a[2*$i]): ($a[2*$i + 1]|fromjson? // if . == "true" then true elif . == "false" then false else . end)})' > "$2"
 }
 
 function writeDstCatalog() {
@@ -214,7 +212,13 @@ function writeDstCatalog() {
 }
 
 function loadState() {
-    [ -z "$src_state_filepath" ] && src_state_filepath="${connection_name}__state.json"
+    if [[ -z "$src_state_filepath" ]]; then
+        if [[ -z "$connection_name" ]]; then
+            src_state_filepath="state.json"
+        else
+            src_state_filepath="${connection_name}__state.json"
+        fi
+    fi
     log "Using state file: $src_state_filepath"
     if [[ -s "$src_state_filepath" ]]; then
         cat "$src_state_filepath" > "$tempdir/$src_state_filename"
