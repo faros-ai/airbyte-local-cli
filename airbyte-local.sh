@@ -162,9 +162,9 @@ function parseStreamPrefix() {
     fi
 }
 
-# TODO: support CE
 function writeDstConfig() {
     if [[ $dst_docker_image == farosai/airbyte-faros-destination* ]]; then
+        # TODO: support CE
         declare -A edition_configs=( ["edition"]="cloud" ["api_url"]="${dst_config[faros_api_url]}" ["api_key"]="${dst_config[faros_api_key]}" ["graph"]="${dst_config[graph]}" )
         dst_config["edition_configs"]=$(cat << EOF
 {
