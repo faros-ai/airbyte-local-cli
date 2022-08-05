@@ -49,22 +49,22 @@ You can also force full_refresh mode for all streams by setting the
 
 | Option                           | Req | Description                                                                                       |
 | -------------------------------- | --- | ------------------------------------------------------------------------------------------------- |
-| `--src <image>`                  | Y   | Airbyte source docker image                                                                       |
-| `--dst <image>`                  | Y   | Airbyte destination docker image                                                                  |
-| `--src.<key> <value>`            |     | Append `"key": "value"` into the source config                                                    |
-| `--dst.<key> <value>`            |     | Append `"key": "value"` into the destination config                                               |
-| `--check-connection`             |     | Validate the Airbyte source connection                                                            |
-| `--full-refresh`                 |     | Force source full_refresh and destination overwrite mode                                          |
-| `--state <path>`                 |     | Override state file path for incremental sync                                                     |
-| `--src-catalog-overrides <json>` |     | JSON string of sync mode overrides. See [overriding default catalog](#overriding-default-catalog) |
-| `--src-catalog-file <path>`      |     | Source catalog file path                                                                          |
-| `--src-catalog-json <json>`      |     | Source catalog as a JSON string                                                                   |
-| `--dst-catalog-file <path>`      |     | Destination catalog file path                                                                     |
-| `--dst-catalog-json <json>`      |     | Destination catalog as a JSON string                                                              |
-| `--dst-stream-prefix <prefix>`   |     | Destination stream prefix                                                                         |
-| `--no-src-pull`                  |     | Skip pulling Airbyte source image                                                                 |
-| `--no-dst-pull`                  |     | Skip pulling Airbyte destination image                                                            |
-| `--src-only`                     |     | Only run the Airbyte source                                                                       |
-| `--connection-name`              |     | Connection name used in various places                                                            |
-| `--max-log-size <size>`          |     | Set docker max log size                                                                           |
-| `--debug`                        |     | Enable debug logging                                                                              |
+| --src \<image\>                  | Y   | Airbyte source docker image                                                                       |
+| --dst \<image\>                  | Y   | Airbyte destination docker image                                                                  |
+| --src.\<key\> \<value\>          |     | Append `"key": "value"` into the source config                                                    |
+| --dst.\<key\> \<value\>          |     | Append `"key": "value"` into the destination config                                               |
+| --check-connection               |     | Validate the Airbyte source connection                                                            |
+| --full-refresh                   |     | Force source full_refresh and destination overwrite mode                                          |
+| --state \<path\>                 |     | Override state file path for incremental sync                                                     |
+| --src-catalog-overrides \<json\> |     | JSON string of sync mode overrides. See [overriding default catalog](#overriding-default-catalog) |
+| --src-catalog-file \<path\>      |     | Source catalog file path                                                                          |
+| --src-catalog-json \<json\>      |     | Source catalog as a JSON string                                                                   |
+| --dst-catalog-file \<path\>      |     | Destination catalog file path                                                                     |
+| --dst-catalog-json \<json\>      |     | Destination catalog as a JSON string                                                              |
+| --dst-stream-prefix \<prefix\>   |     | Destination stream prefix                                                                         |
+| --no-src-pull                    |     | Skip pulling Airbyte source image                                                                 |
+| --no-dst-pull                    |     | Skip pulling Airbyte destination image                                                            |
+| --src-only                       |     | Only run the Airbyte source                                                                       |
+| --connection-name                |     | Connection name used in various places                                                            |
+| --max-log-size \<size\>          |     | Set docker max log size                                                                           |
+| --debug                          |     | Enable debug logging                                                                              |
