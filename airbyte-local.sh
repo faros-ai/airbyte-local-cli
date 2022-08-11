@@ -145,7 +145,7 @@ function validateInput() {
     if [[ -z "$src_docker_image" ]]; then
         err "Airbyte source docker image must be set using '--src <image>'"
     fi
-    if [[ -z "$dst_docker_image" ]]; then
+    if [[ -z "$dst_docker_image" ]] && ! ((run_src_only)); then
         err "Airbyte destination docker image must be set using '--dst <image>'"
     fi
 }
@@ -283,7 +283,7 @@ function discoverSrc() {
 }
 
 function readSrc() {
-    docker run --rm -v "$tempdir:/configs" --log-opt max-size="$max_log_size" "$src_docker_image" read \
+    docker run --init --cidfile="$tempdir/src_cid" --rm -v "$tempdir:/configs" --log-opt max-size="$max_log_size" "$src_docker_image" read \
       --config "/configs/$src_config_filename" \
       --catalog "/configs/$src_catalog_filename" \
       --state "/configs/$src_state_filename"
@@ -295,13 +295,19 @@ function sync() {
         tee >(jq -c -R $jq_cmd "fromjson? | select(.type == \"STATE\") | .state.data" | tail -n 1 > "$new_source_state_file") | \
         tee >(jq -c -R $jq_cmd "fromjson? | select(.type != \"RECORD\" and .type != \"STATE\")" 1>&2) | \
         jq -c -R $jq_cmd "fromjson? | select(.type == \"RECORD\") | .record.stream |= \"${dst_stream_prefix}\" + ." | \
-        docker run -i -v "$tempdir:/configs" --log-opt max-size="$max_log_size" "$dst_docker_image" write \
+        docker run --cidfile="$tempdir/dst_cid" --rm -i --init -v "$tempdir:/configs" --log-opt max-size="$max_log_size" "$dst_docker_image" write \
         --config "/configs/$dst_config_filename" \
         --catalog "/configs/$dst_catalog_filename"
     cp "$new_source_state_file" "$src_state_filepath"
 }
 
 function cleanup() {
+    if [[ -s "$tempdir/src_cid" ]]; then
+        docker container kill $(cat "$tempdir/src_cid") 2>/dev/null || true
+    fi
+    if [[ -s "$tempdir/dst_cid" ]]; then
+        docker container kill $(cat "$tempdir/dst_cid") 2>/dev/null || true
+    fi
     rm -rf "$tempdir"
 }
 
@@ -364,22 +370,22 @@ main() {
     writeSrcConfig
     writeSrcCatalog
 
-    if ((no_dst_pull)); then
-        log "Skipping pull of destination image $dst_docker_image"
-    else
-        log "Pulling destination image $dst_docker_image"
-        docker pull $dst_docker_image
-    fi
-    parseStreamPrefix
-    writeDstConfig
-    writeDstCatalog
-    
     checkSrc
     loadState
     if ((run_src_only)); then
         log "Only running source"
         readSrc
     else
+        if ((no_dst_pull)); then
+            log "Skipping pull of destination image $dst_docker_image"
+        else
+            log "Pulling destination image $dst_docker_image"
+            docker pull $dst_docker_image
+        fi
+        parseStreamPrefix
+        writeDstConfig
+        writeDstCatalog
+
         log "Running source and passing output to destination"
         sync
     fi
