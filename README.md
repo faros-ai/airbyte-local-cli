@@ -49,8 +49,8 @@ You can also force full_refresh mode for all streams by setting the
 
 | Option                           | Req | Description                                                                                       |
 | -------------------------------- | --- | ------------------------------------------------------------------------------------------------- |
-| --src \<image\>                  | Y   | Airbyte source docker image                                                                       |
-| --dst \<image\>                  | Y   | Airbyte destination docker image                                                                  |
+| --src \<image\>                  | ✅   | Airbyte source docker image                                                                       |
+| --dst \<image\>                  | ✅   | Airbyte destination docker image                                                                  |
 | --src.\<key\> \<value\>          |     | Append `"key": "value"` into the source config                                                    |
 | --dst.\<key\> \<value\>          |     | Append `"key": "value"` into the destination config                                               |
 | --check-connection               |     | Validate the Airbyte source connection                                                            |
