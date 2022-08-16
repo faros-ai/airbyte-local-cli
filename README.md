@@ -4,7 +4,7 @@ CLI for running Airbyte sources & destinations locally without Airbyte server
 
 ## Example Usage
 
-**Note**: The `src.*` and `dst.*` arguments will differ depending on the source and destination being used.
+Requirements: `bash`, `docker`, `jq`, `tee`.
 
 ```sh
 ./airbyte-local.sh \
@@ -19,6 +19,8 @@ CLI for running Airbyte sources & destinations locally without Airbyte server
    --state state.json \
    --check-connection
 ```
+**Note**: The `src.*` and `dst.*` arguments will differ depending on the source and destination being used.
+
 
 ## Overriding Default Catalog
 
@@ -49,8 +51,8 @@ You can also force full_refresh mode for all streams by setting the
 
 | Option                           | Req | Description                                                                                       |
 | -------------------------------- | --- | ------------------------------------------------------------------------------------------------- |
-| --src \<image\>                  | Y   | Airbyte source docker image                                                                       |
-| --dst \<image\>                  | Y   | Airbyte destination docker image                                                                  |
+| --src \<image\>                  | Yes | Airbyte source docker image                                                                       |
+| --dst \<image\>                  | Yes | Airbyte destination docker image                                                                  |
 | --src.\<key\> \<value\>          |     | Append `"key": "value"` into the source config                                                    |
 | --dst.\<key\> \<value\>          |     | Append `"key": "value"` into the destination config                                               |
 | --check-connection               |     | Validate the Airbyte source connection                                                            |

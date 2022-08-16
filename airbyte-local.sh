@@ -23,10 +23,11 @@ dst_config_filename=${filename_prefix}_dst_config.json
 dst_catalog_filename=${filename_prefix}_dst_catalog.json
 
 # Theme
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[0;33m'
-BLUE='\033[0;34m'
+RED='\u001b[31m'
+GREEN='\u001b[32m'
+YELLOW='\u001b[33m'
+BLUE='\u001b[34m'
+CYAN='\u001b[36m'
 NC='\033[0m' # No Color
 
 function help() {
@@ -145,7 +146,7 @@ function validateInput() {
     if [[ -z "$src_docker_image" ]]; then
         err "Airbyte source docker image must be set using '--src <image>'"
     fi
-    if [[ -z "$dst_docker_image" ]]; then
+    if [[ -z "$dst_docker_image" ]] && ! ((run_src_only)); then
         err "Airbyte destination docker image must be set using '--dst <image>'"
     fi
 }
@@ -200,8 +201,8 @@ function writeSrcCatalog() {
     elif [[ "$src_catalog_json" ]]; then
         echo "$src_catalog_json" > "$tempdir/$src_catalog_filename"
     else
-        discoverSrc | \
-            tee >(jq -c -R $jq_cmd "fromjson? | select(.type != \"CATALOG\")" 1>&2) | \
+        discoverSrc |
+            tee >(jq -cR "fromjson? | select(.type != \"CATALOG\")" >&2) |
             jq --arg full_refresh "$full_refresh" \
                --argjson src_catalog_overrides "$src_catalog_overrides" '{
               streams: [
@@ -285,7 +286,7 @@ function discoverSrc() {
 }
 
 function readSrc() {
-    docker run --rm -v "$tempdir:/configs" --log-opt max-size="$max_log_size" "$src_docker_image" read \
+    docker run --init --cidfile="$tempdir/src_cid" --rm -v "$tempdir:/configs" --log-opt max-size="$max_log_size" "$src_docker_image" read \
       --config "/configs/$src_config_filename" \
       --catalog "/configs/$src_catalog_filename" \
       --state "/configs/$src_state_filename"
@@ -293,17 +294,26 @@ function readSrc() {
 
 function sync() {
     new_source_state_file="$tempdir/new_state.json"
-    readSrc | \
-        tee >(jq -c -R $jq_cmd "fromjson? | select(.type == \"STATE\") | .state.data" | tail -n 1 > "$new_source_state_file") | \
-        tee >(jq -c -R $jq_cmd "fromjson? | select(.type != \"RECORD\" and .type != \"STATE\")" 1>&2) | \
-        jq -c -R $jq_cmd "fromjson? | select(.type == \"RECORD\") | .record.stream |= \"${dst_stream_prefix}\" + ." | \
-        docker run -i -v "$tempdir:/configs" --log-opt max-size="$max_log_size" "$dst_docker_image" write \
-        --config "/configs/$dst_config_filename" \
-        --catalog "/configs/$dst_catalog_filename"
+    readSrc |
+        tee >(jq -cR 'fromjson? | select(.type == "STATE") | .state.data' | tail -n 1 > "$new_source_state_file") |
+        tee >(jq -cCR 'fromjson? | select(.type != "RECORD" and .type != "STATE")' |
+            jq -rR " \"${GREEN}[SRC]:  \" + ." >&2) |
+        jq -cR "fromjson? | select(.type == \"RECORD\") | .record.stream |= \"${dst_stream_prefix}\" + ." |
+        docker run --cidfile="$tempdir/dst_cid" --rm -i --init -v "$tempdir:/configs" --log-opt max-size="$max_log_size" "$dst_docker_image" write \
+        --config "/configs/$dst_config_filename" --catalog "/configs/$dst_catalog_filename" |
+        # https://stedolan.github.io/jq/manual/#Colors
+        JQ_COLORS="1;30:0;37:0;37:0;37:0;36:1;37:1;37" \
+        jq -cCR 'fromjson?' | jq -rR " \"${CYAN}[DST]:  \" + ."
     cp "$new_source_state_file" "$src_state_filepath"
 }
 
 function cleanup() {
+    if [[ -s "$tempdir/src_cid" ]]; then
+        docker container kill $(cat "$tempdir/src_cid") 2>/dev/null || true
+    fi
+    if [[ -s "$tempdir/dst_cid" ]]; then
+        docker container kill $(cat "$tempdir/dst_cid") 2>/dev/null || true
+    fi
     rm -rf "$tempdir"
 }
 
@@ -366,22 +376,22 @@ main() {
     writeSrcConfig
     writeSrcCatalog
 
-    if ((no_dst_pull)); then
-        log "Skipping pull of destination image $dst_docker_image"
-    else
-        log "Pulling destination image $dst_docker_image"
-        docker pull $dst_docker_image
-    fi
-    parseStreamPrefix
-    writeDstConfig
-    writeDstCatalog
-    
     checkSrc
     loadState
     if ((run_src_only)); then
         log "Only running source"
-        readSrc
+        readSrc | jq -cCR 'fromjson?' | jq -rR "\"${GREEN}[SRC]:  \" + ."
     else
+        if ((no_dst_pull)); then
+            log "Skipping pull of destination image $dst_docker_image"
+        else
+            log "Pulling destination image $dst_docker_image"
+            docker pull $dst_docker_image
+        fi
+        parseStreamPrefix
+        writeDstConfig
+        writeDstCatalog
+
         log "Running source and passing output to destination"
         sync
     fi
