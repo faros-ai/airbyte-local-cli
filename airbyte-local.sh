@@ -152,6 +152,7 @@ function validateInput() {
 
 function writeSrcConfig() {
     writeConfig src_config "$tempdir/$src_config_filename"
+    debug "Using source config: $(jq -c < $tempdir/$src_config_filename)"
 }
 
 function writeDstConfig() {
@@ -173,6 +174,7 @@ EOF
     fi
 
     writeConfig dst_config "$tempdir/$dst_config_filename"
+    debug "Using destination config: $(jq -c < $tempdir/$dst_config_filename)"
 }
 
 function writeConfig() {
@@ -207,7 +209,7 @@ function writeSrcCatalog() {
                   | select($src_catalog_overrides[.name].disabled != true)
                   | .incremental = ((.supported_sync_modes|contains(["incremental"])) and ($src_catalog_overrides[.name].sync_mode != "full_refresh") and ($full_refresh != "true"))
                   | {
-                      stream: {name: .name},
+                      stream: {name: .name, json_schema: {}},
                       sync_mode: (if .incremental then "incremental" else "full_refresh" end),
                       destination_sync_mode: ($src_catalog_overrides[.name].destination_sync_mode? // if .incremental then "append" else "overwrite" end)
                     }
