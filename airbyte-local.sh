@@ -90,13 +90,15 @@ function parseFlags() {
                 shift 2 ;;
             --src.*)
                 IFS='.' read -ra strarr <<< $1
-                key="${strarr[1]}"
+                keys=( "${strarr[@]:1}" )
+                key=$(IFS=.; echo "${keys[*]}")
                 val="$2"
                 src_config[$key]="${val}"
                 shift 2 ;;
             --dst.*)
                 IFS='.' read -ra strarr <<< $1
-                key="${strarr[1]}"
+                keys=( "${strarr[@]:1}" )
+                key=$(IFS=.; echo "${keys[*]}")
                 val="$2"
                 dst_config[$key]="${val}"
                 shift 2 ;;
@@ -180,7 +182,7 @@ EOF
 
 function writeConfig() {
     local -n config=$1
-    # https://stackoverflow.com/questions/44792241/constructing-a-json-hash-from-a-bash-associative-array
+    # Inspired by https://stackoverflow.com/questions/44792241/constructing-a-json-hash-from-a-bash-associative-array
     for key in "${!config[@]}"; do
         printf '%s\0%s\0' "$key" "${config[$key]}"
     done |
@@ -188,7 +190,7 @@ function writeConfig() {
       split("\u0000")
       | . as $a
       | reduce range(0; length/2) as $i
-          ({}; . + {($a[2*$i]): ($a[2*$i + 1]|fromjson? // if . == "true" then true elif . == "false" then false else . end)})' > "$2"
+          ({}; . * setpath(($a[2*$i] / ".");($a[2*$i + 1]|fromjson? // if . == "true" then true elif . == "false" then false else . end)))' > "$2"
 }
 
 function writeSrcCatalog() {
