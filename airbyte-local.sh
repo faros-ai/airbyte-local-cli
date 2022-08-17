@@ -297,15 +297,15 @@ function readSrc() {
 function sync() {
     new_source_state_file="$tempdir/new_state.json"
     readSrc |
-        tee >(jq -cR 'fromjson? | select(.type == "STATE") | .state.data' | tail -n 1 > "$new_source_state_file") |
-        tee >(jq -cCR 'fromjson? | select(.type != "RECORD" and .type != "STATE")' |
-            jq -rR " \"${GREEN}[SRC]:  \" + ." >&2) |
-        jq -cR "fromjson? | select(.type == \"RECORD\") | .record.stream |= \"${dst_stream_prefix}\" + ." |
+        tee >(jq -cCR --unbuffered 'fromjson? | select(.type != "RECORD" and .type != "STATE")' |
+            jq -rR --unbuffered " \"${GREEN}[SRC]:  \" + ." >&2) |
+        jq -cR --unbuffered "fromjson? | select(.type == \"RECORD\" or .type == \"STATE\") | .record.stream |= \"${dst_stream_prefix}\" + ." |
         docker run --cidfile="$tempdir/dst_cid" --rm -i --init -v "$tempdir:/configs" --log-opt max-size="$max_log_size" "$dst_docker_image" write \
         --config "/configs/$dst_config_filename" --catalog "/configs/$dst_catalog_filename" |
+        tee >(jq -cR 'fromjson? | select(.type == "STATE") | .state.data' | tail -n 1 > "$new_source_state_file") |
         # https://stedolan.github.io/jq/manual/#Colors
         JQ_COLORS="1;30:0;37:0;37:0;37:0;36:1;37:1;37" \
-        jq -cCR 'fromjson?' | jq -rR " \"${CYAN}[DST]:  \" + ."
+        jq -cCR --unbuffered 'fromjson?' | jq -rR " \"${CYAN}[DST]:  \" + ."
     cp "$new_source_state_file" "$src_state_filepath"
 }
 
@@ -379,9 +379,9 @@ main() {
     writeSrcCatalog
 
     checkSrc
-    loadState
     if ((run_src_only)); then
         log "Only running source"
+        loadState
         readSrc | jq -cCR 'fromjson?' | jq -rR "\"${GREEN}[SRC]:  \" + ."
     else
         if ((no_dst_pull)); then
@@ -391,6 +391,7 @@ main() {
             docker pull $dst_docker_image
         fi
         parseStreamPrefix
+        loadState
         writeDstConfig
         writeDstCatalog
 
