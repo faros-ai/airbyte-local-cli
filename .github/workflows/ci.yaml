@@ -31,5 +31,5 @@ jobs:
       run: |
         docker run --rm \
           -v "$PWD/test:/src" \
-          -v "$PWD/airbyte-local_spec.sh:/airbyte-local_spec.sh" \
+          -v "$PWD/airbyte-local.sh:/airbyte-local.sh" \
           farosai/shellspec:kcov
