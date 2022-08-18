@@ -49,14 +49,12 @@ Describe 'building source config'
         When run source ../airbyte-local.sh \
                 --src 'farosai/dummy-source-image' \
                 --src-only \
-                --src.feed_cfg '{"feed_name":"jira-feed"}' \
-                --src.feed_cfg.feed_path 'tms/jira-feed' \
                 --src.feed_cfg.inner_cfg.x '1' \
                 --src.feed_cfg.inner_cfg.y '2' \
                 --src.feed_cfg.inner_cfg.z '{"a":"3"}' \
                 --src.feed_cfg.inner_cfg.z.b '4' \
                 --debug
-        The output should include 'Using source config: {"feed_cfg":{"inner_cfg":{"y":2,"x":1,"z":{"a":"3","b":4}},"feed_path":"tms/jira-feed","feed_name":"jira-feed"}}'
+        The output should include 'Using source config: {"feed_cfg":{"inner_cfg":{"y":2,"x":1,"z":{"a":"3","b":4}}}}'
     End
 End
 
