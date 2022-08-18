@@ -1,0 +1,32 @@
+name: CI
+
+on:
+  push:
+    branches:
+    - main
+    paths-ignore:
+    - '**.md'
+  pull_request:
+    branches:
+    - main
+
+jobs:
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      FORCE_COLOR: true
+    steps:
+    - uses: actions/checkout@v2
+    # Based on https://github.com/snyk/snyk/blob/master/.github/workflows/smoke-tests.yml
+    
+    - name: Install ShellSpec
+      run: |
+        curl -fsSL https://git.io/shellspec | sh -s -- -y
+        sudo ln -s ${HOME}/.local/lib/shellspec/shellspec /usr/local/bin/shellspec
+        shellspec --version
+
+    - name: Run tests
+      working-directory: test
+      run: shellspec -f d
