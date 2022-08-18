@@ -1,2 +1,2 @@
 FROM shellspec/shellspec:kcov
-RUN apk add --no-cache curl jq gawk sed docker
+RUN apk add --no-cache jq docker
