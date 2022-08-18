@@ -21,12 +21,15 @@ jobs:
     - uses: actions/checkout@v2
     # Based on https://github.com/snyk/snyk/blob/master/.github/workflows/smoke-tests.yml
     
-    - name: Install ShellSpec
-      run: |
-        curl -fsSL https://git.io/shellspec | sh -s -- -y
-        sudo ln -s ${HOME}/.local/lib/shellspec/shellspec /usr/local/bin/shellspec
-        shellspec --version
-
-    - name: Run tests
+    # Shellspec base image does not have curl, jq, awk, sed
+    - name: Build Shellspec image
       working-directory: test
-      run: shellspec -f d
+      run: |
+        docker build . -t 'farosai/shellspec:kcov'
+    
+    - name: Run ShellSpec tests
+      run: |
+        docker run --rm \
+          -v "$PWD/test:/src" \
+          -v "$PWD/airbyte-local_spec.sh:/airbyte-local_spec.sh" \
+          farosai/shellspec:kcov
