@@ -2,6 +2,8 @@
 
 CLI for running Airbyte sources & destinations locally without Airbyte server
 
+![Alt Text](https://github.com/Faros-ai/heracles/raw/main/resources/demo.gif)
+
 ## Example Usage
 
 Requirements: `bash`, `docker`, `jq`, `tee`.
@@ -20,7 +22,6 @@ Requirements: `bash`, `docker`, `jq`, `tee`.
    --check-connection
 ```
 **Note**: The `src.*` and `dst.*` arguments will differ depending on the source and destination being used.
-
 
 ## Overriding Default Catalog
 
