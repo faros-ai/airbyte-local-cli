@@ -58,4 +58,78 @@ Describe 'building source config'
     End
 End
 
+Describe 'building source catalog'
+    # Mock the docker command that invokes the Airbyte source "discover"
+    docker() {
+        if [[ $* =~ ^run.*discover ]]; then
+            echo '
+            {
+                "catalog": {
+                    "streams": [
+                    {
+                        "name": "faros_feed",
+                        "json_schema": {
+                        "$schema": "http://json-schema.org/draft-07/schema#",
+                        "type": "object",
+                        "properties": {
+                            "message": {
+                            "type": "string"
+                            }
+                        }
+                        },
+                        "supported_sync_modes": [
+                        "full_refresh",
+                        "incremental"
+                        ],
+                        "source_defined_cursor": true,
+                        "default_cursor_field": []
+                    }
+                    ]
+                },
+                "type": "CATALOG"
+            }'
+        fi
+    }
+
+    It 'uses discovered catalog'
+        When run source ../airbyte-local.sh \
+                --src 'farosai/dummy-source-image' \
+                --src-only \
+                --src.feed_cfg.feed_name 'jira-feed' \
+                --src.feed_cfg.feed_path 'tms/jira-feed' \
+                --debug
+        The output should include 'Using source configured catalog: {"streams":[{"stream":{"name":"faros_feed","json_schema":{}},"sync_mode":"incremental","destination_sync_mode":"append"}]}'
+    End
+    It 'full-refresh flag forces full refresh and overwrite mode'
+        When run source ../airbyte-local.sh \
+                --src 'farosai/dummy-source-image' \
+                --src-only \
+                --src.feed_cfg.feed_name 'jira-feed' \
+                --src.feed_cfg.feed_path 'tms/jira-feed' \
+                --full-refresh \
+                --debug
+        The output should include 'Using source configured catalog: {"streams":[{"stream":{"name":"faros_feed","json_schema":{}},"sync_mode":"full_refresh","destination_sync_mode":"overwrite"}]}'
+    End
+    It 'uses src-catalog-overrides sync mode'
+        When run source ../airbyte-local.sh \
+                --src 'farosai/dummy-source-image' \
+                --src-only \
+                --src.feed_cfg.feed_name 'jira-feed' \
+                --src.feed_cfg.feed_path 'tms/jira-feed' \
+                --src-catalog-overrides '{"faros_feed": {"sync_mode": "full_refresh"}}' \
+                --debug
+        The output should include 'Using source configured catalog: {"streams":[{"stream":{"name":"faros_feed","json_schema":{}},"sync_mode":"full_refresh","destination_sync_mode":"overwrite"}]}'
+    End
+    It 'ignores disabled streams'
+        When run source ../airbyte-local.sh \
+                --src 'farosai/dummy-source-image' \
+                --src-only \
+                --src.feed_cfg.feed_name 'jira-feed' \
+                --src.feed_cfg.feed_path 'tms/jira-feed' \
+                --src-catalog-overrides '{"faros_feed": {"disabled": true}}' \
+                --debug
+        The output should include 'Using source configured catalog: {"streams":[]}'
+    End
+End
+
 
