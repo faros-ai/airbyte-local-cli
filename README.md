@@ -1,4 +1,4 @@
-# Airbyte Local
+# Airbyte Local CLI [![CI](https://github.com/faros-ai/airbyte-local-cli/actions/workflows/ci.yaml/badge.svg)](https://github.com/faros-ai/airbyte-local-cli/actions/workflows/ci.yaml)
 
 CLI for running Airbyte sources & destinations locally without Airbyte server
 
