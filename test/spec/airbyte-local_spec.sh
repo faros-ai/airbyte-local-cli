@@ -132,4 +132,44 @@ Describe 'building source catalog'
     End
 End
 
+Describe 'check source'
+    It 'check successful'
+        # Mock the docker command that invokes the Airbyte source "check"
+        docker() {
+            if [[ $* =~ ^run.*check ]]; then
+                echo '
+                {"connectionStatus":{"status":"SUCCEEDED"},"type":"CONNECTION_STATUS"}'
+            fi
+        }
+
+        When run source ../airbyte-local.sh \
+                --src 'farosai/dummy-source-image' \
+                --src-only \
+                --src.feed_cfg.feed_name 'jira-feed' \
+                --src.feed_cfg.feed_path 'tms/jira-feed' \
+                --check-connection
+
+        The output should include 'Connection validation successful'
+    End
+    It 'check failed'
+        # Mock the docker command that invokes the Airbyte source "check"
+        docker() {
+            if [[ $* =~ ^run.*check ]]; then
+                echo '
+                {"connectionStatus":{"status":"FAILED", "message":"Something went wrong"},"type":"CONNECTION_STATUS"}'
+            fi
+        }
+
+        When run source ../airbyte-local.sh \
+                --src 'farosai/dummy-source-image' \
+                --src-only \
+                --src.feed_cfg.feed_name 'jira-feed' \
+                --src.feed_cfg.feed_path 'tms/jira-feed' \
+                --check-connection
+
+        The output should include 'Something went wrong'
+        The status should be failure
+    End
+End
+
 
