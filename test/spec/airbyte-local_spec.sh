@@ -172,4 +172,36 @@ Describe 'check source'
     End
 End
 
+Describe 'building destination config'
+    # Makes the docker command a noop since we don't need it for these tests
+    docker() {
+        true
+    }
+
+    It 'merges keys recursively'
+        When run source ../airbyte-local.sh \
+                --src 'farosai/dummy-source-image' \
+                --dst 'farosai/dummy-destination-image' \
+                --dst.feed_cfg.inner_cfg.x '1' \
+                --dst.feed_cfg.inner_cfg.y '2' \
+                --dst.feed_cfg.inner_cfg.z '{"a":"3"}' \
+                --dst.feed_cfg.inner_cfg.z.b '4' \
+                --debug
+
+        The output should include 'Using destination config: {"feed_cfg":{"inner_cfg":{"y":2,"x":1,"z":{"a":"3","b":4}}}}'
+    End
+    It 'adds Faros SaaS specific config when using faros-destination'
+        When run source ../airbyte-local.sh \
+                --src 'farosai/dummy-source-image' \
+                --dst 'farosai/airbyte-faros-destination' \
+                --dst.faros_api_url 'http://faros' \
+                --dst.faros_api_key 'XYZ' \
+                --dst.graph 'g1' \
+                --dst-stream-prefix 'dummy_prefix' \
+                --debug
+
+        The output should include 'Using destination config: {"edition_configs":{"edition":"cloud","api_url":"http://faros","api_key":"XYZ","graph":"g1"}}'
+    End
+End
+
 
