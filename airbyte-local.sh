@@ -369,7 +369,7 @@ main() {
     tempdir=$(mktemp -d)
     trap cleanup EXIT
     trap cleanup SIGINT
-    echo "Created folder $tempdir for temporary airbyte files"
+    echo "Created folder $tempdir for temporary Airbyte files"
 
     if ((no_src_pull)); then
         log "Skipping pull of source image $src_docker_image"
@@ -397,7 +397,7 @@ main() {
         writeDstConfig
         writeDstCatalog
 
-        log "Running source and passing output to destination"
+        log "Running ${GREEN}source [SRC]${NC} and passing output to ${CYAN}destination [DST]${NC}"
         sync
     fi
     log "Done"
