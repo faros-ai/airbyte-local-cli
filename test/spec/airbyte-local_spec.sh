@@ -204,4 +204,46 @@ Describe 'building destination config'
     End
 End
 
+Describe 'building destination catalog'
+    # Mock the docker command that invokes the Airbyte source "discover"
+    docker() {
+        if [[ $* =~ ^run.*discover ]]; then
+            echo '
+            {
+                "catalog": {
+                    "streams": [
+                    {
+                        "name": "faros_feed",
+                        "json_schema": {
+                        "$schema": "http://json-schema.org/draft-07/schema#",
+                        "type": "object",
+                        "properties": {
+                            "message": {
+                            "type": "string"
+                            }
+                        }
+                        },
+                        "supported_sync_modes": [
+                        "full_refresh",
+                        "incremental"
+                        ],
+                        "source_defined_cursor": true,
+                        "default_cursor_field": []
+                    }
+                    ]
+                },
+                "type": "CATALOG"
+            }'
+        fi
+    }
 
+    It 'uses source catalog with prefixed stream name'
+        When run source ../airbyte-local.sh \
+                --src 'farosai/dummy-source-image' \
+                --dst 'farosai/dummy-destination-image' \
+                --dst-stream-prefix 'dummy_prefix__' \
+                --debug
+
+        The output should include 'Using destination configured catalog: {"streams":[{"stream":{"name":"dummy_prefix__faros_feed","json_schema":{}},"sync_mode":"incremental","destination_sync_mode":"append"}]}'
+    End
+End
