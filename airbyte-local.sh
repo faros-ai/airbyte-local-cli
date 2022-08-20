@@ -139,9 +139,6 @@ function parseFlags() {
             --memory)
                 memory="$2"
                 shift 2 ;;
-            --cpus)
-                cpus="$2"
-                shift 2 ;;
             --debug)
                 debug=1
                 shift 1 ;;
