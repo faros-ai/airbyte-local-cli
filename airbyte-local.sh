@@ -58,7 +58,7 @@ function help() {
     echo "--src-only                        Only run the Airbyte source"
     echo "--connection-name                 Connection name used in various places"
     echo "--max-log-size <size>             Set Docker max log size"
-    echo "--memory <mem>                    Set Docker maximum amount of memory the containers can use, e.g '1g'"
+    echo "--memory <mem>                    Set Docker maximum amount of memory each container can use, e.g '1g'"
     echo "--debug                           Enable debug logging"
     exit
 }
