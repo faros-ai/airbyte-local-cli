@@ -7,7 +7,7 @@ Describe 'source and destination image validation'
             )
         }
         When call airbyte_local_test
-        The output should include "Airbyte source docker image must be set using '--src <image>'"
+        The output should include "Airbyte source Docker image must be set using '--src <image>'"
     End
     It 'fails if missing destination image'
         airbyte_local_test() {
@@ -17,7 +17,7 @@ Describe 'source and destination image validation'
             )
         }
         When call airbyte_local_test
-        The output should include "Airbyte destination docker image must be set using '--dst <image>'"
+        The output should include "Airbyte destination Docker image must be set using '--dst <image>'"
     End
 End
 
