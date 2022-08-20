@@ -19,8 +19,8 @@ Requirements: `bash`, `docker`, `jq`, `tee`.
    --state state.json \
    --check-connection
 ```
-**Note**: The `src.*` and `dst.*` arguments will differ depending on the source and destination being used.
 
+**Note**: The `src.*` and `dst.*` arguments will differ depending on the source and destination being used.
 
 ## Overriding Default Catalog
 
@@ -51,8 +51,8 @@ You can also force full_refresh mode for all streams by setting the
 
 | Option                           | Req | Description                                                                                       |
 | -------------------------------- | --- | ------------------------------------------------------------------------------------------------- |
-| --src \<image\>                  | Yes | Airbyte source docker image                                                                       |
-| --dst \<image\>                  | Yes | Airbyte destination docker image                                                                  |
+| --src \<image\>                  | Yes | Airbyte source Docker image                                                                       |
+| --dst \<image\>                  | Yes | Airbyte destination Docker image                                                                  |
 | --src.\<key\> \<value\>          |     | Append `"key": "value"` into the source config                                                    |
 | --dst.\<key\> \<value\>          |     | Append `"key": "value"` into the destination config                                               |
 | --check-connection               |     | Validate the Airbyte source connection                                                            |
@@ -68,5 +68,6 @@ You can also force full_refresh mode for all streams by setting the
 | --no-dst-pull                    |     | Skip pulling Airbyte destination image                                                            |
 | --src-only                       |     | Only run the Airbyte source                                                                       |
 | --connection-name                |     | Connection name used in various places                                                            |
-| --max-log-size \<size\>          |     | Set docker max log size                                                                           |
+| --max-log-size \<size\>          |     | Set Docker max log size                                                                           |
+| --memory \<mem\>                 |     | Set Docker maximum amount of memory each container can use, e.g `"1g"`                            |
 | --debug                          |     | Enable debug logging                                                                              |

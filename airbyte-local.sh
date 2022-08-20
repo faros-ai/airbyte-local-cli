@@ -40,8 +40,8 @@ function help() {
     echo
     echo "options:"
     echo
-    echo "--src <image> (required)          Airbyte source docker image"
-    echo "--dst <image> (required)          Airbyte destination docker image"
+    echo "--src <image> (required)          Airbyte source Docker image"
+    echo "--dst <image> (required)          Airbyte destination Docker image"
     echo "--src.<key> <value>               Add \"key\": \"value\" into the source config" 
     echo "--dst.<key> <value>               Add \"key\": \"value\" into the destination config"
     echo "--check-connection                Validate the Airbyte source connection"
@@ -57,7 +57,8 @@ function help() {
     echo "--no-dst-pull                     Skip pulling Airbyte destination image"
     echo "--src-only                        Only run the Airbyte source"
     echo "--connection-name                 Connection name used in various places"
-    echo "--max-log-size <size>             Set docker max log size"
+    echo "--max-log-size <size>             Set Docker max log size"
+    echo "--memory <mem>                    Set Docker maximum amount of memory each container can use, e.g '1g'"
     echo "--debug                           Enable debug logging"
     exit
 }
@@ -67,6 +68,7 @@ function setDefaults() {
     declare -Ag dst_config=()
     src_catalog_overrides="{}"
     max_log_size="10m"
+    memory="1g"
 }
 
 function parseFlags() {
@@ -134,6 +136,9 @@ function parseFlags() {
             --max-log-size)
                 max_log_size="$2"
                 shift 2 ;;
+            --memory)
+                memory="$2"
+                shift 2 ;;
             --debug)
                 debug=1
                 shift 1 ;;
@@ -148,10 +153,10 @@ function parseFlags() {
 
 function validateInput() {
     if [[ -z "$src_docker_image" ]]; then
-        err "Airbyte source docker image must be set using '--src <image>'"
+        err "Airbyte source Docker image must be set using '--src <image>'"
     fi
     if [[ -z "$dst_docker_image" ]] && ! ((run_src_only)); then
-        err "Airbyte destination docker image must be set using '--dst <image>'"
+        err "Airbyte destination Docker image must be set using '--dst <image>'"
     fi
 }
 
@@ -290,7 +295,7 @@ function discoverSrc() {
 }
 
 function readSrc() {
-    docker run --init --cidfile="$tempdir/src_cid" --rm -v "$tempdir:/configs" --log-opt max-size="$max_log_size" "$src_docker_image" read \
+    docker run -m "$memory" --init --cidfile="$tempdir/src_cid" --rm -v "$tempdir:/configs" --log-opt max-size="$max_log_size" "$src_docker_image" read \
       --config "/configs/$src_config_filename" \
       --catalog "/configs/$src_catalog_filename" \
       --state "/configs/$src_state_filename"
@@ -302,7 +307,7 @@ function sync() {
         tee >(jq -cCR --unbuffered 'fromjson? | select(.type != "RECORD" and .type != "STATE")' |
             jq -rR --unbuffered " \"${GREEN}[SRC]: \" + ${JQ_TIMESTAMP} + ." >&2) |
         jq -cR --unbuffered "fromjson? | select(.type == \"RECORD\" or .type == \"STATE\") | .record.stream |= \"${dst_stream_prefix}\" + ." |
-        docker run --cidfile="$tempdir/dst_cid" --rm -i --init -v "$tempdir:/configs" --log-opt max-size="$max_log_size" "$dst_docker_image" write \
+        docker run -m "$memory" --cidfile="$tempdir/dst_cid" --rm -i --init -v "$tempdir:/configs" --log-opt max-size="$max_log_size" "$dst_docker_image" write \
         --config "/configs/$dst_config_filename" --catalog "/configs/$dst_catalog_filename" |
         tee >(jq -cR --unbuffered 'fromjson? | select(.type == "STATE") | .state.data' | tail -n 1 > "$new_source_state_file") |
         # https://stedolan.github.io/jq/manual/#Colors
