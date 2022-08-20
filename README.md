@@ -72,4 +72,5 @@ You can also force full_refresh mode for all streams by setting the
 | --connection-name                |     | Connection name used in various places                                                            |
 | --max-log-size \<size\>          |     | Set Docker max log size                                                                           |
 | --memory \<mem\>                 |     | Set Docker maximum amount of memory each container can use, e.g `"1g"`                            |
+| --cpus \<cpus\>                  |     | Set Docker maximum CPUs each container can use, e.g `"1"`                                         |
 | --debug                          |     | Enable debug logging                                                                              |
