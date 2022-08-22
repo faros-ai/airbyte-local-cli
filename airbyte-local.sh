@@ -57,8 +57,9 @@ function help() {
     echo "--no-dst-pull                     Skip pulling Airbyte destination image"
     echo "--src-only                        Only run the Airbyte source"
     echo "--connection-name                 Connection name used in various places"
-    echo "--max-log-size <size>             Set Docker max log size"
-    echo "--memory <mem>                    Set Docker maximum amount of memory each container can use, e.g '1g'"
+    echo "--max-log-size <size>             Set Docker maximum log size"
+    echo "--max-mem <mem>                   Set maximum amount of memory each Docker container can use, e.g \"1g\""
+    echo "--max-cpus <cpus>                 Set maximum CPUs each Docker container can use, e.g \"1\""
     echo "--debug                           Enable debug logging"
     exit
 }
@@ -68,7 +69,8 @@ function setDefaults() {
     declare -Ag dst_config=()
     src_catalog_overrides="{}"
     max_log_size="10m"
-    memory="1g"
+    max_memory=""
+    max_cpus=""
 }
 
 function parseFlags() {
@@ -136,8 +138,11 @@ function parseFlags() {
             --max-log-size)
                 max_log_size="$2"
                 shift 2 ;;
-            --memory)
-                memory="$2"
+            --max-mem)
+                max_memory="-m $2"
+                shift 2 ;;
+            --max-cpus)
+                max_cpus="--cpus $2"
                 shift 2 ;;
             --debug)
                 debug=1
@@ -295,7 +300,7 @@ function discoverSrc() {
 }
 
 function readSrc() {
-    docker run -m "$memory" --init --cidfile="$tempdir/src_cid" --rm -v "$tempdir:/configs" --log-opt max-size="$max_log_size" "$src_docker_image" read \
+    docker run $max_memory $max_cpus --init --cidfile="$tempdir/src_cid" --rm -v "$tempdir:/configs" --log-opt max-size="$max_log_size" -a stdout -a stderr "$src_docker_image" read \
       --config "/configs/$src_config_filename" \
       --catalog "/configs/$src_catalog_filename" \
       --state "/configs/$src_state_filename"
@@ -307,7 +312,7 @@ function sync() {
         tee >(jq -cCR --unbuffered 'fromjson? | select(.type != "RECORD" and .type != "STATE")' |
             jq -rR --unbuffered " \"${GREEN}[SRC]: \" + ${JQ_TIMESTAMP} + ." >&2) |
         jq -cR --unbuffered "fromjson? | select(.type == \"RECORD\" or .type == \"STATE\") | .record.stream |= \"${dst_stream_prefix}\" + ." |
-        docker run -m "$memory" --cidfile="$tempdir/dst_cid" --rm -i --init -v "$tempdir:/configs" --log-opt max-size="$max_log_size" "$dst_docker_image" write \
+        docker run $max_memory $max_cpus --cidfile="$tempdir/dst_cid" --rm -i --init -v "$tempdir:/configs" --log-opt max-size="$max_log_size" -a stdout -a stderr -a stdin "$dst_docker_image" write \
         --config "/configs/$dst_config_filename" --catalog "/configs/$dst_catalog_filename" |
         tee >(jq -cR --unbuffered 'fromjson? | select(.type == "STATE") | .state.data' | tail -n 1 > "$new_source_state_file") |
         # https://stedolan.github.io/jq/manual/#Colors

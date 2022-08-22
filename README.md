@@ -70,6 +70,7 @@ You can also force full_refresh mode for all streams by setting the
 | --no-dst-pull                    |     | Skip pulling Airbyte destination image                                                            |
 | --src-only                       |     | Only run the Airbyte source                                                                       |
 | --connection-name                |     | Connection name used in various places                                                            |
-| --max-log-size \<size\>          |     | Set Docker max log size                                                                           |
-| --memory \<mem\>                 |     | Set Docker maximum amount of memory each container can use, e.g `"1g"`                            |
+| --max-log-size \<size\>          |     | Set Docker maximum log size                                                                       |
+| --max-mem \<mem\>                |     | Set maximum amount of memory each Docker container can use, e.g `"1g"`                            |
+| --max-cpus \<cpus\>              |     | Set maximum CPUs each Docker container can use, e.g `"1"`                                         |
 | --debug                          |     | Enable debug logging                                                                              |
