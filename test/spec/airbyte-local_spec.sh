@@ -246,4 +246,39 @@ Describe 'building destination catalog'
 
         The output should include 'Using destination configured catalog: {"streams":[{"stream":{"name":"dummy_prefix__faros_feed","json_schema":{}},"sync_mode":"incremental","destination_sync_mode":"append"}]}'
     End
+
+    It 'creates stream prefix when source and destination are Faros connectors'
+        When run source ../airbyte-local.sh \
+                --src 'farosai/airbyte-dummy-source-image' \
+                --dst 'farosai/airbyte-faros-destination' \
+                --debug
+
+        The output should include 'Using destination configured catalog: {"streams":[{"stream":{"name":"mydummysourcesrc__dummy_source__faros_feed","json_schema":{}},"sync_mode":"incremental","destination_sync_mode":"append"}]}'
+    End
+    It 'creates stream prefix including connection_name when source and destination are Faros connectors'
+        When run source ../airbyte-local.sh \
+                --src 'farosai/airbyte-dummy-source-image' \
+                --dst 'farosai/airbyte-faros-destination' \
+                --connection-name 'connectionXYZ' \
+                --debug
+
+        The output should include 'Using destination configured catalog: {"streams":[{"stream":{"name":"connectionXYZ__dummy_source__faros_feed","json_schema":{}},"sync_mode":"incremental","destination_sync_mode":"append"}]}'
+    End
+    It 'fails if missing stream prefix when using Faros destination and non-Faros source'
+        When run source ../airbyte-local.sh \
+                --src 'airbytehq/airbyte-dummy-source-image' \
+                --dst 'farosai/airbyte-faros-destination' \
+                --debug
+
+        The output should include "farosai/airbyte-faros-destination requires a destination stream prefix. Specify this by adding '--dst-stream-prefix <value>'"
+        The status should be failure
+    End
+    It 'allows missing stream prefix when using non-Faros source and destination'
+        When run source ../airbyte-local.sh \
+                --src 'airbytehq/dummy-source-image' \
+                --dst 'airbytehq/dummy-destination-image' \
+                --debug
+
+        The output should include 'Using destination configured catalog: {"streams":[{"stream":{"name":"faros_feed","json_schema":{}},"sync_mode":"incremental","destination_sync_mode":"append"}]}'
+    End
 End
