@@ -53,6 +53,7 @@ function help() {
     echo "--dst-catalog-file <path>         Destination catalog file path"
     echo "--dst-catalog-json <json>         Destination catalog as a JSON string"
     echo "--dst-stream-prefix <prefix>      Destination stream prefix"
+    echo "--dst-use-host-network            Use the host network when running the Airbyte destination"
     echo "--no-src-pull                     Skip pulling Airbyte source image"
     echo "--no-dst-pull                     Skip pulling Airbyte destination image"
     echo "--src-only                        Only run the Airbyte source"
@@ -75,6 +76,7 @@ function setDefaults() {
     max_log_size="10m"
     max_memory=""
     src_catalog_overrides="{}"
+    dst_use_host_network=""
 }
 
 function parseFlags() {
@@ -139,6 +141,9 @@ function parseFlags() {
             --dst-catalog-json)
                 dst_catalog_json="$2"
                 shift 2 ;;
+            --dst-use-host-network)
+                dst_use_host_network="--network host"
+                shift 1 ;;
             --max-log-size)
                 max_log_size="$2"
                 shift 2 ;;
@@ -325,7 +330,7 @@ function sync() {
         tee >(jq -cCR --unbuffered 'fromjson? | select(.type != "RECORD" and .type != "STATE")' |
             jq -rR --unbuffered " \"${GREEN}[SRC]: \" + ${JQ_TIMESTAMP} + ." >&2) |
         jq -cR --unbuffered "fromjson? | select(.type == \"RECORD\" or .type == \"STATE\") | .record.stream |= \"${dst_stream_prefix}\" + ." |
-        docker run $keep_containers $max_memory $max_cpus --cidfile="$tempdir/dst_cid" -i --init -v "$tempdir:/configs" --log-opt max-size="$max_log_size" -a stdout -a stderr -a stdin --env LOG_LEVEL="$log_level" "$dst_docker_image" write \
+        docker run $keep_containers $dst_use_host_network $max_memory $max_cpus --cidfile="$tempdir/dst_cid" -i --init -v "$tempdir:/configs" --log-opt max-size="$max_log_size" -a stdout -a stderr -a stdin --env LOG_LEVEL="$log_level" "$dst_docker_image" write \
         --config "/configs/$dst_config_filename" --catalog "/configs/$dst_catalog_filename" |
         tee >(jq -cR --unbuffered 'fromjson? | select(.type == "STATE") | .state.data' | tail -n 1 > "$new_source_state_file") |
         # https://stedolan.github.io/jq/manual/#Colors
