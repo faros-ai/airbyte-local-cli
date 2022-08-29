@@ -213,7 +213,7 @@ Describe 'building destination config'
                 --dst-stream-prefix 'dummy_prefix' \
                 --debug
 
-        The output should include 'Using destination config: {"cloud_graphql_batch_size":10,"edition":"cloud","api_url":"http://faros","api_key":"XYZ","graph":"g1"}}'
+        The output should include 'Using destination config: {"edition_configs":{"cloud_graphql_batch_size":10,"edition":"cloud","api_url":"http://faros","api_key":"XYZ","graph":"g1"}}'
     End
     It 'adds Faros SaaS specific config specified via dst.* flags'
         When run source ../airbyte-local.sh \
