@@ -15,9 +15,10 @@ Requirements: `bash`, `docker`, `jq`, `tee`.
    --src.password '<source_password>' \
    --src.url '<source_url>' \
    --dst 'farosai/airbyte-faros-destination' \
-   --dst.faros_api_url '<faros_api_url>' \
-   --dst.faros_api_key '<faros_api_key>' \
-   --dst.graph 'default' \
+   --dst.edition_configs.edition 'cloud' \
+   --dst.edition_configs.api_url '<faros_api_url>' \
+   --dst.edition_configs.api_key '<faros_api_key>' \
+   --dst.edition_configs.graph 'default' \
    --state state.json \
    --check-connection
 ```

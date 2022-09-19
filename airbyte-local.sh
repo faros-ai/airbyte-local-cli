@@ -186,26 +186,6 @@ function writeSrcConfig() {
 }
 
 function writeDstConfig() {
-    if [[ $dst_docker_image == farosai/airbyte-faros-destination* ]]; then
-        if [[ "${dst_config[faros_api_url]}" ]] && [[ "${dst_config[faros_api_key]}" ]] && [[ "${dst_config[graph]}" ]]; then
-            dst_config["edition_configs"]=$(jq -n \
-            --arg faros_api_url "${dst_config[faros_api_url]}" \
-            --arg faros_api_key "${dst_config[faros_api_key]}" \
-            --arg graph "${dst_config[graph]}" \
-            '. +
-            {
-                "edition": "cloud",
-                "api_url": $faros_api_url,
-                "api_key": $faros_api_key,
-                "graph": $graph
-            }
-            ' <<< ${dst_config["edition_configs"]:-"{}"})
-            unset dst_config[faros_api_url]
-            unset dst_config[faros_api_key]
-            unset dst_config[graph]
-        fi
-    fi
-
     writeConfig dst_config "$tempdir/$dst_config_filename"
     debug "Using destination config: $(jq -c < $tempdir/$dst_config_filename)"
 }
