@@ -190,31 +190,6 @@ Describe 'building destination config'
 
         The output should include 'Using destination config: {"feed_cfg":{"inner_cfg":{"y":2,"x":1,"z":{"a":"3","b":4}}}}'
     End
-    It 'adds Faros SaaS specific config specified via special flags when using faros-destination'
-        When run source ../airbyte-local.sh \
-                --src 'farosai/dummy-source-image' \
-                --dst 'farosai/airbyte-faros-destination' \
-                --dst.faros_api_url 'http://faros' \
-                --dst.faros_api_key 'XYZ' \
-                --dst.graph 'g1' \
-                --dst-stream-prefix 'dummy_prefix' \
-                --debug
-
-        The output should include 'Using destination config: {"edition_configs":{"edition":"cloud","api_url":"http://faros","api_key":"XYZ","graph":"g1"}}'
-    End
-    It 'adds Faros SaaS specific config specified via special flags when using faros-destination while keeping other edition_configs'
-        When run source ../airbyte-local.sh \
-                --src 'farosai/dummy-source-image' \
-                --dst 'farosai/airbyte-faros-destination' \
-                --dst.faros_api_url 'http://faros' \
-                --dst.faros_api_key 'XYZ' \
-                --dst.graph 'g1' \
-                --dst.edition_configs.cloud_graphql_batch_size 10 \
-                --dst-stream-prefix 'dummy_prefix' \
-                --debug
-
-        The output should include 'Using destination config: {"edition_configs":{"cloud_graphql_batch_size":10,"edition":"cloud","api_url":"http://faros","api_key":"XYZ","graph":"g1"}}'
-    End
     It 'adds Faros SaaS specific config specified via dst.* flags'
         When run source ../airbyte-local.sh \
                 --src 'farosai/dummy-source-image' \
