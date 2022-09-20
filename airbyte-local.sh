@@ -250,7 +250,7 @@ function writeDstCatalog() {
 function parseStreamPrefix() {
     IFS='-' read -ra src_docker_image_parts <<< $src_docker_image
     if [[ $dst_docker_image == farosai/airbyte-faros-destination* ]]; then
-        if [[ ${src_docker_image_parts[0]} == farosai/airbyte ]]; then
+        if [[ ${src_docker_image_parts[0]} == farosai/airbyte ]] && [[ -z "$dst_stream_prefix" ]]; then
             # Remove first and last elements
             src_docker_image_parts=("${src_docker_image_parts[@]:1}")
             src_docker_image_parts=("${src_docker_image_parts[@]::${#src_docker_image_parts[@]}-1}");
