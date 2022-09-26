@@ -63,6 +63,8 @@ function help() {
     echo "--max-log-size <size>             Set Docker maximum log size"
     echo "--max-mem <mem>                   Set maximum amount of memory each Docker container can use, e.g \"1g\""
     echo "--max-cpus <cpus>                 Set maximum CPUs each Docker container can use, e.g \"1\""
+    echo '--src-docker-options "<string>"   Set additional options to pass to the "docker run <src>" command'
+    echo '--dst-docker-options "<string>"   Set additional options to pass to the "docker run <dst>" command'
     echo "--debug                           Enable debug logging"
     exit
 }
@@ -77,6 +79,8 @@ function setDefaults() {
     max_memory=""
     src_catalog_overrides="{}"
     dst_use_host_network=""
+    src_docker_options=""
+    dst_docker_options=""
 }
 
 function parseFlags() {
@@ -158,6 +162,12 @@ function parseFlags() {
                 shift 2 ;;
             --max-cpus)
                 max_cpus="--cpus $2"
+                shift 2 ;;
+            --src-docker-options)
+                src_docker_options="$2"
+                shift 2 ;;
+            --dst-docker-options)
+                dst_docker_options="$2"
                 shift 2 ;;
             --debug)
                 debug=1
@@ -283,7 +293,7 @@ function loadState() {
 function checkSrc() {
     if ((check_src_connection)); then
         log "Validating connection to source..."
-        connectionStatusInfo=$(docker run --rm -v "$tempdir:/configs" "$src_docker_image" check --config "/configs/$src_config_filename")
+        connectionStatusInfo=$(docker run --rm -v "$tempdir:/configs" $src_docker_options "$src_docker_image" check --config "/configs/$src_config_filename")
         connectionStatus=$(echo "$connectionStatusInfo" | jq -r '.connectionStatus.status')
         if [[ "$connectionStatus" != 'SUCCEEDED' ]]; then
             err $(echo "$connectionStatusInfo" | jq -r '.connectionStatus.message')
@@ -298,7 +308,7 @@ function discoverSrc() {
 }
 
 function readSrc() {
-    docker run $keep_containers $max_memory $max_cpus --init --cidfile="$tempdir/src_cid" -v "$tempdir:/configs" --log-opt max-size="$max_log_size" -a stdout -a stderr --env LOG_LEVEL="$log_level" "$src_docker_image" read \
+    docker run $keep_containers $max_memory $max_cpus --init --cidfile="$tempdir/src_cid" -v "$tempdir:/configs" --log-opt max-size="$max_log_size" -a stdout -a stderr --env LOG_LEVEL="$log_level" $src_docker_options "$src_docker_image" read \
       --config "/configs/$src_config_filename" \
       --catalog "/configs/$src_catalog_filename" \
       --state "/configs/$src_state_filename"
@@ -310,7 +320,7 @@ function sync() {
         tee >(jq -cCR --unbuffered 'fromjson? | select(.type != "RECORD" and .type != "STATE")' |
             jq -rR --unbuffered " \"${GREEN}[SRC]: \" + ${JQ_TIMESTAMP} + ." >&2) |
         jq -cR --unbuffered "fromjson? | select(.type == \"RECORD\" or .type == \"STATE\") | .record.stream |= \"${dst_stream_prefix}\" + ." |
-        docker run $keep_containers $dst_use_host_network $max_memory $max_cpus --cidfile="$tempdir/dst_cid" -i --init -v "$tempdir:/configs" --log-opt max-size="$max_log_size" -a stdout -a stderr -a stdin --env LOG_LEVEL="$log_level" "$dst_docker_image" write \
+        docker run $keep_containers $dst_use_host_network $max_memory $max_cpus --cidfile="$tempdir/dst_cid" -i --init -v "$tempdir:/configs" --log-opt max-size="$max_log_size" -a stdout -a stderr -a stdin --env LOG_LEVEL="$log_level" $dst_docker_options "$dst_docker_image" write \
         --config "/configs/$dst_config_filename" --catalog "/configs/$dst_catalog_filename" |
         tee >(jq -cR --unbuffered 'fromjson? | select(.type == "STATE") | .state.data' | tail -n 1 > "$new_source_state_file") |
         # https://stedolan.github.io/jq/manual/#Colors
