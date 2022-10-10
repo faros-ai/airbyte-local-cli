@@ -34,7 +34,9 @@ Requirements: `bash`, `docker`, `jq`, `tee`.
    --dst 'farosai/airbyte-faros-destination' \
    --dst.edition_configs.edition 'community' \
    --dst.edition_configs.hasura_admin_secret 'admin' \
-   --dst.edition_configs.hasura_url 'http://host.docker.internal:8080/'
+   --dst.edition_configs.hasura_url 'http://host.docker.internal:8080/' \
+   --state state.json \
+   --check-connection
 ```
 
 **Note**: The `src.*` and `dst.*` arguments will differ depending on the source and destination being used.
