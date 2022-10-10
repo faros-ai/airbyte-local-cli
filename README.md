@@ -6,9 +6,12 @@ CLI for running Airbyte sources & destinations locally without Airbyte server
 
 ## Example Usage
 
-**Note**: The `src.*` and `dst.*` arguments will differ depending on the source and destination being used.
+**Requirements**: `bash`, `docker`, `jq`, `tee`
+
 
 For example here how you can sync ServiceNow source with [Faros Cloud](https://www.faros.ai) destination:
+
+**Note**: The `src.*` and `dst.*` arguments will differ depending on the source and destination being used.
 
 ```sh
 ./airbyte-local.sh \
@@ -41,16 +44,12 @@ Or with [Faros Community Edition](https://github.com/faros-ai/faros-community-ed
    --check-connection
 ```
 
-## Requirements
+## Arguments
 
-`bash`, `docker`, `jq`, `tee`
-
-## Options
-
-| Option                            | Req | Description                                                                                       |
-| --------------------------------- | --- | ------------------------------------------------------------------------------------------------- |
-| --src \<image\>                   | Yes | Airbyte source Docker image                                                                       |
-| --dst \<image\>                   | Yes | Airbyte destination Docker image                                                                  |
+| Argument                          | Required | Description                                                                                       |
+| --------------------------------- | -------- | ------------------------------------------------------------------------------------------------- |
+| --src \<image\>                   | Yes      | Airbyte source Docker image                                                                       |
+| --dst \<image\>                   | Yes      | Airbyte destination Docker image                                                                  |
 | --src.\<key\> \<value\>           |     | Append `"key": "value"` into the source config \*                                                 |
 | --dst.\<key\> \<value\>           |     | Append `"key": "value"` into the destination config                                               |
 | --check-connection                |     | Validate the Airbyte source connection                                                            |
