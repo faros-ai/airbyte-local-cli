@@ -4,9 +4,9 @@ CLI for running Airbyte sources & destinations locally without Airbyte server
 
 ![Alt Text](https://github.com/Faros-ai/airbyte-local-cli/raw/main/resources/demo.gif)
 
-## Example Usage
-
 Requirements: `bash`, `docker`, `jq`, `tee`.
+
+## Example Usage (Faros Cloud)
 
 ```sh
 ./airbyte-local.sh \
@@ -21,6 +21,20 @@ Requirements: `bash`, `docker`, `jq`, `tee`.
    --dst.edition_configs.graph 'default' \
    --state state.json \
    --check-connection
+```
+
+## Example Usage (Faros Community Edition)
+
+```sh
+./airbyte-local.sh \
+--src 'farosai/airbyte-github-source:0.0.2' \
+--src.credentials.personal_access_token '<YOUR_GITHUB_TOKEN_HERE>' \
+--src.start_date '2022-10-01T00:00:00Z' \
+--src.repository 'apache/kafka' \
+--dst 'farosai/airbyte-faros-destination' \
+--dst.edition_configs.hasura_url 'http://host.docker.internal:8080/' \
+--dst.edition_configs.hasura_admin_secret 'admin' \
+--dst.edition_configs.edition 'community'
 ```
 
 **Note**: The `src.*` and `dst.*` arguments will differ depending on the source and destination being used.
