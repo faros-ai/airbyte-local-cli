@@ -4,8 +4,6 @@ CLI for running Airbyte sources & destinations locally without Airbyte server
 
 ![Alt Text](https://github.com/Faros-ai/airbyte-local-cli/raw/main/resources/demo.gif)
 
-Requirements: `bash`, `docker`, `jq`, `tee`.
-
 ## Example Usage
 
 **Note**: The `src.*` and `dst.*` arguments will differ depending on the source and destination being used.
@@ -42,6 +40,10 @@ Or with [Faros Community Edition](https://github.com/faros-ai/faros-community-ed
    --state state.json \
    --check-connection
 ```
+
+## Requirements
+
+`bash`, `docker`, `jq`, `tee`
 
 ## Options
 
