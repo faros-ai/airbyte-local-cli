@@ -8,7 +8,7 @@ CLI for running Airbyte sources & destinations locally without Airbyte server
 
 **Requirements**: `bash`, `docker`, `jq`, `tee`
 
-For example here how you can sync ServiceNow source with [Faros Cloud](https://www.faros.ai) destination:
+For example here is how you can sync ServiceNow source with [Faros Cloud](https://www.faros.ai) destination:
 
 ```sh
 ./airbyte-local.sh \
