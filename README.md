@@ -6,7 +6,7 @@ CLI for running Airbyte sources & destinations locally without Airbyte server
 
 ## Example Usage
 
-**Note**: The `src.*` and `dst.*` arguments will differ depending on the source and destination being used.
+**Requirements**: `bash`, `docker`, `jq`, `tee`
 
 For example here how you can sync ServiceNow source with [Faros Cloud](https://www.faros.ai) destination:
 
@@ -41,13 +41,11 @@ Or with [Faros Community Edition](https://github.com/faros-ai/faros-community-ed
    --check-connection
 ```
 
-## Requirements
+**Note**: The `src.*` and `dst.*` arguments will differ depending on the source and destination being used.
 
-`bash`, `docker`, `jq`, `tee`
+## Arguments
 
-## Options
-
-| Option                            | Req | Description                                                                                       |
+| Argument                          | Required | Description                                                                                       |
 | --------------------------------- | --- | ------------------------------------------------------------------------------------------------- |
 | --src \<image\>                   | Yes | Airbyte source Docker image                                                                       |
 | --dst \<image\>                   | Yes | Airbyte destination Docker image                                                                  |
