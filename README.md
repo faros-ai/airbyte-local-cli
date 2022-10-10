@@ -27,14 +27,14 @@ Requirements: `bash`, `docker`, `jq`, `tee`.
 
 ```sh
 ./airbyte-local.sh \
-   --src 'farosai/airbyte-github-source:0.0.2' \
-   --src.credentials.personal_access_token '<YOUR_GITHUB_TOKEN_HERE>' \
-   --src.start_date '2022-10-01T00:00:00Z' \
-   --src.repository 'apache/kafka' \
+   --src 'farosai/airbyte-servicenow-source' \
+   --src.username '<source_username>' \
+   --src.password '<source_password>' \
+   --src.url '<source_url>' \
    --dst 'farosai/airbyte-faros-destination' \
-   --dst.edition_configs.hasura_url 'http://host.docker.internal:8080/' \
+   --dst.edition_configs.edition 'community' \
    --dst.edition_configs.hasura_admin_secret 'admin' \
-   --dst.edition_configs.edition 'community'
+   --dst.edition_configs.hasura_url 'http://host.docker.internal:8080/'
 ```
 
 **Note**: The `src.*` and `dst.*` arguments will differ depending on the source and destination being used.
