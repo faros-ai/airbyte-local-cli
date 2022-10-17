@@ -293,7 +293,7 @@ function loadState() {
 function checkSrc() {
     if ((check_src_connection)); then
         log "Validating connection to source..."
-        connectionStatusInfo=$(docker run -v "$tempdir:/configs" $src_docker_options "$src_docker_image" check --config "/configs/$src_config_filename" | grep "CONNECTION_STATUS")
+        connectionStatusInfo=$(docker run --rm -v "$tempdir:/configs" $src_docker_options "$src_docker_image" check --config "/configs/$src_config_filename" | grep "CONNECTION_STATUS")
         connectionStatus=$(echo "$connectionStatusInfo" | jq -r '.connectionStatus.status')
         if [[ "$connectionStatus" != 'SUCCEEDED' ]]; then
             err $(echo "$connectionStatusInfo" | jq -r '.connectionStatus.message')
