@@ -202,7 +202,7 @@ function writeDstConfig() {
 
 function writeConfig() {
     var=$(declare -p "$1")
-    eval "declare -A config=${var#*=}"
+    declare -A config=${var#*=}
     # Inspired by https://stackoverflow.com/questions/44792241/constructing-a-json-hash-from-a-bash-associative-array
     for key in "${!config[@]}"; do
         printf '%s\0%s\0' "$key" "${config[$key]}"
