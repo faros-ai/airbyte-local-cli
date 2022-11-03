@@ -8,6 +8,12 @@ CLI for running Airbyte sources & destinations locally without Airbyte server
 
 **Requirements**: `bash`, `docker`, `jq`, `tee`
 
+Either [download the script manually](https://raw.githubusercontent.com/faros-ai/airbyte-local-cli/main/airbyte-local.sh) or invoke the script directly with curl:
+
+```sh
+bash <(curl -s https://raw.githubusercontent.com/faros-ai/airbyte-local-cli/main/airbyte-local.sh) --help
+```
+
 For example here is how you can sync ServiceNow source with [Faros Cloud](https://www.faros.ai) destination:
 
 ```sh
@@ -46,30 +52,30 @@ Or with [Faros Community Edition](https://github.com/faros-ai/faros-community-ed
 ## Arguments
 
 | Argument                          | Required | Description                                                                                       |
-| --------------------------------- | --- | ------------------------------------------------------------------------------------------------- |
-| --src \<image\>                   | Yes | Airbyte source Docker image                                                                       |
-| --dst \<image\>                   | Yes | Airbyte destination Docker image                                                                  |
-| --src.\<key\> \<value\>           |     | Append `"key": "value"` into the source config \*                                                 |
-| --dst.\<key\> \<value\>           |     | Append `"key": "value"` into the destination config                                               |
-| --check-connection                |     | Validate the Airbyte source connection                                                            |
-| --full-refresh                    |     | Force source full_refresh and destination overwrite mode                                          |
-| --state \<path\>                  |     | Override state file path for incremental sync                                                     |
-| --src-catalog-overrides \<json\>  |     | JSON string of sync mode overrides. See [overriding default catalog](#overriding-default-catalog) |
-| --src-catalog-file \<path\>       |     | Source catalog file path                                                                          |
-| --src-catalog-json \<json\>       |     | Source catalog as a JSON string                                                                   |
-| --dst-catalog-file \<path\>       |     | Destination catalog file path                                                                     |
-| --dst-catalog-json \<json\>       |     | Destination catalog as a JSON string                                                              |
-| --dst-stream-prefix \<prefix\>    |     | Destination stream prefix                                                                         |
-| --no-src-pull                     |     | Skip pulling Airbyte source image                                                                 |
-| --no-dst-pull                     |     | Skip pulling Airbyte destination image                                                            |
-| --src-only                        |     | Only run the Airbyte source                                                                       |
-| --connection-name                 |     | Connection name used in various places                                                            |
-| --max-log-size \<size\>           |     | Set Docker maximum log size                                                                       |
-| --max-mem \<mem\>                 |     | Set maximum amount of memory each Docker container can use, e.g `"1g"`                            |
-| --max-cpus \<cpus\>               |     | Set maximum CPUs each Docker container can use, e.g `"1"`                                         |
-| --src-docker-options "\<string\>" |     | Set additional options to pass to the `docker run <src>` command                                  |
-| --dst-docker-options "\<string\>" |     | Set additional options to pass to the `docker run <dst>` command                                  |
-| --debug                           |     | Enable debug logging                                                                              |
+| --------------------------------- | -------- | ------------------------------------------------------------------------------------------------- |
+| --src \<image\>                   | Yes      | Airbyte source Docker image                                                                       |
+| --dst \<image\>                   | Yes      | Airbyte destination Docker image                                                                  |
+| --src.\<key\> \<value\>           |          | Append `"key": "value"` into the source config \*                                                 |
+| --dst.\<key\> \<value\>           |          | Append `"key": "value"` into the destination config                                               |
+| --check-connection                |          | Validate the Airbyte source connection                                                            |
+| --full-refresh                    |          | Force source full_refresh and destination overwrite mode                                          |
+| --state \<path\>                  |          | Override state file path for incremental sync                                                     |
+| --src-catalog-overrides \<json\>  |          | JSON string of sync mode overrides. See [overriding default catalog](#overriding-default-catalog) |
+| --src-catalog-file \<path\>       |          | Source catalog file path                                                                          |
+| --src-catalog-json \<json\>       |          | Source catalog as a JSON string                                                                   |
+| --dst-catalog-file \<path\>       |          | Destination catalog file path                                                                     |
+| --dst-catalog-json \<json\>       |          | Destination catalog as a JSON string                                                              |
+| --dst-stream-prefix \<prefix\>    |          | Destination stream prefix                                                                         |
+| --no-src-pull                     |          | Skip pulling Airbyte source image                                                                 |
+| --no-dst-pull                     |          | Skip pulling Airbyte destination image                                                            |
+| --src-only                        |          | Only run the Airbyte source                                                                       |
+| --connection-name                 |          | Connection name used in various places                                                            |
+| --max-log-size \<size\>           |          | Set Docker maximum log size                                                                       |
+| --max-mem \<mem\>                 |          | Set maximum amount of memory each Docker container can use, e.g `"1g"`                            |
+| --max-cpus \<cpus\>               |          | Set maximum CPUs each Docker container can use, e.g `"1"`                                         |
+| --src-docker-options "\<string\>" |          | Set additional options to pass to the `docker run <src>` command                                  |
+| --dst-docker-options "\<string\>" |          | Set additional options to pass to the `docker run <dst>` command                                  |
+| --debug                           |          | Enable debug logging                                                                              |
 
 **Note**: when passing an array value for a parameter specify it as a json array, for example:
 
