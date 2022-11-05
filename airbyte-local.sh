@@ -390,8 +390,8 @@ function checkBashVersion() {
     bash_minor_version=$(echo "${BASH_VERSION}" | cut -d '.' -f 2)
     if [ $bash_major_version -eq 4 ] && [ $bash_minor_version -lt 3 ]; then
         warn "Bash version ${BASH_VERSION} detected."
-        warn "This requires the use of the dangerous eval() function to manager connector config objects."
-        warn "We recommend you upgrade to at least version 4.3 to remove this requirement."
+        warn "This requires the use of the dangerous eval() function to manage connector config objects."
+        warn "We recommend you upgrade bash to at least version 4.3 to remove this requirement."
         use_eval=1
     fi
 }
