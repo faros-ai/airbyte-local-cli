@@ -2,7 +2,8 @@
 
 set -eo pipefail
 
-[ "${BASH_VERSINFO:-0}" -ge 4 ] || { echo "Error: Bash 4.0 or higher is required." && exit 1; }
+bash_major_version="${BASH_VERSINFO:-0}"
+[ "$bash_major_version" -ge 4 ] || { echo "Error: Bash 4.0 or higher is required." && exit 1; }
 
 declare -a required_cmds=("docker" "jq")
 for i in "${required_cmds[@]}"; do
@@ -201,8 +202,12 @@ function writeDstConfig() {
 }
 
 function writeConfig() {
-    var=$(declare -p "$1")
-    eval "declare -A config=${var#*=}"
+    if ((use_eval)); then
+        var=$(declare -p "$1")
+        eval "declare -A config=${var#*=}"
+    else
+        local -n config=$1
+    fi
     # Inspired by https://stackoverflow.com/questions/44792241/constructing-a-json-hash-from-a-bash-associative-array
     for key in "${!config[@]}"; do
         printf '%s\0%s\0' "$key" "${config[$key]}"
@@ -381,7 +386,18 @@ function err() {
     exit 1
 }
 
+function checkBashVersion() {
+    bash_minor_version=$(echo "${BASH_VERSION}" | cut -d '.' -f 2)
+    if [ $bash_major_version -eq 4 ] && [ $bash_minor_version -lt 3 ]; then
+        warn "Bash version ${BASH_VERSION} detected."
+        warn "This requires the use of the dangerous eval() function to manage connector config objects."
+        warn "We recommend you upgrade bash to at least version 4.3 to remove this requirement."
+        use_eval=1
+    fi
+}
+
 main() {
+    checkBashVersion
     setDefaults
     parseFlags "$@"
     validateInput
