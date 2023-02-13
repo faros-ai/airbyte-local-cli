@@ -238,7 +238,7 @@ function writeSrcCatalog() {
                   | select($src_catalog_overrides[.name].disabled != true)
                   | .incremental = ((.supported_sync_modes|contains(["incremental"])) and ($src_catalog_overrides[.name].sync_mode != "full_refresh") and ($full_refresh != "true"))
                   | {
-                      stream: {name: .name, json_schema: {}},
+                      stream: {name: .name, supported_sync_modes: .supported_sync_modes, json_schema: {}},
                       sync_mode: (if .incremental then "incremental" else "full_refresh" end),
                       destination_sync_mode: ($src_catalog_overrides[.name].destination_sync_mode? // if .incremental then "append" else "overwrite" end)
                     }
