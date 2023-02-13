@@ -98,7 +98,7 @@ Describe 'building source catalog'
                 --src.feed_cfg.feed_name 'jira-feed' \
                 --src.feed_cfg.feed_path 'tms/jira-feed' \
                 --debug
-        The output should include 'Using source configured catalog: {"streams":[{"stream":{"name":"faros_feed","json_schema":{}},"sync_mode":"incremental","destination_sync_mode":"append"}]}'
+        The output should include 'Using source configured catalog: {"streams":[{"stream":{"name":"faros_feed","supported_sync_modes":["full_refresh","incremental"],"json_schema":{}},"sync_mode":"incremental","destination_sync_mode":"append"}]}'
     End
     It 'full-refresh flag forces full refresh and overwrite mode'
         When run source ../airbyte-local.sh \
@@ -108,7 +108,7 @@ Describe 'building source catalog'
                 --src.feed_cfg.feed_path 'tms/jira-feed' \
                 --full-refresh \
                 --debug
-        The output should include 'Using source configured catalog: {"streams":[{"stream":{"name":"faros_feed","json_schema":{}},"sync_mode":"full_refresh","destination_sync_mode":"overwrite"}]}'
+        The output should include 'Using source configured catalog: {"streams":[{"stream":{"name":"faros_feed","supported_sync_modes":["full_refresh","incremental"],"json_schema":{}},"sync_mode":"full_refresh","destination_sync_mode":"overwrite"}]}'
     End
     It 'uses src-catalog-overrides sync mode'
         When run source ../airbyte-local.sh \
@@ -118,7 +118,7 @@ Describe 'building source catalog'
                 --src.feed_cfg.feed_path 'tms/jira-feed' \
                 --src-catalog-overrides '{"faros_feed": {"sync_mode": "full_refresh"}}' \
                 --debug
-        The output should include 'Using source configured catalog: {"streams":[{"stream":{"name":"faros_feed","json_schema":{}},"sync_mode":"full_refresh","destination_sync_mode":"overwrite"}]}'
+        The output should include 'Using source configured catalog: {"streams":[{"stream":{"name":"faros_feed","supported_sync_modes":["full_refresh","incremental"],"json_schema":{}},"sync_mode":"full_refresh","destination_sync_mode":"overwrite"}]}'
     End
     It 'ignores disabled streams'
         When run source ../airbyte-local.sh \
@@ -243,7 +243,7 @@ Describe 'building destination catalog'
                 --dst-stream-prefix 'dummy_prefix__' \
                 --debug
 
-        The output should include 'Using destination configured catalog: {"streams":[{"stream":{"name":"dummy_prefix__faros_feed","json_schema":{}},"sync_mode":"incremental","destination_sync_mode":"append"}]}'
+        The output should include 'Using destination configured catalog: {"streams":[{"stream":{"name":"dummy_prefix__faros_feed","supported_sync_modes":["full_refresh","incremental"],"json_schema":{}},"sync_mode":"incremental","destination_sync_mode":"append"}]}'
     End
 
     It 'creates stream prefix when source and destination are Faros connectors'
@@ -252,7 +252,7 @@ Describe 'building destination catalog'
                 --dst 'farosai/airbyte-faros-destination' \
                 --debug
 
-        The output should include 'Using destination configured catalog: {"streams":[{"stream":{"name":"mydummysourcesrc__dummy_source__faros_feed","json_schema":{}},"sync_mode":"incremental","destination_sync_mode":"append"}]}'
+        The output should include 'Using destination configured catalog: {"streams":[{"stream":{"name":"mydummysourcesrc__dummy_source__faros_feed","supported_sync_modes":["full_refresh","incremental"],"json_schema":{}},"sync_mode":"incremental","destination_sync_mode":"append"}]}'
     End
     It 'creates stream prefix including connection_name when source and destination are Faros connectors'
         When run source ../airbyte-local.sh \
@@ -261,7 +261,7 @@ Describe 'building destination catalog'
                 --connection-name 'connectionXYZ' \
                 --debug
 
-        The output should include 'Using destination configured catalog: {"streams":[{"stream":{"name":"connectionXYZ__dummy_source__faros_feed","json_schema":{}},"sync_mode":"incremental","destination_sync_mode":"append"}]}'
+        The output should include 'Using destination configured catalog: {"streams":[{"stream":{"name":"connectionXYZ__dummy_source__faros_feed","supported_sync_modes":["full_refresh","incremental"],"json_schema":{}},"sync_mode":"incremental","destination_sync_mode":"append"}]}'
     End
     It 'fails if missing stream prefix when using Faros destination and non-Faros source'
         When run source ../airbyte-local.sh \
@@ -278,6 +278,6 @@ Describe 'building destination catalog'
                 --dst 'airbytehq/dummy-destination-image' \
                 --debug
 
-        The output should include 'Using destination configured catalog: {"streams":[{"stream":{"name":"faros_feed","json_schema":{}},"sync_mode":"incremental","destination_sync_mode":"append"}]}'
+        The output should include 'Using destination configured catalog: {"streams":[{"stream":{"name":"faros_feed","supported_sync_modes":["full_refresh","incremental"],"json_schema":{}},"sync_mode":"incremental","destination_sync_mode":"append"}]}'
     End
 End
