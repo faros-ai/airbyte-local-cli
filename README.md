@@ -6,7 +6,7 @@ CLI for running Airbyte sources & destinations locally without Airbyte server
 
 ## Example Usage
 
-**Requirements**: `docker`, `bash`, `docker`, `jq`, `tee`
+**Requirements**: `bash`, `docker`, `jq`, `tee`
 
 Either [download the script manually](https://raw.githubusercontent.com/faros-ai/airbyte-local-cli/main/airbyte-local.sh) or invoke the script directly with curl:
 
