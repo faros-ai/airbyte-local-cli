@@ -48,6 +48,7 @@ function help() {
     echo "--check-connection                Validate the Airbyte source connection"
     echo "--full-refresh                    Force full_refresh and overwrite mode"
     echo "--state <path>                    Override state file path for incremental sync"
+    echo "--output <path>                   Write destination input as a file"
     echo "--src-catalog-overrides <json>    JSON string of sync mode overrides"
     echo "--src-catalog-file <path>         Source catalog file path"
     echo "--src-catalog-json <json>         Source catalog as a JSON string"
@@ -82,6 +83,7 @@ function setDefaults() {
     dst_use_host_network=""
     src_docker_options=""
     dst_docker_options=""
+    output_filepath="/dev/null"
 }
 
 function parseFlags() {
@@ -95,6 +97,9 @@ function parseFlags() {
                 shift 2 ;;
             --state)
                 src_state_filepath="$2"
+                shift 2 ;;
+            --output)
+                output_filepath="$2"
                 shift 2 ;;
             --src-catalog-overrides)
                 src_catalog_overrides="$2"
@@ -326,6 +331,7 @@ function sync() {
         tee >(jq -cCR --unbuffered 'fromjson? | select(.type != "RECORD" and .type != "STATE")' |
             jq -rR --unbuffered " \"${GREEN}[SRC]: \" + ${JQ_TIMESTAMP} + ." >&2) |
         jq -cR --unbuffered "fromjson? | select(.type == \"RECORD\" or .type == \"STATE\") | .record.stream |= \"${dst_stream_prefix}\" + ." |
+        tee "$output_filepath" |
         docker run $keep_containers $dst_use_host_network $max_memory $max_cpus --cidfile="$tempdir/dst_cid" -i --init -v "$tempdir:/configs" --log-opt max-size="$max_log_size" -a stdout -a stderr -a stdin --env LOG_LEVEL="$log_level" $dst_docker_options "$dst_docker_image" write \
         --config "/configs/$dst_config_filename" --catalog "/configs/$dst_catalog_filename" |
         tee >(jq -cR --unbuffered 'fromjson? | select(.type == "STATE") | .state.data' | tail -n 1 > "$new_source_state_file") |
