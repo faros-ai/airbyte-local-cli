@@ -48,7 +48,7 @@ function help() {
     echo "--check-connection                Validate the Airbyte source connection"
     echo "--full-refresh                    Force full_refresh and overwrite mode"
     echo "--state <path>                    Override state file path for incremental sync"
-    echo "--output <path>                   Write destination input as a file"
+    echo "--src-output-file <path>          Write source output as a file (handy for debugging)"
     echo "--src-catalog-overrides <json>    JSON string of sync mode overrides"
     echo "--src-catalog-file <path>         Source catalog file path"
     echo "--src-catalog-json <json>         Source catalog as a JSON string"
@@ -98,7 +98,7 @@ function parseFlags() {
             --state)
                 src_state_filepath="$2"
                 shift 2 ;;
-            --output)
+            --src-output-file)
                 output_filepath="$2"
                 shift 2 ;;
             --src-catalog-overrides)
@@ -326,6 +326,7 @@ function readSrc() {
 }
 
 function sync() {
+    debug "Writing source output to $output_filepath"
     new_source_state_file="$tempdir/new_state.json"
     readSrc |
         tee >(jq -cCR --unbuffered 'fromjson? | select(.type != "RECORD" and .type != "STATE")' |
