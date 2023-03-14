@@ -197,7 +197,7 @@ function parseFlags() {
 }
 
 function validateInput() {
-    if [[ -z "$src_docker_image" && -z "$src_record_file" ]]; then
+    if [[ -z "$src_docker_image" ]]; then
         err "Airbyte source Docker image must be set using '--src <image>'"
     fi
     if [[ -z "$dst_docker_image" ]] && ! ((run_src_only)); then
