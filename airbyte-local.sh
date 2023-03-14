@@ -59,7 +59,8 @@ function help() {
     echo "--no-src-pull                     Skip pulling Airbyte source image"
     echo "--no-dst-pull                     Skip pulling Airbyte destination image"
     echo "--src-only                        Only run the Airbyte source"
-    echo "--no-log-prefix                   Omits log prefix added to each message"
+    echo "--src-record-file                 Use a file for source output"
+    echo "--no-log-prefix                   Omit the log prefix added to each message"
     echo "--connection-name                 Connection name used in various places"
     echo "--keep-containers                 Do not remove source and destination containers after they exit"
     echo "--log-level                       Set level of source and destination loggers"
@@ -129,6 +130,9 @@ function parseFlags() {
             --src-only)
                 run_src_only=1
                 shift 1 ;;
+            --src-record-file)
+                src_record_file="$2"
+                shift 2 ;;
             --check-connection)
                 check_src_connection=1
                 shift 1 ;;
@@ -193,7 +197,7 @@ function parseFlags() {
 }
 
 function validateInput() {
-    if [[ -z "$src_docker_image" ]]; then
+    if [[ -z "$src_docker_image" && -z "$src_record_file" ]]; then
         err "Airbyte source Docker image must be set using '--src <image>'"
     fi
     if [[ -z "$dst_docker_image" ]] && ! ((run_src_only)); then
@@ -324,10 +328,14 @@ function discoverSrc() {
 }
 
 function readSrc() {
-    docker run $keep_containers $max_memory $max_cpus --init --cidfile="$tempdir/src_cid" -v "$tempdir:/configs" --log-opt max-size="$max_log_size" -a stdout -a stderr --env LOG_LEVEL="$log_level" $src_docker_options "$src_docker_image" read \
-      --config "/configs/$src_config_filename" \
-      --catalog "/configs/$src_catalog_filename" \
-      --state "/configs/$src_state_filename"
+    if [[ "$src_record_file" ]]; then
+        cat $src_record_file
+    else
+        docker run $keep_containers $max_memory $max_cpus --init --cidfile="$tempdir/src_cid" -v "$tempdir:/configs" --log-opt max-size="$max_log_size" -a stdout -a stderr --env LOG_LEVEL="$log_level" $src_docker_options "$src_docker_image" read \
+          --config "/configs/$src_config_filename" \
+          --catalog "/configs/$src_catalog_filename" \
+          --state "/configs/$src_state_filename"
+    fi
 }
 
 function sync() {
@@ -421,10 +429,11 @@ main() {
 
     if ((no_src_pull)); then
         log "Skipping pull of source image $src_docker_image"
-    else
+    elif [[ -z "$src_record_file" ]]; then
         log "Pulling source image $src_docker_image"
         docker pull $src_docker_image
     fi
+
     writeSrcConfig
     writeSrcCatalog
 
