@@ -59,6 +59,7 @@ function help() {
     echo "--no-src-pull                     Skip pulling Airbyte source image"
     echo "--no-dst-pull                     Skip pulling Airbyte destination image"
     echo "--src-only                        Only run the Airbyte source"
+    echo "--no-log-prefix                   Omits log prefix added to each message"
     echo "--connection-name                 Connection name used in various places"
     echo "--keep-containers                 Do not remove source and destination containers after they exit"
     echo "--log-level                       Set level of source and destination loggers"
@@ -84,6 +85,7 @@ function setDefaults() {
     src_docker_options=""
     dst_docker_options=""
     output_filepath="/dev/null"
+    no_log_prefix=0
 }
 
 function parseFlags() {
@@ -138,6 +140,9 @@ function parseFlags() {
                 shift 1 ;;
             --no-dst-pull)
                 no_dst_pull=1
+                shift 1 ;;
+            --no-log-prefix)
+                no_log_prefix=1
                 shift 1 ;;
             --connection-name)
                 connection_name="$2"
@@ -339,6 +344,7 @@ function sync() {
         # https://stedolan.github.io/jq/manual/#Colors
         JQ_COLORS="1;30:0;37:0;37:0;37:0;36:1;37:1;37" \
         jq -cCR --unbuffered 'fromjson?' | jq -rR " \"${CYAN}[DST]: \" + ${JQ_TIMESTAMP} + ."
+
     cp "$new_source_state_file" "$src_state_filepath"
 }
 
@@ -426,7 +432,7 @@ main() {
     if ((run_src_only)); then
         log "Only running source"
         loadState
-        readSrc | jq -cCR --unbuffered 'fromjson?' | jq -rR "\"${GREEN}[SRC]: \" + ${JQ_TIMESTAMP} + ."
+        readSrc | jq -cCRM --unbuffered 'fromjson?' | jq -rRM "if ${no_log_prefix} == 1 then . else \"${GREEN}[SRC]: \" + ${JQ_TIMESTAMP} + . end"
     else
         if ((no_dst_pull)); then
             log "Skipping pull of destination image $dst_docker_image"
