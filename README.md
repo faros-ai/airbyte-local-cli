@@ -79,7 +79,6 @@ Or with [Faros Community Edition](https://github.com/faros-ai/faros-community-ed
 | --src-docker-options "\<string\>" |          | Set additional options to pass to the `docker run <src>` command                                  |
 | --dst-docker-options "\<string\>" |          | Set additional options to pass to the `docker run <dst>` command                                  |
 | --debug                           |          | Enable debug logging                                                                              |
-| --debug-secrets                   |          | Enable debug logging with visible secrets                                                         |
 
 **Note**: when passing an array value for a parameter specify it as a json array, for example:
 
