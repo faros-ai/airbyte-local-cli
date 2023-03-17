@@ -73,12 +73,12 @@ Describe 'redacting source config secrets'
                         "required": ["secret", "non_secret"],
                         "additionalProperties": true,
                         "properties": {
-                            "secret": {
+                            "_secret": {
                                 "type": "string",
                                 "title": "Secret",
                                 "airbyte_secret": true
                             },
-                            "non_secret": {
+                            "other": {
                                 "type": "string",
                                 "title": "NonSecret"
                             }
@@ -94,10 +94,10 @@ Describe 'redacting source config secrets'
         When run source ../airbyte-local.sh \
                 --src 'farosai/dummy-source-image' \
                 --src-only \
-                --src.secret 'SHOULD_BE_REDACTED!!!' \
-                --src.non_secret 'foo' \
+                --src._secret 'SHOULD_BE_REDACTED!!!' \
+                --src.other 'foo' \
                 --debug
-        The output should include 'Using source config: {"non_secret":"foo","secret":"REDACTED"}'
+        The output should include 'Using source config: {"_secret":"REDACTED","other":"foo"}'
     End
 End
 
