@@ -70,14 +70,17 @@ Describe 'redacting source config secrets'
                     "connectionSpecification": {
                         "properties": {
                             "nested_object": {
-                                "other": {
-                                    "type": "string",
-                                    "title": "NonSecret"
-                                },
-                                "secret": {
-                                    "type": "string",
-                                    "title": "Secret",
-                                    "airbyte_secret": true
+                                "type": "object",
+                                "properties": {
+                                    "other": {
+                                        "type": "string",
+                                        "title": "NonSecret"
+                                    },
+                                    "secret": {
+                                        "type": "string",
+                                        "title": "Secret",
+                                        "airbyte_secret": true
+                                    }
                                 }
                             },
                             "other": {
