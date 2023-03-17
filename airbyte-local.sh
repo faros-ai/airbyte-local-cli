@@ -221,7 +221,10 @@ function writeDstConfig() {
     debug "Using destination config: $(redactConfigSecrets "$(jq -c < $tempdir/$dst_config_filename)" "$(specDst)")"
 }
 
-# constructs paths to fields that should be redacted from spec and then redacts them in the config
+# Constructs paths to fields that should be redacted using Airbyte spec and then redacts them from the config
+# $1      - Config with secrets to redact
+# $2      - Airbyte spec that defines which fields are "airbyte_secret"
+# returns - Config with redacted secrets
 function redactConfigSecrets() {
     loggable_config="$1"
     config_properties="$(echo "$2" | jq -r '.spec.connectionSpecification.properties')"
