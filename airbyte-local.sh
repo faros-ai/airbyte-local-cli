@@ -213,24 +213,22 @@ function validateInput() {
 
 function writeSrcConfig() {
     writeConfig src_config "$tempdir/$src_config_filename"
-    if ((debug)); then
-        loggable_src_config="$(jq -c < $tempdir/$src_config_filename)"
-        redactSrcConfigSecrets
-        debug "Using source config: $loggable_src_config"
-    fi
-}
-
-function redactSrcConfigSecrets() {
-    src_spec_props=$(specSrc | jq -r '.spec.connectionSpecification.properties')
-    paths_to_redact=($(jq -c --stream 'if .[0][-1] == "airbyte_secret" and .[1] then .[0] else null end | select(. != null) | .[0:-1] | map(select(. != "properties"))' <<< $src_spec_props))
-    for path in "${paths_to_redact[@]}"; do
-        loggable_src_config=$(jq -c --argjson path "$path" 'if getpath($path) != null then setpath($path; "REDACTED") else . end' <<< $loggable_src_config)
-    done
+    debug "Using source config: $(redactConfigSecrets "$(jq -c < $tempdir/$src_config_filename)" "$(specSrc)")"
 }
 
 function writeDstConfig() {
     writeConfig dst_config "$tempdir/$dst_config_filename"
-    debug "Using destination config: $(jq -c < $tempdir/$dst_config_filename)"
+    debug "Using destination config: $(redactConfigSecrets "$(jq -c < $tempdir/$dst_config_filename)" "$(specDst)")"
+}
+
+function redactConfigSecrets() {
+    loggable_config="$1"
+    config_properties="$(echo "$2" | jq -r '.spec.connectionSpecification.properties')"
+    paths_to_redact=($(jq -c --stream 'if .[0][-1] == "airbyte_secret" and .[1] then .[0] else null end | select(. != null) | .[0:-1] | map(select(. != "properties"))' <<< "$config_properties"))
+    for path in "${paths_to_redact[@]}"; do
+        loggable_config="$(jq -c --argjson path "$path" 'if getpath($path) != null then setpath($path; "REDACTED") else . end' <<< "$loggable_config")"
+    done
+    echo "$loggable_config"
 }
 
 function writeConfig() {
@@ -358,6 +356,10 @@ function readSrc() {
           --catalog "/configs/$src_catalog_filename" \
           --state "/configs/$src_state_filename"
     fi
+}
+
+function specDst() {
+    docker run --rm "$dst_docker_image" spec
 }
 
 function sync() {

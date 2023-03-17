@@ -102,13 +102,18 @@ Describe 'redacting source config secrets'
     It 'redacts airbyte_secret fields'
         When run source ../airbyte-local.sh \
                 --src 'farosai/dummy-source-image' \
-                --src-only \
+                --dst 'farosai/dummy-destination-image' \
                 --src.nested_object.other 'bar' \
                 --src.nested_object.secret 'SHOULD_BE_REDACTED!!!' \
                 --src.other 'foo' \
                 --src.secret 'SHOULD_BE_REDACTED!!!' \
+                --dst.nested_object.other 'bar' \
+                --dst.nested_object.secret 'SHOULD_BE_REDACTED!!!' \
+                --dst.other 'foo' \
+                --dst.secret 'SHOULD_BE_REDACTED!!!' \
                 --debug
-        The output should include 'Using source config: {"nested_object":{"secret":"REDACTED","other":"bar"},"secret":"REDACTED","other":"foo"}'
+        The output should include 'Using source config: {"nested_object":{"secret":"REDACTED","other":"bar"},"secret":"REDACTED","other":"foo"}' 
+        The output should include 'Using destination config: {"nested_object":{"secret":"REDACTED","other":"bar"},"secret":"REDACTED","other":"foo"}'
     End
 End
 
