@@ -18,33 +18,33 @@ For example here is how you can sync ServiceNow source with [Faros Cloud](https:
 
 ```sh
 ./airbyte-local.sh \
-   --src 'farosai/airbyte-servicenow-source' \
-   --src.username '<source_username>' \
-   --src.password '<source_password>' \
-   --src.url '<source_url>' \
-   --dst 'farosai/airbyte-faros-destination' \
-   --dst.edition_configs.edition 'cloud' \
-   --dst.edition_configs.api_url '<faros_api_url>' \
-   --dst.edition_configs.api_key '<faros_api_key>' \
-   --dst.edition_configs.graph 'default' \
-   --state state.json \
-   --check-connection
+  --src 'farosai/airbyte-servicenow-source' \
+  --src.username '<source_username>' \
+  --src.password '<source_password>' \
+  --src.url '<source_url>' \
+  --dst 'farosai/airbyte-faros-destination' \
+  --dst.edition_configs.edition 'cloud' \
+  --dst.edition_configs.api_url '<faros_api_url>' \
+  --dst.edition_configs.api_key '<faros_api_key>' \
+  --dst.edition_configs.graph 'default' \
+  --state state.json \
+  --check-connection
 ```
 
 Or with [Faros Community Edition](https://github.com/faros-ai/faros-community-edition) as the destination:
 
 ```sh
 ./airbyte-local.sh \
-   --src 'farosai/airbyte-servicenow-source' \
-   --src.username '<source_username>' \
-   --src.password '<source_password>' \
-   --src.url '<source_url>' \
-   --dst 'farosai/airbyte-faros-destination' \
-   --dst.edition_configs.edition 'community' \
-   --dst.edition_configs.hasura_admin_secret 'admin' \
-   --dst.edition_configs.hasura_url 'http://host.docker.internal:8080/' \
-   --state state.json \
-   --check-connection
+  --src 'farosai/airbyte-servicenow-source' \
+  --src.username '<source_username>' \
+  --src.password '<source_password>' \
+  --src.url '<source_url>' \
+  --dst 'farosai/airbyte-faros-destination' \
+  --dst.edition_configs.edition 'community' \
+  --dst.edition_configs.hasura_admin_secret 'admin' \
+  --dst.edition_configs.hasura_url 'http://host.docker.internal:8080/' \
+  --state state.json \
+  --check-connection
 ```
 
 **Note**: The `src.*` and `dst.*` arguments will differ depending on the source and destination being used.
@@ -70,7 +70,9 @@ Or with [Faros Community Edition](https://github.com/faros-ai/faros-community-ed
 | --no-src-pull                     |          | Skip pulling Airbyte source image                                                                 |
 | --no-dst-pull                     |          | Skip pulling Airbyte destination image                                                            |
 | --src-only                        |          | Only run the Airbyte source                                                                       |
+| --dst-only \<file\>               |          | Use a file for destination input instead of a source                                              |
 | --connection-name                 |          | Connection name used in various places                                                            |
+| --raw-messages                    |          | Output raw Airbyte messages, i.e., without a log prefix or colors                                 |
 | --max-log-size \<size\>           |          | Set Docker maximum log size                                                                       |
 | --max-mem \<mem\>                 |          | Set maximum amount of memory each Docker container can use, e.g `"1g"`                            |
 | --max-cpus \<cpus\>               |          | Set maximum CPUs each Docker container can use, e.g `"1"`                                         |

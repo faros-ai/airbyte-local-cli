@@ -59,9 +59,11 @@ function help() {
     echo "--no-src-pull                     Skip pulling Airbyte source image"
     echo "--no-dst-pull                     Skip pulling Airbyte destination image"
     echo "--src-only                        Only run the Airbyte source"
+    echo "--dst-only <file>                 Use a file for destination input instead of a source"
     echo "--connection-name                 Connection name used in various places"
     echo "--keep-containers                 Do not remove source and destination containers after they exit"
     echo "--log-level                       Set level of source and destination loggers"
+    echo "--raw-messages                    Output raw Airbyte messages, i.e., without a log prefix or colors (useful when used with --dst-only)"
     echo "--max-log-size <size>             Set Docker maximum log size"
     echo "--max-mem <mem>                   Set maximum amount of memory each Docker container can use, e.g \"1g\""
     echo "--max-cpus <cpus>                 Set maximum CPUs each Docker container can use, e.g \"1\""
@@ -84,6 +86,9 @@ function setDefaults() {
     src_docker_options=""
     dst_docker_options=""
     output_filepath="/dev/null"
+    jq_src_msg="\"${GREEN}[SRC]: \" + ${JQ_TIMESTAMP} + ."
+    jq_dst_msg="\"${CYAN}[DST]: \" + ${JQ_TIMESTAMP} + ."
+    jq_color_opt="-C"
 }
 
 function parseFlags() {
@@ -127,6 +132,10 @@ function parseFlags() {
             --src-only)
                 run_src_only=1
                 shift 1 ;;
+            --dst-only)
+                src_file="$2"
+                no_src_pull=1
+                shift 2 ;;
             --check-connection)
                 check_src_connection=1
                 shift 1 ;;
@@ -160,6 +169,12 @@ function parseFlags() {
             --log-level)
                 log_level="$2"
                 shift 2 ;;
+            --raw-messages)
+                # Passthrough
+                jq_src_msg="."
+                jq_dst_msg="."
+                jq_color_opt="-M"
+                shift 1 ;;
             --keep-containers)
                 keep_containers=""
                 shift 1 ;;
@@ -319,18 +334,22 @@ function discoverSrc() {
 }
 
 function readSrc() {
-    docker run $keep_containers $max_memory $max_cpus --init --cidfile="$tempdir/src_cid" -v "$tempdir:/configs" --log-opt max-size="$max_log_size" -a stdout -a stderr --env LOG_LEVEL="$log_level" $src_docker_options "$src_docker_image" read \
-      --config "/configs/$src_config_filename" \
-      --catalog "/configs/$src_catalog_filename" \
-      --state "/configs/$src_state_filename"
+    if [[ "$src_file" ]]; then
+        cat $src_file
+    else
+        docker run $keep_containers $max_memory $max_cpus --init --cidfile="$tempdir/src_cid" -v "$tempdir:/configs" --log-opt max-size="$max_log_size" -a stdout -a stderr --env LOG_LEVEL="$log_level" $src_docker_options "$src_docker_image" read \
+          --config "/configs/$src_config_filename" \
+          --catalog "/configs/$src_catalog_filename" \
+          --state "/configs/$src_state_filename"
+    fi
 }
 
 function sync() {
     debug "Writing source output to $output_filepath"
     new_source_state_file="$tempdir/new_state.json"
     readSrc |
-        tee >(jq -cCR --unbuffered 'fromjson? | select(.type != "RECORD" and .type != "STATE")' |
-            jq -rR --unbuffered " \"${GREEN}[SRC]: \" + ${JQ_TIMESTAMP} + ." >&2) |
+        tee >(jq -cR $jq_color_opt --unbuffered 'fromjson? | select(.type != "RECORD" and .type != "STATE")' |
+            jq -rR --unbuffered "$jq_src_msg" >&2) |
         jq -cR --unbuffered "fromjson? | select(.type == \"RECORD\" or .type == \"STATE\") | .record.stream |= \"${dst_stream_prefix}\" + ." |
         tee "$output_filepath" |
         docker run $keep_containers $dst_use_host_network $max_memory $max_cpus --cidfile="$tempdir/dst_cid" -i --init -v "$tempdir:/configs" --log-opt max-size="$max_log_size" -a stdout -a stderr -a stdin --env LOG_LEVEL="$log_level" $dst_docker_options "$dst_docker_image" write \
@@ -338,7 +357,7 @@ function sync() {
         tee >(jq -cR --unbuffered 'fromjson? | select(.type == "STATE") | .state.data' | tail -n 1 > "$new_source_state_file") |
         # https://stedolan.github.io/jq/manual/#Colors
         JQ_COLORS="1;30:0;37:0;37:0;37:0;36:1;37:1;37" \
-        jq -cCR --unbuffered 'fromjson?' | jq -rR " \"${CYAN}[DST]: \" + ${JQ_TIMESTAMP} + ."
+        jq -cR $jq_color_opt --unbuffered 'fromjson?' | jq -rR "$jq_dst_msg"
     cp "$new_source_state_file" "$src_state_filepath"
 }
 
@@ -426,7 +445,7 @@ main() {
     if ((run_src_only)); then
         log "Only running source"
         loadState
-        readSrc | jq -cCR --unbuffered 'fromjson?' | jq -rR "\"${GREEN}[SRC]: \" + ${JQ_TIMESTAMP} + ."
+        readSrc | jq -cR $jq_color_opt --unbuffered 'fromjson?' | jq -rR "$jq_src_msg"
     else
         if ((no_dst_pull)); then
             log "Skipping pull of destination image $dst_docker_image"
