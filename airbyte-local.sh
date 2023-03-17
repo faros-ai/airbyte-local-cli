@@ -192,6 +192,11 @@ function parseFlags() {
                 shift 2 ;;
             --debug)
                 debug=1
+                redact_secrets=1
+                shift 1 ;;
+            --debug-secrets)
+                debug=1
+                redact_secrets=0
                 shift 1 ;;
             --help)
                 help ;;
@@ -213,7 +218,18 @@ function validateInput() {
 
 function writeSrcConfig() {
     writeConfig src_config "$tempdir/$src_config_filename"
-    debug "Using source config: $(jq -c < $tempdir/$src_config_filename)"
+    if ((debug)); then
+        loggable_src_config="$(jq -c < $tempdir/$src_config_filename)"
+        if ((redact_secrets)); then
+            redactSrcConfigSecrets
+        fi
+        debug "Using source config: $loggable_src_config"
+    fi
+}
+
+function redactSrcConfigSecrets() {
+    keys_to_redact=$(specSrc | jq -r '.spec.connectionSpecification.properties | to_entries | [.[] | select(.value.airbyte_secret) | .key]')
+    loggable_src_config="$(jq -r --argjson redact "$keys_to_redact" '. |= with_entries( .value = if ([.key] | inside($redact)) then "REDACTED" else .value end )' <<< $loggable_src_config)"
 }
 
 function writeDstConfig() {
@@ -326,6 +342,10 @@ function checkSrc() {
         fi
         log "Connection validation successful"
     fi
+}
+
+function specSrc() {
+    docker run --rm "$src_docker_image" spec
 }
 
 function discoverSrc() {
