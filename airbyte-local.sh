@@ -213,12 +213,16 @@ function validateInput() {
 
 function writeSrcConfig() {
     writeConfig src_config "$tempdir/$src_config_filename"
-    debug "Using source config: $(redactConfigSecrets "$(jq -c < $tempdir/$src_config_filename)" "$(specSrc)")"
+    if ((debug)); then
+        debug "Using source config: $(redactConfigSecrets "$(jq -c < $tempdir/$src_config_filename)" "$(specSrc)")"
+    fi
 }
 
 function writeDstConfig() {
     writeConfig dst_config "$tempdir/$dst_config_filename"
-    debug "Using destination config: $(redactConfigSecrets "$(jq -c < $tempdir/$dst_config_filename)" "$(specDst)")"
+    if ((debug)); then
+        debug "Using destination config: $(redactConfigSecrets "$(jq -c < $tempdir/$dst_config_filename)" "$(specDst)")"
+    fi
 }
 
 # Constructs paths to fields that should be redacted using Airbyte spec and then redacts them from the config
