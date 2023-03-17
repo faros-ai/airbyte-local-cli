@@ -221,6 +221,7 @@ function writeDstConfig() {
     debug "Using destination config: $(redactConfigSecrets "$(jq -c < $tempdir/$dst_config_filename)" "$(specDst)")"
 }
 
+# constructs paths to fields that should be redacted from spec and then redacts them in the config
 function redactConfigSecrets() {
     loggable_config="$1"
     config_properties="$(echo "$2" | jq -r '.spec.connectionSpecification.properties')"
