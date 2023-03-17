@@ -192,11 +192,6 @@ function parseFlags() {
                 shift 2 ;;
             --debug)
                 debug=1
-                redact_secrets=1
-                shift 1 ;;
-            --debug-secrets)
-                debug=1
-                redact_secrets=0
                 shift 1 ;;
             --help)
                 help ;;
@@ -220,16 +215,17 @@ function writeSrcConfig() {
     writeConfig src_config "$tempdir/$src_config_filename"
     if ((debug)); then
         loggable_src_config="$(jq -c < $tempdir/$src_config_filename)"
-        if ((redact_secrets)); then
-            redactSrcConfigSecrets
-        fi
+        redactSrcConfigSecrets
         debug "Using source config: $loggable_src_config"
     fi
 }
 
 function redactSrcConfigSecrets() {
-    keys_to_redact=$(specSrc | jq -r '.spec.connectionSpecification.properties | to_entries | map(select(.value.airbyte_secret).key)')
-    loggable_src_config="$(jq -c --argjson redact "$keys_to_redact" '. |= with_entries( .value = if ([.key] | inside($redact)) then "REDACTED" else .value end )' <<< $loggable_src_config)"
+    src_spec_props=$(specSrc | jq -r '.spec.connectionSpecification.properties')
+    paths_to_redact=($(jq -c --stream 'if .[0][-1] == "airbyte_secret" and .[1] then .[0] else null end | select(. != null) | .[0:-1] | map(select(. != "properties"))' <<< $src_spec_props))
+    for path in "${paths_to_redact[@]}"; do
+        loggable_src_config=$(jq -c --argjson path "$path" 'if getpath($path) != null then setpath($path; "REDACTED") else . end' <<< $loggable_src_config)
+    done
 }
 
 function writeDstConfig() {

@@ -24,7 +24,9 @@ End
 Describe 'building source config'
     # Makes the docker command a noop since we don't need it for these tests
     docker() {
-        true
+        if [[ $* =~ ^run.*spec ]]; then
+            echo '{"spec": {"connectionSpecification":{"properties":{}}}}'
+        fi
     }
 
     It 'flat key/values'
@@ -33,7 +35,7 @@ Describe 'building source config'
                 --src-only \
                 --src.feed_cfg.feed_name 'jira-feed' \
                 --src.feed_cfg.feed_path 'tms/jira-feed' \
-                --debug-secrets
+                --debug
         The output should include 'Using source config: {"feed_cfg":{"feed_path":"tms/jira-feed","feed_name":"jira-feed"}}'
     End
     It 'merges keys'
@@ -42,7 +44,7 @@ Describe 'building source config'
                 --src-only \
                 --src.feed_cfg '{"feed_name":"jira-feed"}' \
                 --src.feed_cfg.feed_path 'tms/jira-feed' \
-                --debug-secrets
+                --debug
         The output should include 'Using source config: {"feed_cfg":{"feed_path":"tms/jira-feed","feed_name":"jira-feed"}}'
     End
     It 'merges keys recursively'
@@ -53,7 +55,7 @@ Describe 'building source config'
                 --src.feed_cfg.inner_cfg.y '2' \
                 --src.feed_cfg.inner_cfg.z '{"a":"3"}' \
                 --src.feed_cfg.inner_cfg.z.b '4' \
-                --debug-secrets
+                --debug
         The output should include 'Using source config: {"feed_cfg":{"inner_cfg":{"y":2,"x":1,"z":{"a":"3","b":4}}}}'
     End
 End
@@ -65,27 +67,31 @@ Describe 'redacting source config secrets'
             echo '
             {
                 "spec": {
-                    "documentationUrl": "https://docs.faros.ai",
                     "connectionSpecification": {
-                        "$schema": "http://json-schema.org/draft-07/schema#",
-                        "title": "Dummy Spec",
-                        "type": "object",
-                        "required": ["secret", "non_secret"],
-                        "additionalProperties": true,
                         "properties": {
-                            "_secret": {
-                                "type": "string",
-                                "title": "Secret",
-                                "airbyte_secret": true
+                            "nested_object": {
+                                "other": {
+                                    "type": "string",
+                                    "title": "NonSecret"
+                                },
+                                "secret": {
+                                    "type": "string",
+                                    "title": "Secret",
+                                    "airbyte_secret": true
+                                }
                             },
                             "other": {
                                 "type": "string",
                                 "title": "NonSecret"
+                            },
+                            "secret": {
+                                "type": "string",
+                                "title": "Secret",
+                                "airbyte_secret": true
                             }
                         }
                     }
-                },
-                "type": "SPEC"
+                }
             }'
         fi
     }
@@ -94,17 +100,21 @@ Describe 'redacting source config secrets'
         When run source ../airbyte-local.sh \
                 --src 'farosai/dummy-source-image' \
                 --src-only \
-                --src._secret 'SHOULD_BE_REDACTED!!!' \
+                --src.nested_object.other 'bar' \
+                --src.nested_object.secret 'SHOULD_BE_REDACTED!!!' \
                 --src.other 'foo' \
+                --src.secret 'SHOULD_BE_REDACTED!!!' \
                 --debug
-        The output should include 'Using source config: {"_secret":"REDACTED","other":"foo"}'
+        The output should include 'Using source config: {"nested_object":{"secret":"REDACTED","other":"bar"},"secret":"REDACTED","other":"foo"}'
     End
 End
 
 Describe 'writing source output'
     # Makes the docker command a noop since we don't need it for these tests
     docker() {
-        true
+        if [[ $* =~ ^run.*spec ]]; then
+            echo '{"spec": {"connectionSpecification":{"properties":{}}}}'
+        fi
     }
 
     It 'writes source output to file'
@@ -112,14 +122,14 @@ Describe 'writing source output'
                 --src 'farosai/dummy-source-image' \
                 --dst 'farosai/dummy-destination-image' \
                 --src-output-file '/tmp/out.txt' \
-                --debug-secrets
+                --debug
         The output should include 'Writing source output to /tmp/out.txt'
     End
     It 'does not write source output'
         When run source ../airbyte-local.sh \
                 --src 'farosai/dummy-source-image' \
                 --dst 'farosai/dummy-destination-image' \
-                --debug-secrets
+                --debug
         The output should include 'Writing source output to /dev/null'
     End
 End
@@ -154,6 +164,8 @@ Describe 'building source catalog'
                 },
                 "type": "CATALOG"
             }'
+        elif [[ $* =~ ^run.*spec ]]; then
+            echo '{"spec":{"connectionSpecification":{"properties":{}}}}'
         fi
     }
 
@@ -163,7 +175,7 @@ Describe 'building source catalog'
                 --src-only \
                 --src.feed_cfg.feed_name 'jira-feed' \
                 --src.feed_cfg.feed_path 'tms/jira-feed' \
-                --debug-secrets
+                --debug
         The output should include 'Using source configured catalog: {"streams":[{"stream":{"name":"faros_feed","supported_sync_modes":["full_refresh","incremental"],"json_schema":{}},"sync_mode":"incremental","destination_sync_mode":"append"}]}'
     End
     It 'full-refresh flag forces full refresh and overwrite mode'
@@ -173,7 +185,7 @@ Describe 'building source catalog'
                 --src.feed_cfg.feed_name 'jira-feed' \
                 --src.feed_cfg.feed_path 'tms/jira-feed' \
                 --full-refresh \
-                --debug-secrets
+                --debug
         The output should include 'Using source configured catalog: {"streams":[{"stream":{"name":"faros_feed","supported_sync_modes":["full_refresh","incremental"],"json_schema":{}},"sync_mode":"full_refresh","destination_sync_mode":"overwrite"}]}'
     End
     It 'uses src-catalog-overrides sync mode'
@@ -183,7 +195,7 @@ Describe 'building source catalog'
                 --src.feed_cfg.feed_name 'jira-feed' \
                 --src.feed_cfg.feed_path 'tms/jira-feed' \
                 --src-catalog-overrides '{"faros_feed": {"sync_mode": "full_refresh"}}' \
-                --debug-secrets
+                --debug
         The output should include 'Using source configured catalog: {"streams":[{"stream":{"name":"faros_feed","supported_sync_modes":["full_refresh","incremental"],"json_schema":{}},"sync_mode":"full_refresh","destination_sync_mode":"overwrite"}]}'
     End
     It 'ignores disabled streams'
@@ -193,7 +205,7 @@ Describe 'building source catalog'
                 --src.feed_cfg.feed_name 'jira-feed' \
                 --src.feed_cfg.feed_path 'tms/jira-feed' \
                 --src-catalog-overrides '{"faros_feed": {"disabled": true}}' \
-                --debug-secrets
+                --debug
         The output should include 'Using source configured catalog: {"streams":[]}'
     End
 End
@@ -241,7 +253,9 @@ End
 Describe 'building destination config'
     # Makes the docker command a noop since we don't need it for these tests
     docker() {
-        true
+        if [[ $* =~ ^run.*spec ]]; then
+            echo '{"spec": {"connectionSpecification":{"properties":{}}}}'
+        fi
     }
 
     It 'merges keys recursively'
@@ -252,7 +266,7 @@ Describe 'building destination config'
                 --dst.feed_cfg.inner_cfg.y '2' \
                 --dst.feed_cfg.inner_cfg.z '{"a":"3"}' \
                 --dst.feed_cfg.inner_cfg.z.b '4' \
-                --debug-secrets
+                --debug
 
         The output should include 'Using destination config: {"feed_cfg":{"inner_cfg":{"y":2,"x":1,"z":{"a":"3","b":4}}}}'
     End
@@ -263,7 +277,7 @@ Describe 'building destination config'
                 --dst.edition_configs '{"edition":"cloud","api_url":"http://faros","api_key":"XYZ","graph":"g1","cloud_graphql_batch_size":10}' \
                 --dst.edition_configs.check_connection 'true' \
                 --dst-stream-prefix 'dummy_prefix' \
-                --debug-secrets
+                --debug
 
         The output should include 'Using destination config: {"edition_configs":{"edition":"cloud","api_url":"http://faros","api_key":"XYZ","graph":"g1","cloud_graphql_batch_size":10,"check_connection":true}}'
     End
@@ -299,6 +313,8 @@ Describe 'building destination catalog'
                 },
                 "type": "CATALOG"
             }'
+        elif [[ $* =~ ^run.*spec ]]; then
+            echo '{"spec":{"connectionSpecification":{"properties":{}}}}'
         fi
     }
 
@@ -307,7 +323,7 @@ Describe 'building destination catalog'
                 --src 'farosai/dummy-source-image' \
                 --dst 'farosai/dummy-destination-image' \
                 --dst-stream-prefix 'dummy_prefix__' \
-                --debug-secrets
+                --debug
 
         The output should include 'Using destination configured catalog: {"streams":[{"stream":{"name":"dummy_prefix__faros_feed","supported_sync_modes":["full_refresh","incremental"],"json_schema":{}},"sync_mode":"incremental","destination_sync_mode":"append"}]}'
     End
@@ -316,7 +332,7 @@ Describe 'building destination catalog'
         When run source ../airbyte-local.sh \
                 --src 'farosai/airbyte-dummy-source-image' \
                 --dst 'farosai/airbyte-faros-destination' \
-                --debug-secrets
+                --debug
 
         The output should include 'Using destination configured catalog: {"streams":[{"stream":{"name":"mydummysourcesrc__dummy_source__faros_feed","supported_sync_modes":["full_refresh","incremental"],"json_schema":{}},"sync_mode":"incremental","destination_sync_mode":"append"}]}'
     End
@@ -325,7 +341,7 @@ Describe 'building destination catalog'
                 --src 'farosai/airbyte-dummy-source-image' \
                 --dst 'farosai/airbyte-faros-destination' \
                 --connection-name 'connectionXYZ' \
-                --debug-secrets
+                --debug
 
         The output should include 'Using destination configured catalog: {"streams":[{"stream":{"name":"connectionXYZ__dummy_source__faros_feed","supported_sync_modes":["full_refresh","incremental"],"json_schema":{}},"sync_mode":"incremental","destination_sync_mode":"append"}]}'
     End
@@ -333,7 +349,7 @@ Describe 'building destination catalog'
         When run source ../airbyte-local.sh \
                 --src 'airbytehq/airbyte-dummy-source-image' \
                 --dst 'farosai/airbyte-faros-destination' \
-                --debug-secrets
+                --debug
 
         The output should include "farosai/airbyte-faros-destination requires a destination stream prefix. Specify this by adding '--dst-stream-prefix <value>'"
         The status should be failure
@@ -342,7 +358,7 @@ Describe 'building destination catalog'
         When run source ../airbyte-local.sh \
                 --src 'airbytehq/dummy-source-image' \
                 --dst 'airbytehq/dummy-destination-image' \
-                --debug-secrets
+                --debug
 
         The output should include 'Using destination configured catalog: {"streams":[{"stream":{"name":"faros_feed","supported_sync_modes":["full_refresh","incremental"],"json_schema":{}},"sync_mode":"incremental","destination_sync_mode":"append"}]}'
     End
