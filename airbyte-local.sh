@@ -229,7 +229,7 @@ function writeSrcConfig() {
 
 function redactSrcConfigSecrets() {
     keys_to_redact=$(specSrc | jq -r '.spec.connectionSpecification.properties | to_entries | [.[] | select(.value.airbyte_secret) | .key]')
-    loggable_src_config="$(jq -r --argjson redact "$keys_to_redact" '. |= with_entries( .value = if ([.key] | inside($redact)) then "REDACTED" else .value end )' <<< $loggable_src_config)"
+    loggable_src_config="$(jq -c --argjson redact "$keys_to_redact" '. |= with_entries( .value = if ([.key] | inside($redact)) then "REDACTED" else .value end )' <<< $loggable_src_config)"
 }
 
 function writeDstConfig() {
