@@ -86,8 +86,8 @@ function setDefaults() {
     src_docker_options=""
     dst_docker_options=""
     output_filepath="/dev/null"
-    src_msg="\"${GREEN}[SRC]: \" + ${JQ_TIMESTAMP} + ."
-    dst_msg="\"${CYAN}[DST]: \" + ${JQ_TIMESTAMP} + ."
+    jq_src_msg="\"${GREEN}[SRC]: \" + ${JQ_TIMESTAMP} + ."
+    jq_dst_msg="\"${CYAN}[DST]: \" + ${JQ_TIMESTAMP} + ."
     jq_color_opt="-C"
 }
 
@@ -170,10 +170,10 @@ function parseFlags() {
                 log_level="$2"
                 shift 2 ;;
             --raw-messages)
-                jq_color_opt="-M"
                 # Passthrough
-                src_msg="."
-                dst_msg="."
+                jq_src_msg="."
+                jq_dst_msg="."
+                jq_color_opt="-M"
                 shift 1 ;;
             --keep-containers)
                 keep_containers=""
@@ -349,7 +349,7 @@ function sync() {
     new_source_state_file="$tempdir/new_state.json"
     readSrc |
         tee >(jq -cR $jq_color_opt --unbuffered 'fromjson? | select(.type != "RECORD" and .type != "STATE")' |
-            jq -rR --unbuffered "$src_msg" >&2) |
+            jq -rR --unbuffered "$jq_src_msg" >&2) |
         jq -cR --unbuffered "fromjson? | select(.type == \"RECORD\" or .type == \"STATE\") | .record.stream |= \"${dst_stream_prefix}\" + ." |
         tee "$output_filepath" |
         docker run $keep_containers $dst_use_host_network $max_memory $max_cpus --cidfile="$tempdir/dst_cid" -i --init -v "$tempdir:/configs" --log-opt max-size="$max_log_size" -a stdout -a stderr -a stdin --env LOG_LEVEL="$log_level" $dst_docker_options "$dst_docker_image" write \
@@ -357,7 +357,7 @@ function sync() {
         tee >(jq -cR --unbuffered 'fromjson? | select(.type == "STATE") | .state.data' | tail -n 1 > "$new_source_state_file") |
         # https://stedolan.github.io/jq/manual/#Colors
         JQ_COLORS="1;30:0;37:0;37:0;37:0;36:1;37:1;37" \
-        jq -cR $jq_color_opt --unbuffered 'fromjson?' | jq -rR "$dst_msg"
+        jq -cR $jq_color_opt --unbuffered 'fromjson?' | jq -rR "$jq_dst_msg"
     cp "$new_source_state_file" "$src_state_filepath"
 }
 
@@ -445,7 +445,7 @@ main() {
     if ((run_src_only)); then
         log "Only running source"
         loadState
-        readSrc | jq -cR $jq_color_opt --unbuffered 'fromjson?' | jq -rR "$src_msg"
+        readSrc | jq -cR $jq_color_opt --unbuffered 'fromjson?' | jq -rR "$jq_src_msg"
     else
         if ((no_dst_pull)); then
             log "Skipping pull of destination image $dst_docker_image"
