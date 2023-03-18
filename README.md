@@ -52,7 +52,7 @@ Or with [Faros Community Edition](https://github.com/faros-ai/faros-community-ed
 ## Arguments
 
 | Argument                          | Required | Description                                                                                       |
-|-----------------------------------| -------- |---------------------------------------------------------------------------------------------------|
+| --------------------------------- | -------- | ------------------------------------------------------------------------------------------------- |
 | --src \<image\>                   | Yes      | Airbyte source Docker image                                                                       |
 | --dst \<image\>                   | Yes      | Airbyte destination Docker image                                                                  |
 | --src.\<key\> \<value\>           |          | Append `"key": "value"` into the source config \*                                                 |
@@ -62,8 +62,12 @@ Or with [Faros Community Edition](https://github.com/faros-ai/faros-community-ed
 | --state \<path\>                  |          | Override state file path for incremental sync                                                     |
 | --src-output-file \<path\>        |          | Write source output as a file (handy for debugging)                                               |
 | --src-catalog-overrides \<json\>  |          | JSON string of sync mode overrides. See [overriding default catalog](#overriding-default-catalog) |
+| --src-config-file \<path\>        |          | Source config file path                                                                           |
+| --src-config-json \<json\>        |          | Source config as a JSON string                                                                    |
 | --src-catalog-file \<path\>       |          | Source catalog file path                                                                          |
 | --src-catalog-json \<json\>       |          | Source catalog as a JSON string                                                                   |
+| --dst-config-file \<path\>        |          | Destination config file path                                                                      |
+| --dst-config-json \<json\>        |          | Destination config as a JSON string                                                               |
 | --dst-catalog-file \<path\>       |          | Destination catalog file path                                                                     |
 | --dst-catalog-json \<json\>       |          | Destination catalog as a JSON string                                                              |
 | --dst-stream-prefix \<prefix\>    |          | Destination stream prefix                                                                         |

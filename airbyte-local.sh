@@ -115,6 +115,12 @@ function parseFlags() {
             --src-catalog-json)
                 src_catalog_json="$2"
                 shift 2 ;;
+            --src-config-file)
+                src_config_file="$2"
+                shift 2 ;;
+            --src-config-json)
+                src_config_json="$2"
+                shift 2 ;;
             --src.*)
                 IFS='.' read -ra strarr <<< $1
                 keys=( "${strarr[@]:1}" )
@@ -159,6 +165,12 @@ function parseFlags() {
                 shift 2 ;;
             --dst-catalog-json)
                 dst_catalog_json="$2"
+                shift 2 ;;
+            --dst-config-file)
+                dst_config_file="$2"
+                shift 2 ;;
+            --dst-config-json)
+                dst_config_json="$2"
                 shift 2 ;;
             --dst-use-host-network)
                 dst_use_host_network="--network host"
@@ -212,13 +224,29 @@ function validateInput() {
 }
 
 function writeSrcConfig() {
-    writeConfig src_config "$tempdir/$src_config_filename"
-    debug "Using source config: $(jq -c < $tempdir/$src_config_filename)"
+    if [[ "$src_config_file" ]]; then
+        cp "$src_config_file" "$tempdir/$src_config_filename"
+    elif [[ "$src_config_json" ]]; then
+        echo "$src_config_json" > "$tempdir/$src_config_filename"
+    else
+        writeConfig src_config "$tempdir/$src_config_filename"
+    fi
+    if ((debug)); then
+        debug "Using source config: $(redactConfigSecrets "$(jq -c < $tempdir/$src_config_filename)" "$(specSrc)")"
+    fi
 }
 
 function writeDstConfig() {
-    writeConfig dst_config "$tempdir/$dst_config_filename"
-    debug "Using destination config: $(jq -c < $tempdir/$dst_config_filename)"
+    if [[ "$dst_config_file" ]]; then
+        cp "$dst_config_file" "$tempdir/$dst_config_filename"
+    elif [[ "$dst_config_json" ]]; then
+        echo "$dst_config_json" > "$tempdir/$dst_config_filename"
+    else
+        writeConfig dst_config "$tempdir/$dst_config_filename"
+    fi
+    if ((debug)); then
+        debug "Using destination config: $(redactConfigSecrets "$(jq -c < $tempdir/$dst_config_filename)" "$(specDst)")"
+    fi
 }
 
 function writeConfig() {
@@ -237,6 +265,26 @@ function writeConfig() {
       | . as $a
       | reduce range(0; length/2) as $i
           ({}; . * setpath(($a[2*$i] / ".");($a[2*$i + 1]|fromjson? // if . == "true" then true elif . == "false" then false else . end)))' > "$2"
+}
+
+# Constructs paths to fields that should be redacted using Airbyte spec and then redacts them from the config
+# $1      - Config with secrets to redact
+# $2      - Airbyte spec that defines which fields are "airbyte_secret"
+# returns - Config with redacted secrets
+function redactConfigSecrets() {
+    loggable_config="$1"
+    config_properties="$(echo "$2" | jq -r '.spec.connectionSpecification.properties')"
+    paths_to_redact=($(jq -c --stream 'if .[0][-1] == "airbyte_secret" and .[1] then .[0] else null end 
+                                       | select(. != null) 
+                                       | .[0:-1] 
+                                       | map(select(. != "properties" and 
+                                                    . != "oneOf" and
+                                                    . != "anyOf" and
+                                                    (.|tostring|test("^\\d+$")|not)))' <<< "$config_properties"))
+    for path in "${paths_to_redact[@]}"; do\
+        loggable_config="$(jq -c --argjson path "$path" 'if getpath($path) != null then setpath($path; "REDACTED") else . end' <<< "$loggable_config")"
+    done
+    echo "$loggable_config"
 }
 
 function writeSrcCatalog() {
@@ -328,6 +376,10 @@ function checkSrc() {
     fi
 }
 
+function specSrc() {
+    docker run --rm "$src_docker_image" spec
+}
+
 function discoverSrc() {
     docker run --rm -v "$tempdir:/configs" "$src_docker_image" discover \
       --config "/configs/$src_config_filename"
@@ -342,6 +394,10 @@ function readSrc() {
           --catalog "/configs/$src_catalog_filename" \
           --state "/configs/$src_state_filename"
     fi
+}
+
+function specDst() {
+    docker run --rm "$dst_docker_image" spec
 }
 
 function sync() {

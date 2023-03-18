@@ -24,7 +24,9 @@ End
 Describe 'building source config'
     # Makes the docker command a noop since we don't need it for these tests
     docker() {
-        true
+        if [[ $* =~ ^run.*spec ]]; then
+            echo '{"spec": {"connectionSpecification":{"properties":{}}}}'
+        fi
     }
 
     It 'flat key/values'
@@ -58,10 +60,65 @@ Describe 'building source config'
     End
 End
 
+Describe 'redacting source config secrets'
+    # Mock the docker command that invokes the Airbyte source "spec"
+    docker() {
+        if [[ $* =~ ^run.*spec ]]; then
+            echo '
+            {
+                "spec": {
+                    "connectionSpecification": {
+                        "properties": {
+                            "anyOfObj": {
+                                "anyOf": [
+                                    {"properties":{"e":{"airbyte_secret": true},"f":{}}},
+                                    {"properties":{"g":{"airbyte_secret": true},"h":{}}}
+                                ]
+                            },
+                            "nestedObj": {
+                                "type": "object",
+                                "properties": {
+                                    "other": {},
+                                    "secret": {
+                                        "airbyte_secret": true
+                                    }
+                                }
+                            },
+                            "oneOfObj": {
+                                "oneOf": [
+                                    {"properties":{"a":{"airbyte_secret": true},"b":{}}},
+                                    {"properties":{"c":{"airbyte_secret": true},"d":{}}}
+                                ]
+                            },
+                            "other": {},
+                            "secret": {
+                                "airbyte_secret": true
+                            }
+                        }
+                    }
+                }
+            }'
+        fi
+    }
+
+    It 'redacts airbyte_secret fields'
+        When run source ../airbyte-local.sh \
+                --src 'farosai/dummy-source-image' \
+                --dst 'farosai/dummy-destination-image' \
+                --src-config-json '{"nestedObj":{"secret":"SHOULD_BE_REDACTED!!!","other":"bar"},"anyOfObj":{"e":"SHOULD_BE_REDACTED!!!","f":"f"},"secret":"SHOULD_BE_REDACTED!!!","oneOfObj":{"a":"SHOULD_BE_REDACTED!!!","b":"b"},"other":"foo"}' \
+                --dst-config-json '{"nestedObj":{"secret":"SHOULD_BE_REDACTED!!!","other":"bar"},"anyOfObj":{"g":"SHOULD_BE_REDACTED!!!","h":"h"},"secret":"SHOULD_BE_REDACTED!!!","oneOfObj":{"c":"SHOULD_BE_REDACTED!!!","d":"d"},"other":"foo"}' \
+                --debug
+        The output should include 'Using source config: {"nestedObj":{"secret":"REDACTED","other":"bar"},"anyOfObj":{"e":"REDACTED","f":"f"},"secret":"REDACTED","oneOfObj":{"a":"REDACTED","b":"b"},"other":"foo"}' 
+        The output should include 'Using destination config: {"nestedObj":{"secret":"REDACTED","other":"bar"},"anyOfObj":{"g":"REDACTED","h":"h"},"secret":"REDACTED","oneOfObj":{"c":"REDACTED","d":"d"},"other":"foo"}'
+    End
+End
+
 Describe 'writing source output'
     # Makes the docker command a noop since we don't need it for these tests
     docker() {
-        true
+        if [[ $* =~ ^run.*spec ]]; then
+            echo '{"spec": {"connectionSpecification":{"properties":{}}}}'
+        fi
     }
 
     It 'writes source output to file'
@@ -111,6 +168,8 @@ Describe 'building source catalog'
                 },
                 "type": "CATALOG"
             }'
+        elif [[ $* =~ ^run.*spec ]]; then
+            echo '{"spec":{"connectionSpecification":{"properties":{}}}}'
         fi
     }
 
@@ -198,7 +257,9 @@ End
 Describe 'building destination config'
     # Makes the docker command a noop since we don't need it for these tests
     docker() {
-        true
+        if [[ $* =~ ^run.*spec ]]; then
+            echo '{"spec": {"connectionSpecification":{"properties":{}}}}'
+        fi
     }
 
     It 'merges keys recursively'
@@ -256,6 +317,8 @@ Describe 'building destination catalog'
                 },
                 "type": "CATALOG"
             }'
+        elif [[ $* =~ ^run.*spec ]]; then
+            echo '{"spec":{"connectionSpecification":{"properties":{}}}}'
         fi
     }
 
