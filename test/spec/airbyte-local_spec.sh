@@ -69,7 +69,13 @@ Describe 'redacting source config secrets'
                 "spec": {
                     "connectionSpecification": {
                         "properties": {
-                            "nested_object": {
+                            "anyOfObj": {
+                                "anyOf": [
+                                    {"properties":{"e":{"airbyte_secret": true},"f":{}}},
+                                    {"properties":{"g":{"airbyte_secret": true},"h":{}}}
+                                ]
+                            },
+                            "nestedObjObj": {
                                 "type": "object",
                                 "properties": {
                                     "other": {},
@@ -78,16 +84,10 @@ Describe 'redacting source config secrets'
                                     }
                                 }
                             },
-                            "oneOf_object": {
+                            "oneOfObj": {
                                 "oneOf": [
                                     {"properties":{"a":{"airbyte_secret": true},"b":{}}},
                                     {"properties":{"c":{"airbyte_secret": true},"d":{}}}
-                                ]
-                            },
-                            "anyOf_object": {
-                                "anyOf": [
-                                    {"properties":{"e":{"airbyte_secret": true},"f":{}}},
-                                    {"properties":{"g":{"airbyte_secret": true},"h":{}}}
                                 ]
                             },
                             "other": {},
@@ -105,25 +105,25 @@ Describe 'redacting source config secrets'
         When run source ../airbyte-local.sh \
                 --src 'farosai/dummy-source-image' \
                 --dst 'farosai/dummy-destination-image' \
-                --src.nested_object.other 'bar' \
-                --src.nested_object.secret 'SHOULD_BE_REDACTED!!!' \
-                --src.oneOf_object.a 'SHOULD_BE_REDACTED!!!' \
-                --src.oneOf_object.b 'b' \
-                --src.anyOf_object.e 'SHOULD_BE_REDACTED!!!' \
-                --src.anyOf_object.f 'f' \
+                --src.anyOfObj.e 'SHOULD_BE_REDACTED!!!' \
+                --src.anyOfObj.f 'f' \
+                --src.nestedObjObj.other 'bar' \
+                --src.nestedObj.secret 'SHOULD_BE_REDACTED!!!' \
+                --src.oneOfObj.a 'SHOULD_BE_REDACTED!!!' \
+                --src.oneOfObj.b 'b' \
                 --src.other 'foo' \
                 --src.secret 'SHOULD_BE_REDACTED!!!' \
-                --dst.nested_object.other 'bar' \
-                --dst.nested_object.secret 'SHOULD_BE_REDACTED!!!' \
-                --dst.oneOf_object.c 'SHOULD_BE_REDACTED!!!' \
-                --dst.oneOf_object.d 'd' \
-                --dst.anyOf_object.g 'SHOULD_BE_REDACTED!!!' \
-                --dst.anyOf_object.h 'h' \
+                --dst.anyOfObj.g 'SHOULD_BE_REDACTED!!!' \
+                --dst.anyOfObj.h 'h' \
+                --dst.nestedObj.other 'bar' \
+                --dst.nestedObj.secret 'SHOULD_BE_REDACTED!!!' \
+                --dst.oneOfObj.c 'SHOULD_BE_REDACTED!!!' \
+                --dst.oneOfObj.d 'd' \
                 --dst.other 'foo' \
                 --dst.secret 'SHOULD_BE_REDACTED!!!' \
                 --debug
-        The output should include 'Using source config: {"nested_object":{"secret":"REDACTED","other":"bar"},"anyOf_object":{"f":"f","e":"REDACTED"},"secret":"REDACTED","oneOf_object":{"a":"REDACTED","b":"b"},"other":"foo"}' 
-        The output should include 'Using destination config: {"nested_object":{"secret":"REDACTED","other":"bar"},"anyOf_object":{"h":"h","g":"REDACTED"},"secret":"REDACTED","oneOf_object":{"d":"d","c":"REDACTED"},"other":"foo"}'
+        The output should include 'Using source config: {"nestedObj":{"secret":"SHOULD_BE_REDACTED!!!"},"anyOfObj":{"f":"f","e":"REDACTED"},"secret":"REDACTED","oneOfObj":{"a":"REDACTED","b":"b"},"nestedObjObj":{"other":"bar"},"other":"foo"}' 
+        The output should include 'Using destination config: {"nestedObj":{"secret":"SHOULD_BE_REDACTED!!!","other":"bar"},"anyOfObj":{"g":"REDACTED","h":"h"},"secret":"REDACTED","oneOfObj":{"c":"REDACTED","d":"d"},"other":"foo"}'
     End
 End
 
