@@ -105,10 +105,10 @@ Describe 'redacting source config secrets'
         When run source ../airbyte-local.sh \
                 --src 'farosai/dummy-source-image' \
                 --dst 'farosai/dummy-destination-image' \
-                --src-config-json '{"nestedObj":{"secret":"SHOULD_BE_REDACTED!!!","other":"bar"},"anyOfObj":{"g":"SHOULD_BE_REDACTED!!!","h":"h"},"secret":"SHOULD_BE_REDACTED!!!","oneOfObj":{"c":"SHOULD_BE_REDACTED!!!","d":"d"},"other":"foo"}' \
+                --src-config-json '{"nestedObj":{"secret":"SHOULD_BE_REDACTED!!!","other":"bar"},"anyOfObj":{"e":"SHOULD_BE_REDACTED!!!","f":"f"},"secret":"SHOULD_BE_REDACTED!!!","oneOfObj":{"a":"SHOULD_BE_REDACTED!!!","b":"b"},"other":"foo"}' \
                 --dst-config-json '{"nestedObj":{"secret":"SHOULD_BE_REDACTED!!!","other":"bar"},"anyOfObj":{"g":"SHOULD_BE_REDACTED!!!","h":"h"},"secret":"SHOULD_BE_REDACTED!!!","oneOfObj":{"c":"SHOULD_BE_REDACTED!!!","d":"d"},"other":"foo"}' \
                 --debug
-        The output should include 'Using source config: {"nestedObj":{"secret":"REDACTED","other":"bar"},"anyOfObj":{"g":"REDACTED","h":"h"},"secret":"REDACTED","oneOfObj":{"c":"REDACTED","d":"d"},"other":"foo"}' 
+        The output should include 'Using source config: {"nestedObj":{"secret":"REDACTED","other":"bar"},"anyOfObj":{"e":"REDACTED","f":"f"},"secret":"REDACTED","oneOfObj":{"a":"REDACTED","b":"b"},"other":"foo"}' 
         The output should include 'Using destination config: {"nestedObj":{"secret":"REDACTED","other":"bar"},"anyOfObj":{"g":"REDACTED","h":"h"},"secret":"REDACTED","oneOfObj":{"c":"REDACTED","d":"d"},"other":"foo"}'
     End
 End
