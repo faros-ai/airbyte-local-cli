@@ -75,7 +75,7 @@ Describe 'redacting source config secrets'
                                     {"properties":{"g":{"airbyte_secret": true},"h":{}}}
                                 ]
                             },
-                            "nestedObjObj": {
+                            "nestedObj": {
                                 "type": "object",
                                 "properties": {
                                     "other": {},
@@ -105,25 +105,11 @@ Describe 'redacting source config secrets'
         When run source ../airbyte-local.sh \
                 --src 'farosai/dummy-source-image' \
                 --dst 'farosai/dummy-destination-image' \
-                --src.anyOfObj.e 'SHOULD_BE_REDACTED!!!' \
-                --src.anyOfObj.f 'f' \
-                --src.nestedObjObj.other 'bar' \
-                --src.nestedObj.secret 'SHOULD_BE_REDACTED!!!' \
-                --src.oneOfObj.a 'SHOULD_BE_REDACTED!!!' \
-                --src.oneOfObj.b 'b' \
-                --src.other 'foo' \
-                --src.secret 'SHOULD_BE_REDACTED!!!' \
-                --dst.anyOfObj.g 'SHOULD_BE_REDACTED!!!' \
-                --dst.anyOfObj.h 'h' \
-                --dst.nestedObj.other 'bar' \
-                --dst.nestedObj.secret 'SHOULD_BE_REDACTED!!!' \
-                --dst.oneOfObj.c 'SHOULD_BE_REDACTED!!!' \
-                --dst.oneOfObj.d 'd' \
-                --dst.other 'foo' \
-                --dst.secret 'SHOULD_BE_REDACTED!!!' \
+                --src-config-json '{"nestedObj":{"secret":"SHOULD_BE_REDACTED!!!","other":"bar"},"anyOfObj":{"g":"SHOULD_BE_REDACTED!!!","h":"h"},"secret":"SHOULD_BE_REDACTED!!!","oneOfObj":{"c":"SHOULD_BE_REDACTED!!!","d":"d"},"other":"foo"}' \
+                --dst-config-json '{"nestedObj":{"secret":"SHOULD_BE_REDACTED!!!","other":"bar"},"anyOfObj":{"g":"SHOULD_BE_REDACTED!!!","h":"h"},"secret":"SHOULD_BE_REDACTED!!!","oneOfObj":{"c":"SHOULD_BE_REDACTED!!!","d":"d"},"other":"foo"}' \
                 --debug
-        The output should include 'Using source config: {"nestedObj":{"secret":"SHOULD_BE_REDACTED!!!"},"anyOfObj":{"f":"f","e":"REDACTED"},"secret":"REDACTED","oneOfObj":{"a":"REDACTED","b":"b"},"nestedObjObj":{"other":"bar"},"other":"foo"}' 
-        The output should include 'Using destination config: {"nestedObj":{"secret":"SHOULD_BE_REDACTED!!!","other":"bar"},"anyOfObj":{"g":"REDACTED","h":"h"},"secret":"REDACTED","oneOfObj":{"c":"REDACTED","d":"d"},"other":"foo"}'
+        The output should include 'Using source config: {"nestedObj":{"secret":"REDACTED","other":"bar"},"anyOfObj":{"g":"REDACTED","h":"h"},"secret":"REDACTED","oneOfObj":{"c":"REDACTED","d":"d"},"other":"foo"}' 
+        The output should include 'Using destination config: {"nestedObj":{"secret":"REDACTED","other":"bar"},"anyOfObj":{"g":"REDACTED","h":"h"},"secret":"REDACTED","oneOfObj":{"c":"REDACTED","d":"d"},"other":"foo"}'
     End
 End
 

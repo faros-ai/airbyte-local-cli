@@ -115,6 +115,12 @@ function parseFlags() {
             --src-catalog-json)
                 src_catalog_json="$2"
                 shift 2 ;;
+            --src-config-file)
+                src_config_file="$2"
+                shift 2 ;;
+            --src-config-json)
+                src_config_json="$2"
+                shift 2 ;;
             --src.*)
                 IFS='.' read -ra strarr <<< $1
                 keys=( "${strarr[@]:1}" )
@@ -159,6 +165,12 @@ function parseFlags() {
                 shift 2 ;;
             --dst-catalog-json)
                 dst_catalog_json="$2"
+                shift 2 ;;
+            --dst-config-file)
+                dst_config_file="$2"
+                shift 2 ;;
+            --dst-config-json)
+                dst_config_json="$2"
                 shift 2 ;;
             --dst-use-host-network)
                 dst_use_host_network="--network host"
@@ -212,17 +224,47 @@ function validateInput() {
 }
 
 function writeSrcConfig() {
-    writeConfig src_config "$tempdir/$src_config_filename"
+    if [[ "$src_config_file" ]]; then
+        cp "$src_config_file" "$tempdir/$src_config_filename"
+    elif [[ "$src_config_json" ]]; then
+        echo "$src_config_json" > "$tempdir/$src_config_filename"
+    else
+        writeConfig src_config "$tempdir/$src_config_filename"
+    fi
     if ((debug)); then
         debug "Using source config: $(redactConfigSecrets "$(jq -c < $tempdir/$src_config_filename)" "$(specSrc)")"
     fi
 }
 
 function writeDstConfig() {
-    writeConfig dst_config "$tempdir/$dst_config_filename"
+    if [[ "$dst_config_file" ]]; then
+        cp "$dst_config_file" "$tempdir/$dst_config_filename"
+    elif [[ "$dst_config_json" ]]; then
+        echo "$dst_config_json" > "$tempdir/$dst_config_filename"
+    else
+        writeConfig dst_config "$tempdir/$dst_config_filename"
+    fi
     if ((debug)); then
         debug "Using destination config: $(redactConfigSecrets "$(jq -c < $tempdir/$dst_config_filename)" "$(specDst)")"
     fi
+}
+
+function writeConfig() {
+    if ((use_eval)); then
+        var=$(declare -p "$1")
+        eval "declare -A config=${var#*=}"
+    else
+        local -n config=$1
+    fi
+    # Inspired by https://stackoverflow.com/questions/44792241/constructing-a-json-hash-from-a-bash-associative-array
+    for key in "${!config[@]}"; do
+        printf '%s\0%s\0' "$key" "${config[$key]}"
+    done |
+    jq -Rs '
+      split("\u0000")
+      | . as $a
+      | reduce range(0; length/2) as $i
+          ({}; . * setpath(($a[2*$i] / ".");($a[2*$i + 1]|fromjson? // if . == "true" then true elif . == "false" then false else . end)))' > "$2"
 }
 
 # Constructs paths to fields that should be redacted using Airbyte spec and then redacts them from the config
@@ -243,24 +285,6 @@ function redactConfigSecrets() {
         loggable_config="$(jq -c --argjson path "$path" 'if getpath($path) != null then setpath($path; "REDACTED") else . end' <<< "$loggable_config")"
     done
     echo "$loggable_config"
-}
-
-function writeConfig() {
-    if ((use_eval)); then
-        var=$(declare -p "$1")
-        eval "declare -A config=${var#*=}"
-    else
-        local -n config=$1
-    fi
-    # Inspired by https://stackoverflow.com/questions/44792241/constructing-a-json-hash-from-a-bash-associative-array
-    for key in "${!config[@]}"; do
-        printf '%s\0%s\0' "$key" "${config[$key]}"
-    done |
-    jq -Rs '
-      split("\u0000")
-      | . as $a
-      | reduce range(0; length/2) as $i
-          ({}; . * setpath(($a[2*$i] / ".");($a[2*$i + 1]|fromjson? // if . == "true" then true elif . == "false" then false else . end)))' > "$2"
 }
 
 function writeSrcCatalog() {
