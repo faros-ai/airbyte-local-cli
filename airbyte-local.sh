@@ -235,8 +235,11 @@ function redactConfigSecrets() {
     paths_to_redact=($(jq -c --stream 'if .[0][-1] == "airbyte_secret" and .[1] then .[0] else null end 
                                        | select(. != null) 
                                        | .[0:-1] 
-                                       | map(select(. != "properties" and . != "oneOf" and (.|tostring|test("^\\d+$")|not)))' <<< "$config_properties"))
-    for path in "${paths_to_redact[@]}"; do
+                                       | map(select(. != "properties" and 
+                                                    . != "oneOf" and
+                                                    . != "anyOf" and
+                                                    (.|tostring|test("^\\d+$")|not)))' <<< "$config_properties"))
+    for path in "${paths_to_redact[@]}"; do\
         loggable_config="$(jq -c --argjson path "$path" 'if getpath($path) != null then setpath($path; "REDACTED") else . end' <<< "$loggable_config")"
     done
     echo "$loggable_config"

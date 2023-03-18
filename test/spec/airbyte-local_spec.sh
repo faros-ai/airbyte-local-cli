@@ -72,24 +72,26 @@ Describe 'redacting source config secrets'
                             "nested_object": {
                                 "type": "object",
                                 "properties": {
-                                    "other": {
-                                        "type": "string",
-                                        "title": "NonSecret"
-                                    },
+                                    "other": {},
                                     "secret": {
-                                        "type": "string",
-                                        "title": "Secret",
                                         "airbyte_secret": true
                                     }
                                 }
                             },
-                            "other": {
-                                "type": "string",
-                                "title": "NonSecret"
+                            "oneOf_object": {
+                                "oneOf": [
+                                    {"properties":{"a":{"airbyte_secret": true},"b":{}}},
+                                    {"properties":{"c":{"airbyte_secret": true},"d":{}}}
+                                ]
                             },
+                            "anyOf_object": {
+                                "anyOf": [
+                                    {"properties":{"e":{"airbyte_secret": true},"f":{}}},
+                                    {"properties":{"g":{"airbyte_secret": true},"h":{}}}
+                                ]
+                            },
+                            "other": {},
                             "secret": {
-                                "type": "string",
-                                "title": "Secret",
                                 "airbyte_secret": true
                             }
                         }
@@ -105,15 +107,23 @@ Describe 'redacting source config secrets'
                 --dst 'farosai/dummy-destination-image' \
                 --src.nested_object.other 'bar' \
                 --src.nested_object.secret 'SHOULD_BE_REDACTED!!!' \
+                --src.oneOf_object.a 'SHOULD_BE_REDACTED!!!' \
+                --src.oneOf_object.b 'b' \
+                --src.anyOf_object.e 'SHOULD_BE_REDACTED!!!' \
+                --src.anyOf_object.f 'f' \
                 --src.other 'foo' \
                 --src.secret 'SHOULD_BE_REDACTED!!!' \
                 --dst.nested_object.other 'bar' \
                 --dst.nested_object.secret 'SHOULD_BE_REDACTED!!!' \
+                --dst.oneOf_object.c 'SHOULD_BE_REDACTED!!!' \
+                --dst.oneOf_object.d 'd' \
+                --dst.anyOf_object.g 'SHOULD_BE_REDACTED!!!' \
+                --dst.anyOf_object.h 'h' \
                 --dst.other 'foo' \
                 --dst.secret 'SHOULD_BE_REDACTED!!!' \
                 --debug
-        The output should include 'Using source config: {"nested_object":{"secret":"REDACTED","other":"bar"},"secret":"REDACTED","other":"foo"}' 
-        The output should include 'Using destination config: {"nested_object":{"secret":"REDACTED","other":"bar"},"secret":"REDACTED","other":"foo"}'
+        The output should include 'Using source config: {"nested_object":{"secret":"REDACTED","other":"bar"},"anyOf_object":{"f":"f","e":"REDACTED"},"secret":"REDACTED","oneOf_object":{"a":"REDACTED","b":"b"},"other":"foo"}' 
+        The output should include 'Using destination config: {"nested_object":{"secret":"REDACTED","other":"bar"},"anyOf_object":{"h":"h","g":"REDACTED"},"secret":"REDACTED","oneOf_object":{"d":"d","c":"REDACTED"},"other":"foo"}'
     End
 End
 
