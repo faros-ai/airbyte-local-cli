@@ -38,6 +38,7 @@ else
     # with an unspecified error on some systems
     JQ_TIMESTAMP="(now|todate)"
     
+    # Workaround for Docker for Windows in Git Bash
     # https://github.com/docker-archive/toolbox/issues/673
     export MSYS_NO_PATHCONV=1
 fi
