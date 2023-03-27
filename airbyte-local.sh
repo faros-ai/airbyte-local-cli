@@ -33,10 +33,10 @@ NC='\033[0m' # No Color
 
 # Avoid using strflocaltime on Windows since it fails
 # with an unspecified error on some systems
-if [[ "$OSTYPE" == "win32" ]]; then
-  JQ_TIMESTAMP="(now|todate)"
+if [[ "$OSTYPE" =~ ^darwin || "$OSTYPE" =~ ^linux ]]; then
+    JQ_TIMESTAMP="(now|strflocaltime(\"%H:%M:%S\"))"
 else
-  JQ_TIMESTAMP="(now|strflocaltime(\"%H:%M:%S\"))"
+    JQ_TIMESTAMP="(now|todate)"
 fi
 
 function help() {
