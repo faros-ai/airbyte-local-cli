@@ -31,12 +31,16 @@ BLUE='\u001b[34m'
 CYAN='\u001b[36m'
 NC='\033[0m' # No Color
 
-# Avoid using strflocaltime on Windows since it fails
-# with an unspecified error on some systems
 if [[ "$OSTYPE" =~ ^darwin || "$OSTYPE" =~ ^linux ]]; then
     JQ_TIMESTAMP="(now|strflocaltime(\"%H:%M:%S\"))"
 else
+    # Avoid using strflocaltime on Windows since it fails
+    # with an unspecified error on some systems
     JQ_TIMESTAMP="(now|todate)"
+    
+    # Workaround for Docker for Windows in Git Bash
+    # https://github.com/docker-archive/toolbox/issues/673
+    export MSYS_NO_PATHCONV=1
 fi
 
 function help() {
@@ -395,7 +399,7 @@ function readSrc() {
     if [[ "$src_file" ]]; then
         cat $src_file
     else
-        docker run $keep_containers $max_memory $max_cpus --init --cidfile="$tempdir/src_cid" -v "$tempdir:/configs" --log-opt max-size="$max_log_size" -a stdout -a stderr --env LOG_LEVEL="$log_level" $src_docker_options "$src_docker_image" read \
+        docker run $keep_containers $max_memory $max_cpus --init --cidfile="$tempPrefix-src_cid" -v "$tempdir:/configs" --log-opt max-size="$max_log_size" -a stdout -a stderr --env LOG_LEVEL="$log_level" $src_docker_options "$src_docker_image" read \
           --config "/configs/$src_config_filename" \
           --catalog "/configs/$src_catalog_filename" \
           --state "/configs/$src_state_filename"
@@ -414,7 +418,7 @@ function sync() {
             jq -rR --unbuffered "$jq_src_msg" >&2) |
         jq -cR --unbuffered "fromjson? | select(.type == \"RECORD\" or .type == \"STATE\") | .record.stream |= \"${dst_stream_prefix}\" + ." |
         tee "$output_filepath" |
-        docker run $keep_containers $dst_use_host_network $max_memory $max_cpus --cidfile="$tempdir/dst_cid" -i --init -v "$tempdir:/configs" --log-opt max-size="$max_log_size" -a stdout -a stderr -a stdin --env LOG_LEVEL="$log_level" $dst_docker_options "$dst_docker_image" write \
+        docker run $keep_containers $dst_use_host_network $max_memory $max_cpus --cidfile="$tempPrefix-dst_cid" -i --init -v "$tempdir:/configs" --log-opt max-size="$max_log_size" -a stdout -a stderr -a stdin --env LOG_LEVEL="$log_level" $dst_docker_options "$dst_docker_image" write \
         --config "/configs/$dst_config_filename" --catalog "/configs/$dst_catalog_filename" |
         tee >(jq -cR --unbuffered 'fromjson? | select(.type == "STATE") | .state.data' | tail -n 1 > "$new_source_state_file") |
         # https://stedolan.github.io/jq/manual/#Colors
@@ -424,11 +428,13 @@ function sync() {
 }
 
 function cleanup() {
-    if [[ -s "$tempdir/src_cid" ]]; then
-        docker container kill $(cat "$tempdir/src_cid") 2>/dev/null || true
+    if [[ -s "$tempPrefix-src_cid" ]]; then
+        docker container kill $(cat "$tempPrefix-src_cid") 2>/dev/null || true
+        rm "$tempPrefix-src_cid"
     fi
-    if [[ -s "$tempdir/dst_cid" ]]; then
-        docker container kill $(cat "$tempdir/dst_cid") 2>/dev/null || true
+    if [[ -s "$tempPrefix-dst_cid" ]]; then
+        docker container kill $(cat "$tempPrefix-dst_cid") 2>/dev/null || true
+        rm "$tempPrefix-dst_cid"
     fi
     rm -rf "$tempdir"
 }
@@ -489,7 +495,9 @@ main() {
     setDefaults
     parseFlags "$@"
     validateInput
-    tempdir=$(mktemp -d)
+    tempPrefix="tmp-$(jq -r -n "now")"
+    tempPath="$(pwd)/$tempPrefix"
+    tempdir=$(mkdir -p $tempPath && echo $tempPath)
     trap cleanup EXIT
     trap cleanup SIGINT
     echo "Created folder $tempdir for temporary Airbyte files"
