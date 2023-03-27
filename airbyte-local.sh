@@ -34,9 +34,9 @@ NC='\033[0m' # No Color
 # Avoid using strflocaltime on Windows since it fails
 # with uspecified errors on some systems
 if [[ "$OSTYPE" == "win32" ]]; then
-  JQ_TIMESTAMP="(now|todate + \" - \")"
+  JQ_TIMESTAMP="(now|todate)"
 else
-  JQ_TIMESTAMP="(now|strflocaltime(\"%H:%M:%S - \"))"
+  JQ_TIMESTAMP="(now|strflocaltime(\"%H:%M:%S\"))"
 fi
 
 function help() {
@@ -92,8 +92,8 @@ function setDefaults() {
     src_docker_options=""
     dst_docker_options=""
     output_filepath="/dev/null"
-    jq_src_msg="\"${GREEN}[SRC]: \" + ${JQ_TIMESTAMP} + ."
-    jq_dst_msg="\"${CYAN}[DST]: \" + ${JQ_TIMESTAMP} + ."
+    jq_src_msg="\"${GREEN}[SRC]: \" + ${JQ_TIMESTAMP} + \" - \" + ."
+    jq_dst_msg="\"${CYAN}[DST]: \" + ${JQ_TIMESTAMP} + \" - \" + ."
     jq_color_opt="-C"
 }
 
@@ -434,15 +434,15 @@ function cleanup() {
 }
 
 function fmtLog(){
-    fmtTime="[$(jq -r -n 'now|strflocaltime("%Y-%m-%d %T")')]"
+    fmtTime=$(jq -r -n "${JQ_TIMESTAMP}")
     if [ "$1" == "error" ]; then
-        fmtLog="$fmtTime ${RED}ERROR${NC} "
+        fmtLog="[$fmtTime] ${RED}ERROR${NC} "
     elif [ "$1" == "warn" ]; then
-        fmtLog="$fmtTime ${YELLOW}WARN${NC} "
+        fmtLog="[$fmtTime] ${YELLOW}WARN${NC} "
     elif [ "$1" == "debug" ]; then
-        fmtLog="$fmtTime ${GREEN}DEBUG${NC} "
+        fmtLog="[$fmtTime] ${GREEN}DEBUG${NC} "
     else
-        fmtLog="$fmtTime ${BLUE}INFO${NC} "
+        fmtLog="[$fmtTime] ${BLUE}INFO${NC} "
     fi
 }
 
