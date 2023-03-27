@@ -31,7 +31,13 @@ BLUE='\u001b[34m'
 CYAN='\u001b[36m'
 NC='\033[0m' # No Color
 
-JQ_TIMESTAMP="(now|strflocaltime(\"%H:%M:%S - \"))"
+# Avoid using strflocaltime on Windows since it fails
+# with uspecified errors on some systems
+if [[ "$OSTYPE" == "win32" ]]; then
+  JQ_TIMESTAMP="(now|todate + \" - \")"
+else
+  JQ_TIMESTAMP="(now|strflocaltime(\"%H:%M:%S - \"))"
+fi
 
 function help() {
     echo
