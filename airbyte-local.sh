@@ -344,14 +344,12 @@ function writeDstCatalog() {
 function parseStreamPrefix() {
     IFS='-' read -ra src_docker_image_parts <<< $src_docker_image
     if [[ $dst_docker_image == farosai/airbyte-faros-destination* ]]; then
-        if [[ -z "$connection_name" ]]; then
-            if [[ $src_docker_image == farosai/airbyte-faros-feeds-source* ]]; then
-                # Source config may be missing if uploading from a file. In that case fallback
-                # to name extracted from source image (see below).
-                feed_name=$(jq -r '.feed_cfg.feed_name // empty' "$tempdir/$src_config_filename")
-                if [[ -n "$feed_name" ]]; then
-                    connection_name=${feed_name%"-feed"}
-                fi
+        if [[ -z "$connection_name" ]] && [[ $src_docker_image == farosai/airbyte-faros-feeds-source* ]]; then
+            # Source config may be missing if uploading from a file. In that case fallback
+            # to name extracted from source image (see below).
+            feed_name=$(jq -r '.feed_cfg.feed_name // empty' "$tempdir/$src_config_filename")
+            if [[ -n "$feed_name" ]]; then
+                connection_name=${feed_name%"-feed"}
             fi
         fi
 
