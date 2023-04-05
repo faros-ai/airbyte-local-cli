@@ -58,7 +58,7 @@ function help() {
     echo "--check-connection                Validate the Airbyte source connection"
     echo "--full-refresh                    Force full_refresh and overwrite mode"
     echo "--state <path>                    Override state file path for incremental sync"
-    echo "--src-output-file <path>          Write source output as a file (handy for debugging)"
+    echo "--src-output-file <path>          Write source output as a file (handy for debugging, requires a destination)"
     echo "--src-catalog-overrides <json>    JSON string of sync mode overrides"
     echo "--src-catalog-file <path>         Source catalog file path"
     echo "--src-catalog-json <json>         Source catalog as a JSON string"
@@ -231,6 +231,9 @@ function validateInput() {
     if [[ -z "$dst_docker_image" ]] && ! ((run_src_only)); then
         err "Airbyte destination Docker image must be set using '--dst <image>'"
     fi
+    if [[ "$output_filepath" != "/dev/null" ]] && ((run_src_only)); then
+        err "'--src-output-file' cannot be used with '--src-only'. Consider '--raw-messages' when running without a destination."
+    fi
 }
 
 function writeSrcConfig() {
@@ -284,10 +287,10 @@ function writeConfig() {
 function redactConfigSecrets() {
     loggable_config="$1"
     config_properties="$(echo "$2" | jq -r '.spec.connectionSpecification.properties')"
-    paths_to_redact=($(jq -c --stream 'if .[0][-1] == "airbyte_secret" and .[1] then .[0] else null end 
-                                       | select(. != null) 
-                                       | .[0:-1] 
-                                       | map(select(. != "properties" and 
+    paths_to_redact=($(jq -c --stream 'if .[0][-1] == "airbyte_secret" and .[1] then .[0] else null end
+                                       | select(. != null)
+                                       | .[0:-1]
+                                       | map(select(. != "properties" and
                                                     . != "oneOf" and
                                                     . != "anyOf" and
                                                     (.|tostring|test("^\\d+$")|not)))' <<< "$config_properties"))
