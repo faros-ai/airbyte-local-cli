@@ -232,7 +232,7 @@ function validateInput() {
         err "Airbyte destination Docker image must be set using '--dst <image>'"
     fi
     if [[ "$output_filepath" != "/dev/null" ]] && ((run_src_only)); then
-        err "'--src-output-file' cannot be used with '--src-only'. Consider '--raw-messages' when running without a destination."
+        err "'--src-output-file' cannot be used with '--src-only'. Consider using '--raw-messages' when running without a destination then redirecting to a file"
     fi
 }
 
