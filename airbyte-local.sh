@@ -31,15 +31,11 @@ BLUE='\u001b[34m'
 CYAN='\u001b[36m'
 NC='\033[0m' # No Color
 
-if [[ "$OSTYPE" =~ ^darwin || "$OSTYPE" =~ ^linux ]]; then
-    JQ_TIMESTAMP="(now|strflocaltime(\"%H:%M:%S\"))"
-else
-    # Avoid using strflocaltime on Windows since it fails
-    # with an unspecified error on some systems
-    JQ_TIMESTAMP="(now|todate)"
+JQ_TIMESTAMP="(now|todate)"
 
-    # Workaround for Docker for Windows in Git Bash
-    # https://github.com/docker-archive/toolbox/issues/673
+# Workaround for Docker for Windows in Git Bash
+# https://github.com/docker-archive/toolbox/issues/673
+if ! [[ "$OSTYPE" =~ ^darwin || "$OSTYPE" =~ ^linux ]]; then
     export MSYS_NO_PATHCONV=1
 fi
 
