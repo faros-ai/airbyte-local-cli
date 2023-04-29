@@ -23,14 +23,6 @@ src_catalog_filename=${filename_prefix}_src_catalog.json
 dst_config_filename=${filename_prefix}_dst_config.json
 dst_catalog_filename=${filename_prefix}_dst_catalog.json
 
-# Theme
-RED='\u001b[31m'
-GREEN='\u001b[32m'
-YELLOW='\u001b[33m'
-BLUE='\u001b[34m'
-CYAN='\u001b[36m'
-NC='\033[0m' # No Color
-
 JQ_TIMESTAMP="(now|todate)"
 
 # Workaround for Docker for Windows in Git Bash
@@ -95,6 +87,7 @@ function setDefaults() {
     jq_src_msg="\"${GREEN}[SRC]: \" + ${JQ_TIMESTAMP} + \" - \" + ."
     jq_dst_msg="\"${CYAN}[DST]: \" + ${JQ_TIMESTAMP} + \" - \" + ."
     jq_color_opt="-C"
+    use_colors=1
 }
 
 function parseFlags() {
@@ -189,6 +182,7 @@ function parseFlags() {
                 shift 2 ;;
             --raw-messages)
                 # Passthrough
+                use_colors=0
                 jq_src_msg="."
                 jq_dst_msg="."
                 jq_color_opt="-M"
@@ -218,6 +212,17 @@ function parseFlags() {
                 shift ;;
         esac
     done
+}
+
+function setTheme() {
+    if ((use_colors)); then
+        RED='\u001b[31m'
+        GREEN='\u001b[32m'
+        YELLOW='\u001b[33m'
+        BLUE='\u001b[34m'
+        CYAN='\u001b[36m'
+        NC='\033[0m' # No Color
+    fi
 }
 
 function validateInput() {
@@ -502,6 +507,7 @@ main() {
     checkBashVersion
     setDefaults
     parseFlags "$@"
+    setTheme
     validateInput
     tempPrefix="tmp-$(jq -r -n "now")"
     tempPath="$(pwd)/$tempPrefix"
