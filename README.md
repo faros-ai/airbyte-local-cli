@@ -49,6 +49,21 @@ Or with [Faros Community Edition](https://github.com/faros-ai/faros-community-ed
 
 **Note**: The `src.*` and `dst.*` arguments will differ depending on the source and destination being used.
 
+## Configuring Faros source/destination using a wizard
+
+**Note**: Faros Feeds Source and/or Faros Destination only
+
+Instead of passing `src.*` and `dst.*`, it is possible to invoke a configuration wizard for the Faros source 
+and/or destination:
+
+```
+./airbyte-local.sh \
+  --src 'farosai/airbyte-faros-feeds-source' \
+  --src-wizard \
+  --dst 'farosai/airbyte-faros-destination' \
+  --dst-wizard
+```
+
 ## Arguments
 
 | Argument                          | Required | Description                                                                                       |
@@ -73,6 +88,8 @@ Or with [Faros Community Edition](https://github.com/faros-ai/faros-community-ed
 | --dst-stream-prefix \<prefix\>    |          | Destination stream prefix                                                                         |
 | --no-src-pull                     |          | Skip pulling Airbyte source image                                                                 |
 | --no-dst-pull                     |          | Skip pulling Airbyte destination image                                                            |
+| --src-wizard                      |          | Run the Airbyte source configuration  wizard                                                                 |
+| --dst-wizard                      |          | Run the Airbyte destination configuration  wizard                                                            |
 | --src-only                        |          | Only run the Airbyte source                                                                       |
 | --dst-only \<file\>               |          | Use a file for destination input instead of a source                                              |
 | --connection-name                 |          | Connection name used in various places                                                            |
