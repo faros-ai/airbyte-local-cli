@@ -68,6 +68,8 @@ function help() {
     echo "--dst-use-host-network            Use the host network when running the Airbyte destination"
     echo "--no-src-pull                     Skip pulling Airbyte source image"
     echo "--no-dst-pull                     Skip pulling Airbyte destination image"
+    echo "--src-wizard                      Run the Airbyte source configuration wizard"
+    echo "--dst-wizard                      Run the Airbyte destination configuration wizard"
     echo "--src-only                        Only run the Airbyte source"
     echo "--dst-only <file>                 Use a file for destination input instead of a source"
     echo "--connection-name                 Connection name used in various places"
@@ -152,6 +154,12 @@ function parseFlags() {
                 src_file="$2"
                 no_src_pull=1
                 shift 2 ;;
+            --src-wizard)
+                run_src_wizard=1
+                shift 1 ;;
+            --dst-wizard)
+                run_dst_wizard=1
+                shift 1 ;;
             --check-connection)
                 check_src_connection=1
                 shift 1 ;;
@@ -241,6 +249,8 @@ function writeSrcConfig() {
         cp "$src_config_file" "$tempdir/$src_config_filename"
     elif [[ "$src_config_json" ]]; then
         echo "$src_config_json" > "$tempdir/$src_config_filename"
+    elif ((run_src_wizard)); then
+        getConfigFromWizard "$src_docker_image" "$src_config_filename"
     else
         writeConfig src_config "$tempdir/$src_config_filename"
     fi
@@ -254,12 +264,21 @@ function writeDstConfig() {
         cp "$dst_config_file" "$tempdir/$dst_config_filename"
     elif [[ "$dst_config_json" ]]; then
         echo "$dst_config_json" > "$tempdir/$dst_config_filename"
+    elif ((run_dst_wizard)); then
+        getConfigFromWizard "$dst_docker_image" "$dst_config_filename"
     else
         writeConfig dst_config "$tempdir/$dst_config_filename"
     fi
     if ((debug)); then
         debug "Using destination config: $(redactConfigSecrets "$(jq -c < $tempdir/$dst_config_filename)" "$(specDst)")"
     fi
+}
+
+function getConfigFromWizard() {
+    local docker_image=$1
+    local config_filename=$2
+    docker run -it --rm -v "$tempdir:/configs" "$docker_image" airbyte-local-cli-wizard \
+      --json "/configs/$config_filename"
 }
 
 function writeConfig() {
