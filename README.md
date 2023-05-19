@@ -73,6 +73,8 @@ Or with [Faros Community Edition](https://github.com/faros-ai/faros-community-ed
 | --dst-stream-prefix \<prefix\>    |          | Destination stream prefix                                                                         |
 | --no-src-pull                     |          | Skip pulling Airbyte source image                                                                 |
 | --no-dst-pull                     |          | Skip pulling Airbyte destination image                                                            |
+| --src-wizard                      |          | Run the Airbyte source configuration  wizard                                                                 |
+| --dst-wizard                      |          | Run the Airbyte destination configuration  wizard                                                            |
 | --src-only                        |          | Only run the Airbyte source                                                                       |
 | --dst-only \<file\>               |          | Use a file for destination input instead of a source                                              |
 | --connection-name                 |          | Connection name used in various places                                                            |
