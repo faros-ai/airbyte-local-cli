@@ -49,6 +49,19 @@ Or with [Faros Community Edition](https://github.com/faros-ai/faros-community-ed
 
 **Note**: The `src.*` and `dst.*` arguments will differ depending on the source and destination being used.
 
+## Configuring source/destination using a wizard (Faros sources/destination only)
+
+Instead of passing `src.*` and `dst.*`, it is possible to invoke a configuration wizard for the source 
+and/or destination:
+
+```
+./airbyte-local.sh  \
+--src 'farosai/airbyte-faros-feeds-source'  \
+--src-wizard \
+--dst 'farosai/airbyte-faros-destination' \
+--dst-wizard
+```
+
 ## Arguments
 
 | Argument                          | Required | Description                                                                                       |
