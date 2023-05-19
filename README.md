@@ -51,14 +51,14 @@ Or with [Faros Community Edition](https://github.com/faros-ai/faros-community-ed
 
 ## Configuring Faros source/destination using a wizard
 
-**Note**: Faros Feeds Source and/or Faros Destination only
+**Note**: Faros Sources and/or Faros Destination only
 
 Instead of passing `src.*` and `dst.*`, it is possible to invoke a configuration wizard for the Faros source 
 and/or destination:
 
 ```
 ./airbyte-local.sh \
-  --src 'farosai/airbyte-faros-feeds-source' \
+  --src 'farosai/airbyte-servicenow-source' \
   --src-wizard \
   --dst 'farosai/airbyte-faros-destination' \
   --dst-wizard
