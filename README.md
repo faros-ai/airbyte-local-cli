@@ -49,7 +49,7 @@ Or with [Faros Community Edition](https://github.com/faros-ai/faros-community-ed
 
 **Note**: The `src.*` and `dst.*` arguments will differ depending on the source and destination being used.
 
-## Configuring source/destination using a wizard
+## Configuring Faros source/destination using a wizard
 
 **Note**: Faros Feeds Source and/or Faros Destination only
 
