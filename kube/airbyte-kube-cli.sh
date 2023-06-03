@@ -583,12 +583,6 @@ main() {
     trap cleanup SIGINT
     echo "Created folder $tempdir for temporary Airbyte files"
 
-    if ((no_src_pull)); then
-        log "Skipping pull of source image $src_docker_image"
-    else
-        log "Pulling source image $src_docker_image"
-        docker pull $src_docker_image
-    fi
     writeSrcConfig
     writeSrcCatalog
 
@@ -598,12 +592,6 @@ main() {
         loadState
         readSrc | jq -cR $jq_color_opt --unbuffered 'fromjson?' | jq -rR "$jq_src_msg"
     else
-        if ((no_dst_pull)); then
-            log "Skipping pull of destination image $dst_docker_image"
-        else
-            log "Pulling destination image $dst_docker_image"
-            docker pull $dst_docker_image
-        fi
         parseStreamPrefix
         loadState
         writeDstConfig
