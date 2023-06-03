@@ -1,0 +1,133 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: cli-test
+spec:
+  restartPolicy: Never
+  initContainers:
+    - name: init
+      image: busybox
+      workingDir: /config
+      volumeMounts:
+        - name: pipes-volume
+          mountPath: /pipes
+        - mountPath: /config
+          name: airbyte-config
+      command:
+        - sh
+        - -c
+        - |
+          mkfifo /pipes/src_out
+          mkfifo /pipes/dst_in
+          ITERATION=0
+          MAX_ITERATION=600
+          DISK_USAGE=$(du -s /config | awk '{print $1;}')
+
+          until [ -f FINISHED_UPLOADING -o $ITERATION -ge $MAX_ITERATION ]; do
+            ITERATION=$((ITERATION+1))
+            LAST_DISK_USAGE=$DISK_USAGE
+            DISK_USAGE=$(du -s /config | awk '{print $1;}')
+            if [ $DISK_USAGE -gt $LAST_DISK_USAGE ]; then
+              ITERATION=0
+            fi
+            sleep 0.2
+          done
+
+          if [ -f FINISHED_UPLOADING ]; then
+            echo "All files copied successfully, exiting with code 0..."
+            exit 0
+          else
+            echo "Timeout while attempting to copy to init container, exiting with code 1..."
+            exit 1
+          fi
+  containers:
+    - name: source
+      image: SRC_DOCKER_IMAGE_PLACEHOLDER
+      workingDir: "/config"
+      env:
+        - name: SOURCE_CONFIG
+          value: source_config.json
+        - name: SOURCE_CATALOG
+          value: source_catalog.json
+      command:
+        - sh 
+        - -c
+        - |
+          ((eval "$AIRBYTE_ENTRYPOINT read --config ${SOURCE_CONFIG} --catalog ${SOURCE_CATALOG}" 2>&1 | tee /pipes/src_out) | grep -v '"type":"RECORD"' | grep -v '"type":"STATE"') &
+          CHILD_PID=$!
+
+          echo "Waiting on CHILD_PID $CHILD_PID"
+          wait $CHILD_PID
+          EXIT_STATUS=$?
+          echo "EXIT_STATUS: $EXIT_STATUS"
+          exit $EXIT_STATUS
+      volumeMounts:
+        - name: pipes-volume
+          mountPath: /pipes
+        - mountPath: /config
+          name: airbyte-config
+      # resources:
+      #   limits:
+      #     cpu: "3"
+      #     memory: 256Mi
+      #   requests:
+      #     cpu: 500m
+      #     memory: 50Mi
+    - name: transformer
+      image: apteno/alpine-jq
+      env:
+        - name: DST_STREAM_PREFIX
+          value: DST_STREAM_PREFIX_PLACEHOLDER
+      command:
+        - sh 
+        - -c
+        - |
+          echo "transformer"
+          cat /pipes/src_out | jq -cR --unbuffered "fromjson? | select(.type == \"RECORD\" or .type == \"STATE\") | .record.stream |= \"${DST_STREAM_PREFIX}\" + ." > /pipes/dst_in
+      # resources:
+      #   requests:
+      #     cpu: 500m
+      #     memory: 50Mi
+      volumeMounts:
+        - name: pipes-volume
+          mountPath: /pipes
+    - name: destination
+      image: DST_DOCKER_IMAGE_PLACEHOLDER
+      workingDir: "/config"
+      env:
+        - name: DESTINATION_CONFIG
+          value: destination_config.json
+        - name: DESTINATION_CATALOG
+          value: destination_catalog.json
+      command:
+        - sh 
+        - -c
+        - |
+          ((eval "$AIRBYTE_ENTRYPOINT write --config ${DESTINATION_CONFIG} --catalog ${DESTINATION_CATALOG}" 2>&1) < /pipes/dst_in) &
+          CHILD_PID=$!
+
+          echo "Waiting on CHILD_PID $CHILD_PID"
+          wait $CHILD_PID
+          EXIT_STATUS=$?
+          echo "EXIT_STATUS: $EXIT_STATUS"
+          exit $EXIT_STATUS
+        
+      volumeMounts:
+        - name: pipes-volume
+          mountPath: /pipes
+        - mountPath: /config
+          name: airbyte-config
+      # resources:
+      #   limits:
+      #     cpu: "3"
+      #     memory: 256Mi
+      #   requests:
+      #     cpu: 500m
+      #     memory: 50Mi
+      # workingDir: /config
+  volumes:
+    - name: pipes-volume
+      emptyDir: {}
+    - name: airbyte-config
+      emptyDir:
+        medium: Memory
