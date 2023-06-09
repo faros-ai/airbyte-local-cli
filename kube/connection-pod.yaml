@@ -19,6 +19,7 @@ spec:
         - |
           mkfifo /pipes/src_out
           mkfifo /pipes/dst_in
+          mkfifo /pipes/state
           ITERATION=0
           MAX_ITERATION=600
           DISK_USAGE=$(du -s /config | awk '{print $1;}')
@@ -30,7 +31,7 @@ spec:
             if [ $DISK_USAGE -gt $LAST_DISK_USAGE ]; then
               ITERATION=0
             fi
-            sleep 0.2
+            sleep 0.5
           done
 
           if [ -f FINISHED_UPLOADING ]; then
@@ -49,17 +50,19 @@ spec:
           value: source_config.json
         - name: SOURCE_CATALOG
           value: source_catalog.json
+        - name: INPUT_STATE
+          value: input_state.json
       command:
         - sh 
         - -c
         - |
-          ((eval "$AIRBYTE_ENTRYPOINT read --config ${SOURCE_CONFIG} --catalog ${SOURCE_CATALOG}" 2>&1 | tee /pipes/src_out) | grep -v '"type":"RECORD"' | grep -v '"type":"STATE"') &
+          ((eval "$AIRBYTE_ENTRYPOINT read --config ${SOURCE_CONFIG} --catalog ${SOURCE_CATALOG} --state ${INPUT_STATE}" 2>&1 | tee /pipes/src_out) | grep -v '"type":"RECORD"' | grep -v '"type":"STATE"') &
           CHILD_PID=$!
 
-          echo "Waiting on CHILD_PID $CHILD_PID"
+          echo "Source connector: Waiting on CHILD_PID $CHILD_PID"
           wait $CHILD_PID
           EXIT_STATUS=$?
-          echo "EXIT_STATUS: $EXIT_STATUS"
+          echo "Source connector EXIT_STATUS: $EXIT_STATUS"
           exit $EXIT_STATUS
       volumeMounts:
         - name: pipes-volume
@@ -78,12 +81,30 @@ spec:
       env:
         - name: DST_STREAM_PREFIX
           value: DST_STREAM_PREFIX_PLACEHOLDER
+        - name: NEW_STATE
+          value: /config/new_state.json
+      workingDir: "/config"
       command:
         - sh 
         - -c
         - |
-          echo "transformer"
           cat /pipes/src_out | jq -cR --unbuffered "fromjson? | select(.type == \"RECORD\" or .type == \"STATE\") | .record.stream |= \"${DST_STREAM_PREFIX}\" + ." > /pipes/dst_in
+          cat /pipes/state | jq -cR --unbuffered 'fromjson? | select(.type == "STATE") | .state.data' | tail -n 1 > "$NEW_STATE"
+          echo "Completed piping state records"
+          ITERATION=0
+          MAX_ITERATION=300
+          until [ -f FINISHED_DOWNLOADING -o $ITERATION -ge $MAX_ITERATION ]; do
+            ITERATION=$((ITERATION+1))
+            sleep 0.5
+          done
+          if [ -f FINISHED_DOWNLOADING ]; then
+            echo "New state downloaded successfully. Exiting ..."
+            exit 0
+          else
+            echo "Timeout while waiting for state download"
+            exit 1
+          fi
+
       # resources:
       #   requests:
       #     cpu: 500m
@@ -103,13 +124,13 @@ spec:
         - sh 
         - -c
         - |
-          ((eval "$AIRBYTE_ENTRYPOINT write --config ${DESTINATION_CONFIG} --catalog ${DESTINATION_CATALOG}" 2>&1) < /pipes/dst_in) &
+          ((eval "$AIRBYTE_ENTRYPOINT write --config ${DESTINATION_CONFIG} --catalog ${DESTINATION_CATALOG}" 2>&1 | tee /pipes/state) < /pipes/dst_in) &
           CHILD_PID=$!
 
-          echo "Waiting on CHILD_PID $CHILD_PID"
+          echo "Destination connector: waiting on CHILD_PID $CHILD_PID"
           wait $CHILD_PID
           EXIT_STATUS=$?
-          echo "EXIT_STATUS: $EXIT_STATUS"
+          echo "Destination connector EXIT_STATUS: $EXIT_STATUS"
           exit $EXIT_STATUS
         
       volumeMounts:
@@ -125,6 +146,39 @@ spec:
       #     cpu: 500m
       #     memory: 50Mi
       # workingDir: /config
+    # - name: state
+    #   image: apteno/alpine-jq
+    #   env:
+    #     - name: NEW_STATE
+    #       value: /config/new_state.json
+    #   workingDir: "/config"
+    #   command:
+    #     - sh 
+    #     - -c
+    #     - |
+    #       cat /pipes/state | jq -cR --unbuffered 'fromjson? | select(.type == "STATE") | .state.data' | tail -n 1 > "$NEW_STATE"
+    #       echo "Completed piping state records"
+    #       ITERATION=0
+    #       MAX_ITERATION=300
+    #       until [ -f FINISHED_DOWNLOADING -o $ITERATION -ge $MAX_ITERATION ]; do
+    #         ITERATION=$((ITERATION+1))
+    #         sleep 0.5
+    #       done
+    #       if [ -f FINISHED_DOWNLOADING ]; then
+    #         echo "New state downloaded successfully. Exiting ..."
+    #         exit 0
+    #       else
+    #         echo "Timeout while waiting for state download"
+    #         exit 1
+    #       fi
+    #   #   requests:
+    #   #     cpu: 500m
+    #   #     memory: 50Mi
+    #   volumeMounts:
+    #     - name: pipes-volume
+    #       mountPath: /pipes
+    #     - mountPath: /config
+    #       name: airbyte-config
   volumes:
     - name: pipes-volume
       emptyDir: {}
