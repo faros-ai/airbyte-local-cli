@@ -139,7 +139,6 @@ spec:
             echo "Timeout while waiting for state download"
             exit 1
           fi
-
       # resources:
       #   requests:
       #     cpu: 500m
@@ -169,7 +168,6 @@ spec:
           EXIT_STATUS=$?
           echo "Destination connector EXIT_STATUS: $EXIT_STATUS"
           exit $EXIT_STATUS
-        
       volumeMounts:
         - name: pipes-volume
           mountPath: /pipes
@@ -183,39 +181,6 @@ spec:
       #     cpu: 500m
       #     memory: 50Mi
       # workingDir: /config
-    # - name: state
-    #   image: apteno/alpine-jq
-    #   env:
-    #     - name: NEW_STATE
-    #       value: /config/new_state.json
-    #   workingDir: "/config"
-    #   command:
-    #     - sh 
-    #     - -c
-    #     - |
-    #       cat /pipes/state | jq -cR --unbuffered 'fromjson? | select(.type == "STATE") | .state.data' | tail -n 1 > "$NEW_STATE"
-    #       echo "Completed piping state records"
-    #       ITERATION=0
-    #       MAX_ITERATION=300
-    #       until [ -f FINISHED_DOWNLOADING -o $ITERATION -ge $MAX_ITERATION ]; do
-    #         ITERATION=$((ITERATION+1))
-    #         sleep 0.5
-    #       done
-    #       if [ -f FINISHED_DOWNLOADING ]; then
-    #         echo "New state downloaded successfully. Exiting ..."
-    #         exit 0
-    #       else
-    #         echo "Timeout while waiting for state download"
-    #         exit 1
-    #       fi
-    #   #   requests:
-    #   #     cpu: 500m
-    #   #     memory: 50Mi
-    #   volumeMounts:
-    #     - name: pipes-volume
-    #       mountPath: /pipes
-    #     - mountPath: /config
-    #       name: airbyte-config
   volumes:
     - name: pipes-volume
       emptyDir: {}
