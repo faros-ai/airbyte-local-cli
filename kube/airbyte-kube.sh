@@ -5,14 +5,14 @@ set -eo pipefail
 bash_major_version="${BASH_VERSINFO:-0}"
 [ "$bash_major_version" -ge 4 ] || { echo "Error: Bash 4.0 or higher is required." && exit 1; }
 
-declare -a required_cmds=("docker" "jq")
+declare -a required_cmds=("jq")
 for i in "${required_cmds[@]}"; do
     which "$i" &> /dev/null ||
         { echo "Error: $i is required." && missing_require=1; }
 done
 
 if ((${missing_require:-0})); then
-    echo "Please ensure docker and jq are available before running the script."
+    echo "Please ensure jq is available before running the script."
     exit 1
 fi
 
@@ -43,7 +43,6 @@ function help() {
     echo "--dst <image> (required)          Airbyte destination Docker image"
     echo "--src.<key> <value>               Add \"key\": \"value\" into the source config"
     echo "--dst.<key> <value>               Add \"key\": \"value\" into the destination config"
-    echo "--check-connection                Validate the Airbyte source connection"
     echo "--full-refresh                    Force full_refresh and overwrite mode"
     echo "--state <path>                    Override state file path for incremental sync"
     echo "--src-output-file <path>          Write source output as a file (handy for debugging, requires a destination)"
@@ -53,13 +52,6 @@ function help() {
     echo "--dst-catalog-file <path>         Destination catalog file path"
     echo "--dst-catalog-json <json>         Destination catalog as a JSON string"
     echo "--dst-stream-prefix <prefix>      Destination stream prefix"
-    echo "--dst-use-host-network            Use the host network when running the Airbyte destination"
-    echo "--no-src-pull                     Skip pulling Airbyte source image"
-    echo "--no-dst-pull                     Skip pulling Airbyte destination image"
-    echo "--src-wizard                      Run the Airbyte source configuration wizard"
-    echo "--dst-wizard                      Run the Airbyte destination configuration wizard"
-    echo "--src-only                        Only run the Airbyte source"
-    echo "--dst-only <file>                 Use a file for destination input instead of a source"
     echo "--connection-name                 Connection name used in various places"
     echo "--keep-containers                 Do not remove source and destination containers after they exit"
     echo "--log-level                       Set level of source and destination loggers"
@@ -67,8 +59,6 @@ function help() {
     echo "--max-log-size <size>             Set Docker maximum log size"
     echo "--max-mem <mem>                   Set maximum amount of memory each Docker container can use, e.g \"1g\""
     echo "--max-cpus <cpus>                 Set maximum CPUs each Docker container can use, e.g \"1\""
-    echo '--src-docker-options "<string>"   Set additional options to pass to the "docker run <src>" command'
-    echo '--dst-docker-options "<string>"   Set additional options to pass to the "docker run <dst>" command'
     echo "--debug                           Enable debug logging"
     exit
 }
@@ -81,10 +71,8 @@ function setDefaults() {
     max_cpus=""
     max_log_size="10m"
     max_memory=""
+    pod_name=""
     src_catalog_overrides="{}"
-    dst_use_host_network=""
-    src_docker_options=""
-    dst_docker_options=""
     kube_namespace="default"
     output_filepath="/dev/null"
     jq_src_msg="\"${GREEN}[SRC]: \" + ${JQ_TIMESTAMP} + \" - \" + ."
@@ -137,30 +125,8 @@ function parseFlags() {
                 val="$2"
                 dst_config[$key]="${val}"
                 shift 2 ;;
-            --src-only)
-                run_src_only=1
-                shift 1 ;;
-            --dst-only)
-                src_file="$2"
-                no_src_pull=1
-                shift 2 ;;
-            --src-wizard)
-                run_src_wizard=1
-                shift 1 ;;
-            --dst-wizard)
-                run_dst_wizard=1
-                shift 1 ;;
-            --check-connection)
-                check_src_connection=1
-                shift 1 ;;
             --full-refresh)
                 full_refresh=true
-                shift 1 ;;
-            --no-src-pull)
-                no_src_pull=1
-                shift 1 ;;
-            --no-dst-pull)
-                no_dst_pull=1
                 shift 1 ;;
             --connection-name)
                 connection_name="$2"
@@ -180,9 +146,6 @@ function parseFlags() {
             --dst-config-json)
                 dst_config_json="$2"
                 shift 2 ;;
-            --dst-use-host-network)
-                dst_use_host_network="--network host"
-                shift 1 ;;
             --max-log-size)
                 max_log_size="$2"
                 shift 2 ;;
@@ -204,12 +167,6 @@ function parseFlags() {
                 shift 2 ;;
             --max-cpus)
                 max_cpus="--cpus $2"
-                shift 2 ;;
-            --src-docker-options)
-                src_docker_options="$2"
-                shift 2 ;;
-            --dst-docker-options)
-                dst_docker_options="$2"
                 shift 2 ;;
             --kube-namespace)
                 kube_namespace="$2"
@@ -269,21 +226,12 @@ function writeDstConfig() {
         cp "$dst_config_file" "$tempdir/$dst_config_filename"
     elif [[ "$dst_config_json" ]]; then
         echo "$dst_config_json" > "$tempdir/$dst_config_filename"
-    elif ((run_dst_wizard)); then
-        getConfigFromWizard "$dst_docker_image" "$dst_config_filename"
     else
         writeConfig dst_config "$tempdir/$dst_config_filename"
     fi
     if ((debug)); then
         debug "Using destination config: $(redactConfigSecrets "$(jq -c < $tempdir/$dst_config_filename)" "$(specDst)")"
     fi
-}
-
-function getConfigFromWizard() {
-    local docker_image=$1
-    local config_filename=$2
-    docker run -it --rm -v "$tempdir:/configs" "$docker_image" airbyte-local-cli-wizard \
-      --json "/configs/$config_filename"
 }
 
 function writeConfig() {
@@ -398,43 +346,8 @@ function loadState() {
     fi
 }
 
-function checkSrc() {
-    if ((check_src_connection)); then
-        log "Validating connection to source..."
-        connectionStatusInfo=$(docker run --rm -v "$tempdir:/configs" $src_docker_options "$src_docker_image" check --config "/configs/$src_config_filename" | grep "CONNECTION_STATUS")
-        connectionStatus=$(echo "$connectionStatusInfo" | jq -r '.connectionStatus.status')
-        if [[ "$connectionStatus" != 'SUCCEEDED' ]]; then
-            err $(echo "$connectionStatusInfo" | jq -r '.connectionStatus.message')
-        fi
-        log "Connection validation successful"
-    fi
-}
-
-function specSrc() {
-    docker run --rm "$src_docker_image" spec
-}
-
-function discoverSrc() {
-    docker run --rm -v "$tempdir:/configs" "$src_docker_image" discover \
-      --config "/configs/$src_config_filename"
-}
-
-function readSrc() {
-    if [[ "$src_file" ]]; then
-        cat $src_file
-    else
-        docker run $keep_containers $max_memory $max_cpus --init --cidfile="$tempPrefix-src_cid" -v "$tempdir:/configs" --log-opt max-size="$max_log_size" -a stdout -a stderr --env LOG_LEVEL="$log_level" $src_docker_options "$src_docker_image" read \
-          --config "/configs/$src_config_filename" \
-          --catalog "/configs/$src_catalog_filename" \
-          --state "/configs/$src_state_filename"
-    fi
-}
-
-function specDst() {
-    docker run --rm "$dst_docker_image" spec
-}
-
 function generateKubeManifest() {
+    local pod_name_placeholder=POD_NAME_PLACEHOLDER
     local dst_stream_placeholder=DST_STREAM_PREFIX_PLACEHOLDER
     local src_docker_image_placeholder=SRC_DOCKER_IMAGE_PLACEHOLDER
     local dst_docker_image_placeholder=DST_DOCKER_IMAGE_PLACEHOLDER
@@ -442,12 +355,14 @@ function generateKubeManifest() {
     local full_refresh_placeholder=FULL_REFRESH_PLACEHOLDER
     local manifest_template=$1
     local manifest_file=$2
+
     # Use ~ as delimeter because image name may contain "/"
     sed "s~${dst_stream_placeholder}~${dst_stream_prefix}~" $manifest_template \
     | sed "s~${src_docker_image_placeholder}~${src_docker_image}~" \
     | sed "s~${dst_docker_image_placeholder}~${dst_docker_image}~" \
     | sed "s~${src_catalog_overrides_placeholder}~${src_catalog_overrides}~" \
     | sed "s~${full_refresh_placeholder}~${full_refresh}~" \
+    | sed "s~${pod_name_placeholder}~${pod_name}~" \
     > ${manifest_file}
 }
 
@@ -463,20 +378,30 @@ function waitForPodContainer() {
         if [ -z "$container_status" ]; then # check also init container status
             container_status=$(kubectl get pod $pod -n $namespace -o jsonpath="{.status.initContainerStatuses[?(@.name==\"$container\")].state.$state}" || True)
         fi
-        echo "Waiting for container $container in pod $pod to be in state $state, $status"
+        log "Waiting for container $container in pod $pod to be in state $state, $status"
         sleep 2
     done
+}
+
+function generatePodName() {
+    local name
+    name=${src_docker_image##*/} # remove everything until last "/"
+    name=${name%%:*} # remove tag if present
+    name=faros-${name//_/\-}-$(date +%s) # replace "_" with "-"" and add prefix faros-
+    echo $name
 }
 
 function sync() {
     local kube_manifest_template=connection-pod.yaml
     kube_manifest_tmp=__${kube_manifest_template}
-    local pod=cli-test
+    pod_name=$(generatePodName)
+    local pod=$pod_name
     local namespace=$kube_namespace
     local src_container=source
     local dst_container=destination
     local state_container=transformer
     local new_state_file=new_state.json
+
     # Copy manifest template to tmp file, replacing placeholders with actual values
     generateKubeManifest ${kube_manifest_template} ${kube_manifest_tmp}
     kubectl apply -f ${kube_manifest_tmp} -n ${namespace}
@@ -509,16 +434,14 @@ function sync() {
 }
 
 function cleanup() {
-    if [[ -s "$tempPrefix-src_cid" ]]; then
-        docker container kill $(cat "$tempPrefix-src_cid") 2>/dev/null || true
-        rm "$tempPrefix-src_cid"
+    if [[ ! -z "$keep_containers" ]]; then
+        log "Deleting pod $pod_name"
+        kubectl delete pod $pod_name -n $kube_namespace
+    else
+        log "Pod $pod_name is left on the cluster. To delte it, run 'kubectl delete pod $pod_name -n $kube_namespace'"
     fi
-    if [[ -s "$tempPrefix-dst_cid" ]]; then
-        docker container kill $(cat "$tempPrefix-dst_cid") 2>/dev/null || true
-        rm "$tempPrefix-dst_cid"
-    fi
-    #rm -rf "$tempdir"
-    #rm "$kube_manifest_tmp"
+    rm -rf "$tempdir"
+    rm "$kube_manifest_tmp"
 }
 
 function fmtLog(){
@@ -588,20 +511,14 @@ main() {
     writeSrcConfig
     writeSrcCatalog
 
-    checkSrc
-    if ((run_src_only)); then
-        log "Only running source"
-        loadState
-        readSrc | jq -cR $jq_color_opt --unbuffered 'fromjson?' | jq -rR "$jq_src_msg"
-    else
-        parseStreamPrefix
-        loadState
-        writeDstConfig
-        writeDstCatalog
+    parseStreamPrefix
+    loadState
+    writeDstConfig
+    writeDstCatalog
 
-        log "Running ${GREEN}source [SRC]${NC} and passing output to ${CYAN}destination [DST]${NC}"
-        sync
-    fi
+    log "Running ${GREEN}source [SRC]${NC} and passing output to ${CYAN}destination [DST]${NC}"
+    sync
+
     log "Done"
 }
 
