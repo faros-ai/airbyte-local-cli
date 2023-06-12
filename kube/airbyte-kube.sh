@@ -334,21 +334,8 @@ function writeSrcCatalog() {
     elif [[ "$src_catalog_json" ]]; then
         echo "$src_catalog_json" > "$tempdir/$src_catalog_filename"
     else
-        discoverSrc |
-            tee >(jq -cR "fromjson? | select(.type != \"CATALOG\")" >&2) |
-            jq --arg full_refresh "$full_refresh" \
-               --argjson src_catalog_overrides "$src_catalog_overrides" '{
-              streams: [
-                .catalog.streams[]
-                  | select($src_catalog_overrides[.name].disabled != true)
-                  | .incremental = ((.supported_sync_modes|contains(["incremental"])) and ($src_catalog_overrides[.name].sync_mode != "full_refresh") and ($full_refresh != "true"))
-                  | {
-                      stream: {name: .name, supported_sync_modes: .supported_sync_modes, json_schema: {}},
-                      sync_mode: (if .incremental then "incremental" else "full_refresh" end),
-                      destination_sync_mode: ($src_catalog_overrides[.name].destination_sync_mode? // if .incremental then "append" else "overwrite" end)
-                    }
-              ]
-            }' > $tempdir/$src_catalog_filename
+        log "Source catalog will be configured in k8s pod"
+        return
     fi
     debug "Using source configured catalog: $(jq -c < $tempdir/$src_catalog_filename)"
 }
@@ -363,7 +350,8 @@ function writeDstCatalog() {
     elif [[ "$dst_catalog_json" ]]; then
         echo "$dst_catalog_json" > "$tempdir/$dst_catalog_filename"
     else
-        cat "$tempdir/$src_catalog_filename" | jq ".streams[].stream.name |= \"${dst_stream_prefix}\" + ." > "$tempdir/$dst_catalog_filename"
+        log "Destination catalog will be configured in k8s pod"
+        return
     fi
     debug "Using destination configured catalog: $(jq -c < $tempdir/$dst_catalog_filename)"
 }
@@ -450,12 +438,16 @@ function generateKubeManifest() {
     local dst_stream_placeholder=DST_STREAM_PREFIX_PLACEHOLDER
     local src_docker_image_placeholder=SRC_DOCKER_IMAGE_PLACEHOLDER
     local dst_docker_image_placeholder=DST_DOCKER_IMAGE_PLACEHOLDER
+    local src_catalog_overrides_placeholder=SRC_CATALOG_OVERRIDES_PLACEHOLDER
+    local full_refresh_placeholder=FULL_REFRESH_PLACEHOLDER
     local manifest_template=$1
     local manifest_file=$2
     # Use ~ as delimeter because image name may contain "/"
     sed "s~${dst_stream_placeholder}~${dst_stream_prefix}~" $manifest_template \
     | sed "s~${src_docker_image_placeholder}~${src_docker_image}~" \
     | sed "s~${dst_docker_image_placeholder}~${dst_docker_image}~" \
+    | sed "s~${src_catalog_overrides_placeholder}~${src_catalog_overrides}~" \
+    | sed "s~${full_refresh_placeholder}~${full_refresh}~" \
     > ${manifest_file}
 }
 
@@ -492,9 +484,13 @@ function sync() {
     waitForPodContainer $namespace $pod init "running"
     echo "Copying config files to pod $pod"
     kubectl cp $tempdir/$src_config_filename $pod:/config/source_config.json -n ${namespace} -c init
-    kubectl cp $tempdir/$src_catalog_filename $pod:/config/source_catalog.json -n ${namespace} -c init
+    if [[ -s "$tempdir/$src_catalog_filename" ]]; then
+        kubectl cp $tempdir/$src_catalog_filename $pod:/config/source_catalog.json -n ${namespace} -c init
+    fi
     kubectl cp $tempdir/$dst_config_filename $pod:/config/destination_config.json -n ${namespace} -c init
-    kubectl cp $tempdir/$dst_catalog_filename $pod:/config/destination_catalog.json -n ${namespace} -c init
+    if [[ -s "$tempdir/$dst_catalog_filename" ]]; then
+        kubectl cp $tempdir/$dst_catalog_filename $pod:/config/destination_catalog.json -n ${namespace} -c init
+    fi
     kubectl cp $tempdir/$src_state_filename $pod:/config/input_state.json -n ${namespace} -c init
     kubectl cp FINISHED_UPLOADING $pod:/config/ -n ${namespace} -c init
     # Wait for source container to start up
@@ -521,8 +517,8 @@ function cleanup() {
         docker container kill $(cat "$tempPrefix-dst_cid") 2>/dev/null || true
         rm "$tempPrefix-dst_cid"
     fi
-    rm -rf "$tempdir"
-    rm "$kube_manifest_tmp"
+    #rm -rf "$tempdir"
+    #rm "$kube_manifest_tmp"
 }
 
 function fmtLog(){

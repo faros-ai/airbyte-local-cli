@@ -20,6 +20,7 @@ spec:
           mkfifo /pipes/src_out
           mkfifo /pipes/dst_in
           mkfifo /pipes/state
+          mkfifo /pipes/discover
           ITERATION=0
           MAX_ITERATION=600
           DISK_USAGE=$(du -s /config | awk '{print $1;}')
@@ -56,6 +57,24 @@ spec:
         - sh 
         - -c
         - |
+          if [[ ! -s "$SOURCE_CATALOG" ]]; then
+            echo "Generating source catalog"
+            ((eval "$AIRBYTE_ENTRYPOINT discover --config ${SOURCE_CONFIG}") | tee /pipes/discover | grep -v '"CATALOG"') &
+            CHILD_PID=$!
+            wait $CHILD_PID
+            echo "Completed generating source catalog"
+            ITERATION=0
+            MAX_ITERATION=10
+            until [ ! -s "$SOURCE_CATALOG" -o $ITERATION -ge $MAX_ITERATION ]; do
+              ITERATION=$((ITERATION+1))
+              sleep 0.5
+            done
+            if [[ ! -s "$SOURCE_CATALOG" ]]; then
+              echo "Timed out waiting for source catalog $SOURCE_CATALOG"
+              exit 1
+            fi
+          fi
+          echo "Starting source connector"
           ((eval "$AIRBYTE_ENTRYPOINT read --config ${SOURCE_CONFIG} --catalog ${SOURCE_CATALOG} --state ${INPUT_STATE}" 2>&1 | tee /pipes/src_out) | grep -v '"type":"RECORD"' | grep -v '"type":"STATE"') &
           CHILD_PID=$!
 
@@ -80,14 +99,30 @@ spec:
       image: apteno/alpine-jq
       env:
         - name: DST_STREAM_PREFIX
-          value: DST_STREAM_PREFIX_PLACEHOLDER
+          value: "DST_STREAM_PREFIX_PLACEHOLDER"
         - name: NEW_STATE
           value: /config/new_state.json
+        - name: SOURCE_CATALOG
+          value: source_catalog.json
+        - name: DESTINATION_CATALOG
+          value: destination_catalog.json
+        - name: src_catalog_overrides
+          value: "SRC_CATALOG_OVERRIDES_PLACEHOLDER"
+        - name: full_refresh
+          value: "FULL_REFRESH_PLACEHOLDER"
       workingDir: "/config"
       command:
         - sh 
         - -c
         - |
+          set -e
+          if [[ ! -s "$SOURCE_CATALOG" ]]; then
+            echo "Configuring source catalog"
+            cat /pipes/discover | jq --arg full_refresh "$full_refresh" --argjson src_catalog_overrides "$src_catalog_overrides" '{ streams: [ .catalog.streams[] | select($src_catalog_overrides[.name].disabled != true) | .incremental = ((.supported_sync_modes|contains(["incremental"])) and ($src_catalog_overrides[.name].sync_mode != "full_refresh") and ($full_refresh != "true")) | { stream: {name: .name, supported_sync_modes: .supported_sync_modes, json_schema: {}}, sync_mode: (if .incremental then "incremental" else "full_refresh" end), destination_sync_mode: ($src_catalog_overrides[.name].destination_sync_mode? // if .incremental then "append" else "overwrite" end)}] }' > $SOURCE_CATALOG
+            cat "$SOURCE_CATALOG" | jq ".streams[].stream.name |= \"${DST_STREAM_PREFIX}\" + ." > "$DESTINATION_CATALOG"
+            echo "Saved source catalog in $SOURCE_CATALOG and destination catalog in $DESTINATION_CATALOG"
+          fi
+          echo "Starting processing output of source connector"
           cat /pipes/src_out | jq -cR --unbuffered "fromjson? | select(.type == \"RECORD\" or .type == \"STATE\") | .record.stream |= \"${DST_STREAM_PREFIX}\" + ." > /pipes/dst_in
           cat /pipes/state | jq -cR --unbuffered 'fromjson? | select(.type == "STATE") | .state.data' | tail -n 1 > "$NEW_STATE"
           echo "Completed piping state records"
@@ -112,6 +147,8 @@ spec:
       volumeMounts:
         - name: pipes-volume
           mountPath: /pipes
+        - mountPath: /config
+          name: airbyte-config
     - name: destination
       image: DST_DOCKER_IMAGE_PLACEHOLDER
       workingDir: "/config"
