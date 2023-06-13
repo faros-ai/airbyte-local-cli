@@ -71,7 +71,7 @@ and/or destination:
 | --src \<image\>                   | Yes      | Airbyte source Docker image                                                                       |
 | --dst \<image\>                   | Yes      | Airbyte destination Docker image                                                                  |
 | --src.\<key\> \<value\>           |          | Append `"key": "value"` into the source config \*                                                 |
-| --dst.\<key\> \<value\>           |          | Append `"key": "value"` into the destination config                                               |
+| --dst.\<key\> \<value\>           |          | Append `"key": "value"` into the destination config \*                                            |
 | --check-connection                |          | Validate the Airbyte source connection                                                            |
 | --full-refresh                    |          | Force source full_refresh and destination overwrite mode                                          |
 | --state \<path\>                  |          | Override state file path for incremental sync                                                     |
@@ -88,14 +88,14 @@ and/or destination:
 | --dst-stream-prefix \<prefix\>    |          | Destination stream prefix                                                                         |
 | --no-src-pull                     |          | Skip pulling Airbyte source image                                                                 |
 | --no-dst-pull                     |          | Skip pulling Airbyte destination image                                                            |
-| --src-wizard                      |          | Run the Airbyte source configuration  wizard                                                                 |
-| --dst-wizard                      |          | Run the Airbyte destination configuration  wizard                                                            |
+| --src-wizard                      |          | Run the Airbyte source configuration  wizard                                                      |
+| --dst-wizard                      |          | Run the Airbyte destination configuration  wizard                                                 |
 | --src-only                        |          | Only run the Airbyte source                                                                       |
 | --dst-only \<file\>               |          | Use a file for destination input instead of a source                                              |
 | --connection-name                 |          | Connection name used in various places                                                            |
 | --raw-messages                    |          | Output raw Airbyte messages, i.e., without a log prefix or colors                                 |
 | --max-log-size \<size\>           |          | Set Docker maximum log size                                                                       |
-| --max-mem \<mem\>                 |          | Set maximum amount of memory each Docker container can use, e.g `"1g"`                            |
+| --max-mem \<mem\>                 |          | Set the maximum amount of memory each Docker container can use, e.g `"1g"`                        |
 | --max-cpus \<cpus\>               |          | Set maximum CPUs each Docker container can use, e.g `"1"`                                         |
 | --src-docker-options "\<string\>" |          | Set additional options to pass to the `docker run <src>` command                                  |
 | --dst-docker-options "\<string\>" |          | Set additional options to pass to the `docker run <dst>` command                                  |
