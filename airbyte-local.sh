@@ -5,17 +5,6 @@ set -eo pipefail
 bash_major_version="${BASH_VERSINFO:-0}"
 [ "$bash_major_version" -ge 4 ] || { echo "Error: Bash 4.0 or higher is required." && exit 1; }
 
-declare -a required_cmds=("docker" "jq")
-for i in "${required_cmds[@]}"; do
-    which "$i" &> /dev/null ||
-        { echo "Error: $i is required." && missing_require=1; }
-done
-
-if ((${missing_require:-0})); then
-    echo "Please ensure docker and jq are available before running the script."
-    exit 1
-fi
-
 filename_prefix=faros_airbyte_cli
 src_config_filename=${filename_prefix}_src_config.json
 src_state_filename=${filename_prefix}_src_state.json
@@ -69,6 +58,8 @@ function help() {
     echo "--max-cpus <cpus>                 Set maximum CPUs each Docker container can use, e.g \"1\""
     echo '--src-docker-options "<string>"   Set additional options to pass to the "docker run <src>" command'
     echo '--dst-docker-options "<string>"   Set additional options to pass to the "docker run <dst>" command'
+    echo '--kube-deployment"                Run source destination connectors on a kubernetes cluster'
+    echo '--kube-namespace "<string>"       Set kubernetes namespace where the pod with source and destination conteiners will run; defaults to "default"'
     echo "--debug                           Enable debug logging"
     exit
 }
@@ -81,6 +72,8 @@ function setDefaults() {
     max_cpus=""
     max_log_size="10m"
     max_memory=""
+    pod_name=""
+    kube_namespace="default"
     src_catalog_overrides="{}"
     dst_use_host_network=""
     src_docker_options=""
@@ -198,6 +191,12 @@ function parseFlags() {
             --keep-containers)
                 keep_containers=""
                 shift 1 ;;
+            --kube-deployment)
+                kube_deployment=1
+                shift 1 ;;
+            --kube-namespace)
+                kube_namespace="$2"
+                shift 2 ;;
             --max-mem)
                 max_memory="-m $2"
                 shift 2 ;;
@@ -233,6 +232,23 @@ function setTheme() {
     fi
 }
 
+function validateRequirements() {
+    if ((kube_deployment)); then
+        declare -a required_cmds=("kubectl" "jq")
+    else
+        declare -a required_cmds=("docker" "jq")
+    fi
+    for i in "${required_cmds[@]}"; do
+        which "$i" &> /dev/null ||
+            { echo "Error: $i is required." && missing_require=1; }
+    done
+
+    if ((${missing_require:-0})); then
+        echo "Please ensure $required_cmds are available before running the script."
+        exit 1
+    fi
+}
+
 function validateInput() {
     if [[ -z "$src_docker_image" ]]; then
         err "Airbyte source Docker image must be set using '--src <image>'"
@@ -242,6 +258,31 @@ function validateInput() {
     fi
     if [[ "$output_filepath" != "/dev/null" ]] && ((run_src_only)); then
         err "'--src-output-file' cannot be used with '--src-only'. Consider using '--raw-messages' when running without a destination then redirecting to a file"
+    fi
+    if ((kube_deployment)); then
+        if ((check_src_connection)); then
+            echo "Check connection option is not supported with kubernetes deployment"
+            exit 1
+        fi
+        if ((run_src_wizard)); then
+            echo "Source wizard is not supported with kubernetes deployment"
+            exit 1
+        fi
+        if ((run_dst_wizard)); then
+            echo "Destination wizard is not supported with kubernetes deployment"
+            exit 1
+        fi
+        if ((run_src_only)); then
+            echo "Source only run is not supported with kubernetes deployment"
+            exit 1
+        fi
+        if [[ -n $src_file ]]; then
+            echo "Destination only run is not supported with kubernetes deployment"
+            exit 1
+        fi
+        # Ignore docker image pull flags for kube deployment
+        no_src_pull=1
+        no_dst_pull=1
     fi
 }
 
@@ -329,6 +370,9 @@ function writeSrcCatalog() {
         fi
     elif [[ "$src_catalog_json" ]]; then
         echo "$src_catalog_json" > "$tempdir/$src_catalog_filename"
+    elif ((kube_deployment)); then
+        log "Source catalog will be configured in k8s pod"
+        return
     else
         discoverSrc |
             tee >(jq -cR "fromjson? | select(.type != \"CATALOG\")" >&2) |
@@ -358,6 +402,9 @@ function writeDstCatalog() {
         fi
     elif [[ "$dst_catalog_json" ]]; then
         echo "$dst_catalog_json" > "$tempdir/$dst_catalog_filename"
+    elif ((kube_deployment)); then
+        log "Destination catalog will be configured in k8s pod"
+        return
     else
         cat "$tempdir/$src_catalog_filename" | jq ".streams[].stream.name |= \"${dst_stream_prefix}\" + ." > "$tempdir/$dst_catalog_filename"
     fi
@@ -406,6 +453,238 @@ function loadState() {
     fi
 }
 
+function kubeManifestTemplate() {
+    cat <<EOF
+apiVersion: v1
+kind: Pod
+metadata:
+  name: $POD_NAME_PLACEHOLDER
+spec:
+  restartPolicy: Never
+  initContainers:
+    - name: init
+      image: busybox
+      workingDir: /config
+      volumeMounts:
+        - name: pipes-volume
+          mountPath: /pipes
+        - mountPath: /config
+          name: airbyte-config
+      command:
+        - sh
+        - -c
+        - |
+          mkfifo /pipes/src_out
+          mkfifo /pipes/dst_in
+          mkfifo /pipes/state
+          mkfifo /pipes/discover
+          ITERATION=0
+          MAX_ITERATION=600
+          DISK_USAGE=\$(du -s /config | awk '{print \$1;}')
+
+          until [ -f FINISHED_UPLOADING -o \$ITERATION -ge \$MAX_ITERATION ]; do
+            ITERATION=\$((ITERATION+1))
+            LAST_DISK_USAGE=\$DISK_USAGE
+            DISK_USAGE=\$(du -s /config | awk '{print \$1;}')
+            if [ \$DISK_USAGE -gt \$LAST_DISK_USAGE ]; then
+              ITERATION=0
+            fi
+            sleep 0.5
+          done
+
+          if [ -f FINISHED_UPLOADING ]; then
+            echo "All files copied successfully, exiting with code 0..."
+            exit 0
+          else
+            echo "Timeout while attempting to copy to init container, exiting with code 1..."
+            exit 1
+          fi
+  containers:
+    - name: source
+      image: $SRC_DOCKER_IMAGE_PLACEHOLDER
+      workingDir: "/config"
+      env:
+        - name: SOURCE_CONFIG
+          value: source_config.json
+        - name: SOURCE_CATALOG
+          value: source_catalog.json
+        - name: INPUT_STATE
+          value: input_state.json
+      command:
+        - sh 
+        - -c
+        - |
+          if [[ ! -s "\$SOURCE_CATALOG" ]]; then
+            echo "Generating source catalog"
+            ((eval "\$AIRBYTE_ENTRYPOINT discover --config \${SOURCE_CONFIG}") | tee /pipes/discover | grep -v '"CATALOG"') &
+            CHILD_PID=\$!
+            wait \$CHILD_PID
+            echo "Completed generating source catalog"
+            ITERATION=0
+            MAX_ITERATION=10
+            until [ -s "\$SOURCE_CATALOG" -o \$ITERATION -ge \$MAX_ITERATION ]; do
+              ITERATION=\$((ITERATION+1))
+              echo "Waiting for non-empty file \$SOURCE_CATALOG"
+              sleep 0.5
+            done
+            if [[ ! -s "\$SOURCE_CATALOG" ]]; then
+              echo "Timed out waiting for source catalog \"\$SOURCE_CATALOG\""
+              exit 1
+            fi
+          fi
+          echo "Starting source connector"
+          ((eval "\$AIRBYTE_ENTRYPOINT read --config \${SOURCE_CONFIG} --catalog \${SOURCE_CATALOG} --state \${INPUT_STATE}" 2>&1 | tee /pipes/src_out) | grep -v '"type":"RECORD"' | grep -v '"type":"STATE"') &
+          CHILD_PID=\$!
+
+          echo "Source connector: Waiting on CHILD_PID \$CHILD_PID"
+          wait \$CHILD_PID
+          EXIT_STATUS=\$?
+          echo "Source connector EXIT_STATUS: \$EXIT_STATUS"
+          exit \$EXIT_STATUS
+      volumeMounts:
+        - name: pipes-volume
+          mountPath: /pipes
+        - mountPath: /config
+          name: airbyte-config
+      # resources:
+      #   limits:
+      #     cpu: "3"
+      #     memory: 256Mi
+      #   requests:
+      #     cpu: 500m
+      #     memory: 50Mi
+    - name: transformer
+      image: apteno/alpine-jq
+      env:
+        - name: DST_STREAM_PREFIX
+          value: "$DST_STREAM_PREFIX_PLACEHOLDER"
+        - name: NEW_STATE
+          value: /config/new_state.json
+        - name: SOURCE_CATALOG
+          value: source_catalog.json
+        - name: DESTINATION_CATALOG
+          value: destination_catalog.json
+        - name: src_catalog_overrides
+          value: "$SRC_CATALOG_OVERRIDES_PLACEHOLDER"
+        - name: full_refresh
+          value: "$FULL_REFRESH_PLACEHOLDER"
+      workingDir: "/config"
+      command:
+        - sh 
+        - -c
+        - |
+          set -e
+          if [[ ! -s "\$SOURCE_CATALOG" ]]; then
+            echo "Configuring source catalog"
+            cat /pipes/discover | jq --arg full_refresh "\$full_refresh" --argjson src_catalog_overrides "\$src_catalog_overrides" '{ streams: [ .catalog.streams[] | select(\$src_catalog_overrides[.name].disabled != true) | .incremental = ((.supported_sync_modes|contains(["incremental"])) and (\$src_catalog_overrides[.name].sync_mode != "full_refresh") and (\$full_refresh != "true")) | { stream: {name: .name, supported_sync_modes: .supported_sync_modes, json_schema: {}}, sync_mode: (if .incremental then "incremental" else "full_refresh" end), destination_sync_mode: (\$src_catalog_overrides[.name].destination_sync_mode? // if .incremental then "append" else "overwrite" end)}] }' > \$SOURCE_CATALOG
+            cat "\$SOURCE_CATALOG" | jq ".streams[].stream.name |= \"\${DST_STREAM_PREFIX}\" + ." > "\$DESTINATION_CATALOG"
+            echo "Saved source catalog in \$SOURCE_CATALOG and destination catalog in \$DESTINATION_CATALOG"
+          fi
+          echo "Starting processing output of source connector"
+          cat /pipes/src_out | jq -cR --unbuffered "fromjson? | select(.type == \"RECORD\" or .type == \"STATE\") | .record.stream |= \"\${DST_STREAM_PREFIX}\" + ." > /pipes/dst_in
+          cat /pipes/state | jq -cR --unbuffered 'fromjson? | select(.type == "STATE") | .state.data' | tail -n 1 > "\$NEW_STATE"
+          echo "Completed piping state records"
+          ITERATION=0
+          MAX_ITERATION=300
+          until [ -f FINISHED_DOWNLOADING -o \$ITERATION -ge \$MAX_ITERATION ]; do
+            ITERATION=\$((ITERATION+1))
+            sleep 0.5
+          done
+          if [ -f FINISHED_DOWNLOADING ]; then
+            echo "New state downloaded successfully. Exiting ..."
+            exit 0
+          else
+            echo "Timeout while waiting for state download"
+            exit 1
+          fi
+      # resources:
+      #   requests:
+      #     cpu: 500m
+      #     memory: 50Mi
+      volumeMounts:
+        - name: pipes-volume
+          mountPath: /pipes
+        - mountPath: /config
+          name: airbyte-config
+    - name: destination
+      image: $DST_DOCKER_IMAGE_PLACEHOLDER
+      workingDir: "/config"
+      env:
+        - name: DESTINATION_CONFIG
+          value: destination_config.json
+        - name: DESTINATION_CATALOG
+          value: destination_catalog.json
+      command:
+        - sh 
+        - -c
+        - |
+          ((eval "\$AIRBYTE_ENTRYPOINT write --config \${DESTINATION_CONFIG} --catalog \${DESTINATION_CATALOG}" 2>&1 | tee /pipes/state) < /pipes/dst_in) &
+          CHILD_PID=\$!
+
+          echo "Destination connector: waiting on CHILD_PID \$CHILD_PID"
+          wait \$CHILD_PID
+          EXIT_STATUS=\$?
+          echo "Destination connector EXIT_STATUS: \$EXIT_STATUS"
+          exit \$EXIT_STATUS
+      volumeMounts:
+        - name: pipes-volume
+          mountPath: /pipes
+        - mountPath: /config
+          name: airbyte-config
+      # resources:
+      #   limits:
+      #     cpu: "3"
+      #     memory: 256Mi
+      #   requests:
+      #     cpu: 500m
+      #     memory: 50Mi
+      # workingDir: /config
+  volumes:
+    - name: pipes-volume
+      emptyDir: {}
+    - name: airbyte-config
+      emptyDir:
+        medium: Memory
+EOF
+}
+
+function generateKubeManifest() {
+    POD_NAME_PLACEHOLDER=${pod_name}
+    DST_STREAM_PREFIX_PLACEHOLDER=${dst_stream_prefix}
+    SRC_DOCKER_IMAGE_PLACEHOLDER=${src_docker_image}
+    DST_DOCKER_IMAGE_PLACEHOLDER=${dst_docker_image}
+    SRC_CATALOG_OVERRIDES_PLACEHOLDER=${src_catalog_overrides}
+    FULL_REFRESH_PLACEHOLDER=${full_refresh}
+    local manifest_file=$1
+
+
+    kubeManifestTemplate > "${manifest_file}"
+}
+
+function waitForPodContainer() {
+    local namespace=$1
+    local pod=$2
+    local container=$3
+    local state=$4
+    container_status=""
+    while [ -z "$container_status" ]
+    do
+        container_status=$(kubectl get pod $pod -n $namespace -o jsonpath="{.status.containerStatuses[?(@.name==\"$container\")].state.$state}" || True)
+        if [ -z "$container_status" ]; then # check also init container status
+            container_status=$(kubectl get pod $pod -n $namespace -o jsonpath="{.status.initContainerStatuses[?(@.name==\"$container\")].state.$state}" || True)
+        fi
+        log "Waiting for container $container in pod $pod to be in state $state, $status"
+        sleep 2
+    done
+}
+
+function generatePodName() {
+    local name
+    name=${src_docker_image##*/} # remove everything until last "/"
+    name=${name%%:*} # remove tag if present
+    name=faros-${name//_/\-}-$(date +%s) # replace "_" with "-"" and add prefix faros-
+    echo $name
+}
 function checkSrc() {
     if ((check_src_connection)); then
         log "Validating connection to source..."
@@ -442,7 +721,7 @@ function specDst() {
     docker run --rm "$dst_docker_image" spec
 }
 
-function sync() {
+function sync_local() {
     debug "Writing source output to $output_filepath"
     new_source_state_file="$tempdir/new_state.json"
     readSrc |
@@ -459,14 +738,73 @@ function sync() {
     cp "$new_source_state_file" "$src_state_filepath"
 }
 
-function cleanup() {
-    if [[ -s "$tempPrefix-src_cid" ]]; then
-        docker container kill $(cat "$tempPrefix-src_cid") 2>/dev/null || true
-        rm "$tempPrefix-src_cid"
+function sync_kube() {
+    local kube_manifest_template=connection-pod.yaml
+    kube_manifest_tmp=__${kube_manifest_template}
+    pod_name=$(generatePodName)
+    local pod=$pod_name
+    local namespace=$kube_namespace
+    local src_container=source
+    local dst_container=destination
+    local state_container=transformer
+    local new_state_file=new_state.json
+
+    generateKubeManifest ${kube_manifest_tmp}
+    kubectl apply -f ${kube_manifest_tmp} -n ${namespace}
+    # Wait for init container to start up
+    waitForPodContainer $namespace $pod init "running"
+    echo "Copying config files to pod $pod"
+    kubectl cp $tempdir/$src_config_filename $pod:/config/source_config.json -n ${namespace} -c init
+    if [[ -s "$tempdir/$src_catalog_filename" ]]; then
+        kubectl cp $tempdir/$src_catalog_filename $pod:/config/source_catalog.json -n ${namespace} -c init
     fi
-    if [[ -s "$tempPrefix-dst_cid" ]]; then
-        docker container kill $(cat "$tempPrefix-dst_cid") 2>/dev/null || true
-        rm "$tempPrefix-dst_cid"
+    kubectl cp $tempdir/$dst_config_filename $pod:/config/destination_config.json -n ${namespace} -c init
+    if [[ -s "$tempdir/$dst_catalog_filename" ]]; then
+        kubectl cp $tempdir/$dst_catalog_filename $pod:/config/destination_catalog.json -n ${namespace} -c init
+    fi
+    kubectl cp $tempdir/$src_state_filename $pod:/config/input_state.json -n ${namespace} -c init
+    touch $tempdir/FINISHED_UPLOADING && kubectl cp $tempdir/FINISHED_UPLOADING $pod:/config/ -n ${namespace} -c init
+
+    # Wait for source container to start up
+    waitForPodContainer $namespace $pod $src_container "running"
+    # Tail source logs in the background
+    log "Tailing source container logs in the background"
+    kubectl logs -f $pod -c $src_container -n ${namespace} | jq -cR $jq_color_opt --unbuffered 'fromjson?' | jq -rR "$jq_src_msg" &
+
+    waitForPodContainer $namespace $pod $dst_container "running"
+    log "Tailing destination container logs in the background"
+    kubectl logs -f $pod -c $dst_container -n ${namespace} | JQ_COLORS="1;30:0;37:0;37:0;37:0;36:1;37:1;37" jq -cR $jq_color_opt --unbuffered 'fromjson?' | jq -rR "$jq_dst_msg"
+    log "Copying $new_state_file from pod $pod"
+    kubectl cp $pod:/config/$new_state_file $src_state_filepath -n ${namespace} -c $state_container
+    touch $tempdir/FINISHED_DOWNLOADING && kubectl cp $tempdir/FINISHED_DOWNLOADING $pod:/config/  -n ${namespace} -c $state_container
+}
+
+function sync() {
+    if ((kube_deployment)); then
+        sync_kube
+    else
+        sync_local
+    fi
+}
+
+function cleanup() {
+    if ((kube_deployment)); then
+        if [[ ! -z "$keep_containers" ]]; then
+            log "Deleting pod $pod_name"
+            kubectl delete pod $pod_name -n $kube_namespace
+        else
+            log "Pod $pod_name is left on the cluster. To delte it, run 'kubectl delete pod $pod_name -n $kube_namespace'"
+        fi
+        rm "$kube_manifest_tmp"
+    else
+        if [[ -s "$tempPrefix-src_cid" ]]; then
+            docker container kill $(cat "$tempPrefix-src_cid") 2>/dev/null || true
+            rm "$tempPrefix-src_cid"
+        fi
+        if [[ -s "$tempPrefix-dst_cid" ]]; then
+            docker container kill $(cat "$tempPrefix-dst_cid") 2>/dev/null || true
+            rm "$tempPrefix-dst_cid"
+        fi
     fi
     rm -rf "$tempdir"
 }
@@ -526,6 +864,7 @@ main() {
     checkBashVersion
     setDefaults
     parseFlags "$@"
+    validateRequirements
     setTheme
     validateInput
     tempPrefix="tmp-$(jq -r -n "now")"
@@ -535,11 +874,13 @@ main() {
     trap cleanup SIGINT
     echo "Created folder $tempdir for temporary Airbyte files"
 
-    if ((no_src_pull)); then
-        log "Skipping pull of source image $src_docker_image"
-    else
-        log "Pulling source image $src_docker_image"
-        docker pull $src_docker_image
+    if [[ -z ${kube_deployment+x} ]]; then
+        if ((no_src_pull)); then
+            log "Skipping pull of source image $src_docker_image"
+        else
+            log "Pulling source image $src_docker_image"
+            docker pull $src_docker_image
+        fi
     fi
     writeSrcConfig
     writeSrcCatalog
@@ -550,11 +891,13 @@ main() {
         loadState
         readSrc | jq -cR $jq_color_opt --unbuffered 'fromjson?' | jq -rR "$jq_src_msg"
     else
-        if ((no_dst_pull)); then
-            log "Skipping pull of destination image $dst_docker_image"
-        else
-            log "Pulling destination image $dst_docker_image"
-            docker pull $dst_docker_image
+        if [[ -z ${kube_deployment+x} ]]; then
+            if ((no_dst_pull)); then
+                log "Skipping pull of destination image $dst_docker_image"
+            else
+                log "Pulling destination image $dst_docker_image"
+                docker pull $dst_docker_image
+            fi
         fi
         parseStreamPrefix
         loadState
