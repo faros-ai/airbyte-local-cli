@@ -58,8 +58,8 @@ function help() {
     echo "--max-cpus <cpus>                 Set maximum CPUs each Docker container can use, e.g \"1\""
     echo '--src-docker-options "<string>"   Set additional options to pass to the "docker run <src>" command'
     echo '--dst-docker-options "<string>"   Set additional options to pass to the "docker run <dst>" command'
-    echo '--kube-deployment"                Run source destination connectors on a kubernetes cluster'
-    echo '--kube-namespace "<string>"       Set kubernetes namespace where the pod with source and destination conteiners will run; defaults to "default"'
+    echo '--k8s-deployment"                Run source destination connectors on a kubernetes cluster'
+    echo '--k8s-namespace "<string>"       Set kubernetes namespace where the pod with source and destination conteiners will run; defaults to "default"'
     echo "--debug                           Enable debug logging"
     exit
 }
@@ -73,7 +73,7 @@ function setDefaults() {
     max_log_size="10m"
     max_memory=""
     pod_name=""
-    kube_namespace="default"
+    k8s_namespace="default"
     src_catalog_overrides="{}"
     dst_use_host_network=""
     src_docker_options=""
@@ -191,11 +191,11 @@ function parseFlags() {
             --keep-containers)
                 keep_containers=""
                 shift 1 ;;
-            --kube-deployment)
-                kube_deployment=1
+            --k8s-deployment)
+                k8s_deployment=1
                 shift 1 ;;
-            --kube-namespace)
-                kube_namespace="$2"
+            --k8s-namespace)
+                k8s_namespace="$2"
                 shift 2 ;;
             --max-mem)
                 max_memory="-m $2"
@@ -233,7 +233,7 @@ function setTheme() {
 }
 
 function validateRequirements() {
-    if ((kube_deployment)); then
+    if ((k8s_deployment)); then
         declare -a required_cmds=("kubectl" "jq")
     else
         declare -a required_cmds=("docker" "jq")
@@ -259,7 +259,7 @@ function validateInput() {
     if [[ "$output_filepath" != "/dev/null" ]] && ((run_src_only)); then
         err "'--src-output-file' cannot be used with '--src-only'. Consider using '--raw-messages' when running without a destination then redirecting to a file"
     fi
-    if ((kube_deployment)); then
+    if ((k8s_deployment)); then
         if ((check_src_connection)); then
             echo "Check connection option is not supported with kubernetes deployment"
             exit 1
@@ -370,7 +370,7 @@ function writeSrcCatalog() {
         fi
     elif [[ "$src_catalog_json" ]]; then
         echo "$src_catalog_json" > "$tempdir/$src_catalog_filename"
-    elif ((kube_deployment)); then
+    elif ((k8s_deployment)); then
         log "Source catalog will be configured in k8s pod"
         return
     else
@@ -402,7 +402,7 @@ function writeDstCatalog() {
         fi
     elif [[ "$dst_catalog_json" ]]; then
         echo "$dst_catalog_json" > "$tempdir/$dst_catalog_filename"
-    elif ((kube_deployment)); then
+    elif ((k8s_deployment)); then
         log "Destination catalog will be configured in k8s pod"
         return
     else
@@ -743,7 +743,7 @@ function sync_kube() {
     kube_manifest_tmp=__${kube_manifest_template}
     pod_name=$(generatePodName)
     local pod=$pod_name
-    local namespace=$kube_namespace
+    local namespace=$k8s_namespace
     local src_container=source
     local dst_container=destination
     local state_container=transformer
@@ -776,11 +776,11 @@ function sync_kube() {
     kubectl logs -f $pod -c $dst_container -n ${namespace} | JQ_COLORS="1;30:0;37:0;37:0;37:0;36:1;37:1;37" jq -cR $jq_color_opt --unbuffered 'fromjson?' | jq -rR "$jq_dst_msg"
     log "Copying $new_state_file from pod $pod"
     kubectl cp $pod:/config/$new_state_file $src_state_filepath -n ${namespace} -c $state_container
-    touch $tempdir/FINISHED_DOWNLOADING && kubectl cp $tempdir/FINISHED_DOWNLOADING $pod:/config/  -n ${namespace} -c $state_container
+    touch $tempdir/FINISHED_DOWNLOADING && kubectl cp $tempdir/FINISHED_DOWNLOADING $pod:/config/ -n ${namespace} -c $state_container
 }
 
 function sync() {
-    if ((kube_deployment)); then
+    if ((k8s_deployment)); then
         sync_kube
     else
         sync_local
@@ -788,12 +788,12 @@ function sync() {
 }
 
 function cleanup() {
-    if ((kube_deployment)); then
+    if ((k8s_deployment)); then
         if [[ ! -z "$keep_containers" ]]; then
             log "Deleting pod $pod_name"
-            kubectl delete pod $pod_name -n $kube_namespace
+            kubectl delete pod $pod_name -n $k8s_namespace
         else
-            log "Pod $pod_name is left on the cluster. To delte it, run 'kubectl delete pod $pod_name -n $kube_namespace'"
+            log "Pod $pod_name is left on the cluster. To delete it, run 'kubectl delete pod $pod_name -n $k8s_namespace'"
         fi
         rm "$kube_manifest_tmp"
     else
@@ -874,7 +874,7 @@ main() {
     trap cleanup SIGINT
     echo "Created folder $tempdir for temporary Airbyte files"
 
-    if [[ -z ${kube_deployment+x} ]]; then
+    if [[ -z ${k8s_deployment+x} ]]; then
         if ((no_src_pull)); then
             log "Skipping pull of source image $src_docker_image"
         else
@@ -891,7 +891,7 @@ main() {
         loadState
         readSrc | jq -cR $jq_color_opt --unbuffered 'fromjson?' | jq -rR "$jq_src_msg"
     else
-        if [[ -z ${kube_deployment+x} ]]; then
+        if [[ -z ${k8s_deployment+x} ]]; then
             if ((no_dst_pull)); then
                 log "Skipping pull of destination image $dst_docker_image"
             else
