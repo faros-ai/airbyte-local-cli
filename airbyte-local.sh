@@ -56,6 +56,8 @@ function help() {
     echo "--max-log-size <size>             Set Docker maximum log size"
     echo "--max-mem <mem>                   Set maximum amount of memory each Docker container can use, e.g \"1g\""
     echo "--max-cpus <cpus>                 Set maximum CPUs each Docker container can use, e.g \"1\""
+    echo "--k8s-mem-limit <mem>             Set memory limit for k8s source and destination container. Default is 256Mi"
+    echo "--k8s-cpu-limit <cpus>            Set cpu limit for k8s source and destination container. Default is 500m (0.5)"
     echo '--src-docker-options "<string>"   Set additional options to pass to the "docker run <src>" command'
     echo '--dst-docker-options "<string>"   Set additional options to pass to the "docker run <dst>" command'
     echo '--k8s-deployment"                Run source destination connectors on a kubernetes cluster'
@@ -72,6 +74,8 @@ function setDefaults() {
     max_cpus=""
     max_log_size="10m"
     max_memory=""
+    k8s_mem_limit="256Mi"
+    k8s_cpu_limit="500m"
     pod_name=""
     k8s_namespace="default"
     src_catalog_overrides="{}"
@@ -202,6 +206,12 @@ function parseFlags() {
                 shift 2 ;;
             --max-cpus)
                 max_cpus="--cpus $2"
+                shift 2 ;;
+            --k8s-mem-limit)
+                k8s_mem_limit=$2
+                shift 2 ;;
+            --k8s-cpu-limit)
+                k8s_cpu_limit=$2
                 shift 2 ;;
             --src-docker-options)
                 src_docker_options="$2"
@@ -546,13 +556,10 @@ spec:
           mountPath: /pipes
         - mountPath: /config
           name: airbyte-config
-      # resources:
-      #   limits:
-      #     cpu: "3"
-      #     memory: 256Mi
-      #   requests:
-      #     cpu: 500m
-      #     memory: 50Mi
+      resources:
+        limits:
+          cpu: "${k8s_cpu_limit}"
+          memory: "${k8s_mem_limit}"
     - name: transformer
       image: apteno/alpine-jq
       env:
@@ -597,10 +604,6 @@ spec:
             echo "Timeout while waiting for state download"
             exit 1
           fi
-      # resources:
-      #   requests:
-      #     cpu: 500m
-      #     memory: 50Mi
       volumeMounts:
         - name: pipes-volume
           mountPath: /pipes
@@ -631,14 +634,10 @@ spec:
           mountPath: /pipes
         - mountPath: /config
           name: airbyte-config
-      # resources:
-      #   limits:
-      #     cpu: "3"
-      #     memory: 256Mi
-      #   requests:
-      #     cpu: 500m
-      #     memory: 50Mi
-      # workingDir: /config
+      resources:
+        limits:
+          cpu: "${k8s_cpu_limit}"
+          memory: "${k8s_mem_limit}"
   volumes:
     - name: pipes-volume
       emptyDir: {}
