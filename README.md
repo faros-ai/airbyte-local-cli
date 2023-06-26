@@ -1,6 +1,6 @@
 # Airbyte Local CLI [![CI](https://github.com/faros-ai/airbyte-local-cli/actions/workflows/ci.yaml/badge.svg)](https://github.com/faros-ai/airbyte-local-cli/actions/workflows/ci.yaml)
 
-CLI for running Airbyte sources & destinations locally or on a kubernetes cluster without an Airbyte server
+CLI for running Airbyte sources & destinations locally or on a Kubernetes cluster without an Airbyte server
 
 ![Alt Text](https://github.com/Faros-ai/airbyte-local-cli/raw/main/resources/demo.gif)
 
@@ -8,7 +8,7 @@ CLI for running Airbyte sources & destinations locally or on a kubernetes cluste
 
 **Requirements**:
 - `bash`, `docker`, `jq`, `tee` when running connectors locally
-- `bash`, `kubernetes`, `jq` when running connectors on a kubernetes cluster
+- `bash`, `kubectl`, `jq` when running connectors on a Kubernetes cluster
 
 Either [download the script manually](https://raw.githubusercontent.com/faros-ai/airbyte-local-cli/main/airbyte-local.sh) or invoke the script directly with curl:
 
@@ -50,7 +50,7 @@ Or with [Faros Community Edition](https://github.com/faros-ai/faros-community-ed
 ```
 **Note**: The `src.*` and `dst.*` arguments will differ depending on the source and destination being used.
 
-And here is an example of how to run the ServiceNow sync with [Faros Cloud](https://www.faros.ai) destination on a kubernetes cluster:
+And here is an example of how to run the ServiceNow sync with [Faros Cloud](https://www.faros.ai) destination on a Kubernetes cluster:
 
 ```sh
 ./airbyte-local.sh \
@@ -70,13 +70,13 @@ And here is an example of how to run the ServiceNow sync with [Faros Cloud](http
   --k8s-mem-limit 500Mi \
   --keep-containers
 ```
-**Note**: To execute this command successfully, `kubectl` should be installed in your local environment and the kubernetes cluster context and credentials should be already configured. Namespace, cpu, and mem limits parameters are optional. `--keep-containers` parameter allows to keep the pod on the cluster after the source/destination containers complete the sync.
+**Note**: To execute this command successfully, `kubectl` should be installed in your local environment and the Kubernetes cluster context and credentials should be already configured. Namespace, cpu, and mem limits parameters are optional. `--keep-containers` parameter allows to keep the pod on the cluster after the source/destination containers complete the sync.
 
 
 
 ## Configuring Faros source/destination using a wizard
 
-**Note**: Faros Sources and/or Faros Destination only. Not supported with kubernetes deployment.
+**Note**: Faros Sources and/or Faros Destination only. Not supported with Kubernetes deployment.
 
 Instead of passing `src.*` and `dst.*`, it is possible to invoke a configuration wizard for the Faros source 
 and/or destination:
@@ -124,10 +124,10 @@ and/or destination:
 | --max-cpus \<cpus\>               |          | Set maximum CPUs each Docker container can use, e.g `"1"`                                         |
 | --src-docker-options "\<string\>" |          | Set additional options to pass to the `docker run <src>` command                                  |
 | --dst-docker-options "\<string\>" |          | Set additional options to pass to the `docker run <dst>` command                                  |
-| --k8s-deployment                  |          | Deploy and run source/destination connectors as a pod on a kubernetes cluster                     |
+| --k8s-deployment                  |          | Deploy and run source/destination connectors as a pod on a Kubernetes cluster                     |
 | --k8s-namespace \<name\>          |          | Kubernetes namespace where the source/destination connectors pod is deployed to                   |
-| --k8s-mem-limit \<mem\>           |          | Set memory resource limit for source and destination containers in kubernetes deployment          |
-| --k8s-cpu-limit \<cpu\>           |          | Set cpu resource limit for source and destination containers in kubernetes deployment             |
+| --k8s-mem-limit \<mem\>           |          | Set memory resource limit for source and destination containers in Kubernetes deployment          |
+| --k8s-cpu-limit \<cpu\>           |          | Set cpu resource limit for source and destination containers in Kubernetes deployment             |
 | --debug                           |          | Enable debug logging                                                                              |
 
 **Note**: when passing an array value for a parameter specify it as a json array, for example:
