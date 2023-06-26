@@ -70,8 +70,7 @@ And here is an example of how to run the ServiceNow sync with [Faros Cloud](http
   --k8s-mem-limit 500Mi \
   --keep-containers
 ```
-**Note**: To execute this command successfully, `kubectl` should be installed in your local environment and the Kubernetes cluster context and credentials should be already configured. Namespace, cpu, and mem limits parameters are optional. `--keep-containers` parameter allows to keep the pod on the cluster after the source/destination containers complete the sync.
-
+**Note**: To execute this command successfully, Kubernetes cluster context and credentials should be already configured.
 
 
 ## Configuring Faros source/destination using a wizard
@@ -128,6 +127,7 @@ and/or destination:
 | --k8s-namespace \<name\>          |          | Kubernetes namespace where the source/destination connectors pod is deployed to                   |
 | --k8s-mem-limit \<mem\>           |          | Set memory resource limit for source and destination containers in Kubernetes deployment          |
 | --k8s-cpu-limit \<cpu\>           |          | Set cpu resource limit for source and destination containers in Kubernetes deployment             |
+| --keep-containers                 |          | Do not delete source and destination containers (or Kubernetes pod) after they exit               |
 | --debug                           |          | Enable debug logging                                                                              |
 
 **Note**: when passing an array value for a parameter specify it as a json array, for example:
