@@ -6,9 +6,7 @@ CLI for running Airbyte sources & destinations locally or on a Kubernetes cluste
 
 ## Example Usage
 
-**Requirements**:
-- `bash`, `docker`, `jq`, `tee` when running connectors locally
-- `bash`, `kubectl`, `jq` when running connectors on a Kubernetes cluster
+**Requirements**: `bash`, `docker`, `jq`, `tee` (additionally `kubectl` when running syncs on a Kubernetes cluster)
 
 Either [download the script manually](https://raw.githubusercontent.com/faros-ai/airbyte-local-cli/main/airbyte-local.sh) or invoke the script directly with curl:
 
@@ -50,7 +48,7 @@ Or with [Faros Community Edition](https://github.com/faros-ai/faros-community-ed
 ```
 **Note**: The `src.*` and `dst.*` arguments will differ depending on the source and destination being used.
 
-And here is an example of how to run the ServiceNow sync with [Faros Cloud](https://www.faros.ai) destination on a Kubernetes cluster:
+Or on a Kubernetes cluster:
 
 ```sh
 ./airbyte-local.sh \
@@ -70,7 +68,7 @@ And here is an example of how to run the ServiceNow sync with [Faros Cloud](http
   --max-mem 500Mi \
   --keep-containers
 ```
-**Note**: To execute this command successfully, Kubernetes cluster context and credentials should be already configured.
+**Note**: The command assumes Kubernetes cluster context, and credentials are already configured. For more info, see [official docs](https://kubernetes.io/docs/concepts/configuration/organize-cluster-access-kubeconfig/).
 
 
 ## Configuring Faros source/destination using a wizard
