@@ -54,14 +54,12 @@ function help() {
     echo "--log-level                       Set level of source and destination loggers"
     echo "--raw-messages                    Output raw Airbyte messages, i.e., without a log prefix or colors (useful when used with --dst-only)"
     echo "--max-log-size <size>             Set Docker maximum log size"
-    echo "--max-mem <mem>                   Set maximum amount of memory each Docker container can use, e.g \"1g\""
-    echo "--max-cpus <cpus>                 Set maximum CPUs each Docker container can use, e.g \"1\""
-    echo "--k8s-mem-limit <mem>             Set memory limit for k8s source and destination container. Default is 256Mi"
-    echo "--k8s-cpu-limit <cpus>            Set cpu limit for k8s source and destination container. Default is 500m (0.5)"
+    echo "--max-mem <mem>                   Set maximum amount of memory each Docker or Kubernetes container can use, e.g \"1g\""
+    echo "--max-cpus <cpus>                 Set maximum CPUs each Docker or Kubernetes container can use, e.g \"1\""
     echo '--src-docker-options "<string>"   Set additional options to pass to the "docker run <src>" command'
     echo '--dst-docker-options "<string>"   Set additional options to pass to the "docker run <dst>" command'
-    echo '--k8s-deployment"                Run source destination connectors on a kubernetes cluster'
-    echo '--k8s-namespace "<string>"       Set kubernetes namespace where the pod with source and destination conteiners will run; defaults to "default"'
+    echo '--k8s-deployment"                 Run source destination connectors on a Kubernetes cluster'
+    echo '--k8s-namespace "<string>"        Set Kubernetes namespace where the pod with source and destination conteiners will run; defaults to "default"'
     echo "--debug                           Enable debug logging"
     exit
 }
