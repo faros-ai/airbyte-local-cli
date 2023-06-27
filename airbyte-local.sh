@@ -59,7 +59,7 @@ function help() {
     echo '--src-docker-options "<string>"   Set additional options to pass to the "docker run <src>" command'
     echo '--dst-docker-options "<string>"   Set additional options to pass to the "docker run <dst>" command'
     echo '--k8s-deployment"                 Run source destination connectors on a Kubernetes cluster'
-    echo '--k8s-namespace "<string>"        Set Kubernetes namespace where the pod with source and destination conteiners will run; defaults to "default"'
+    echo '--k8s-namespace "<string>"        Set Kubernetes namespace where the pod with source and destination containers will run; defaults to "default"'
     echo "--debug                           Enable debug logging"
     exit
 }
