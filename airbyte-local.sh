@@ -71,11 +71,11 @@ function setDefaults() {
     declare -Ag dst_config=()
     keep_containers="--rm"
     log_level="info"
-    max_cpus=""
     max_log_size="10m"
     max_memory=""
-    k8s_mem_limit="256Mi"
-    k8s_cpu_limit="500m"
+    max_cpus=""
+    k8s_default_mem_limit="256Mi"
+    k8s_default_cpu_limit="500m"
     pod_name=""
     k8s_namespace="default"
     src_catalog_overrides="{}"
@@ -202,16 +202,10 @@ function parseFlags() {
                 k8s_namespace="$2"
                 shift 2 ;;
             --max-mem)
-                max_memory="-m $2"
+                max_memory="$2"
                 shift 2 ;;
             --max-cpus)
-                max_cpus="--cpus $2"
-                shift 2 ;;
-            --k8s-mem-limit)
-                k8s_mem_limit=$2
-                shift 2 ;;
-            --k8s-cpu-limit)
-                k8s_cpu_limit=$2
+                max_cpus="$2"
                 shift 2 ;;
             --src-docker-options)
                 src_docker_options="$2"
@@ -293,6 +287,16 @@ function validateInput() {
         # Ignore docker image pull flags for kube deployment
         no_src_pull=1
         no_dst_pull=1
+        max_memory=${max_memory:-$k8s_default_mem_limit}
+        max_cpus=${max_cpus:-$k8s_default_cpu_limit}
+    else
+        # when running locally format container cpu and memory limits parameters if they are provided by user
+        if [[ -n "$max_cpus" ]]; then
+            max_cpus="--cpus $max_cpus"
+        fi
+        if [[ -n "$max_memory" ]]; then
+            max_memory="-m $max_memory"
+        fi
     fi
 }
 
@@ -558,8 +562,8 @@ spec:
           name: airbyte-config
       resources:
         limits:
-          cpu: "${k8s_cpu_limit}"
-          memory: "${k8s_mem_limit}"
+          cpu: "${max_cpus}"
+          memory: "${max_memory}"
     - name: transformer
       image: apteno/alpine-jq
       env:
@@ -636,8 +640,8 @@ spec:
           name: airbyte-config
       resources:
         limits:
-          cpu: "${k8s_cpu_limit}"
-          memory: "${k8s_mem_limit}"
+          cpu: "${max_cpus}"
+          memory: "${max_memory}"
   volumes:
     - name: pipes-volume
       emptyDir: {}
@@ -738,8 +742,7 @@ function sync_local() {
 }
 
 function sync_kube() {
-    local kube_manifest_template=connection-pod.yaml
-    kube_manifest_tmp=__${kube_manifest_template}
+    kube_manifest_tmp="$tempdir/connection-pod.yaml"
     pod_name=$(generatePodName)
     local pod=$pod_name
     local namespace=$k8s_namespace
@@ -794,7 +797,6 @@ function cleanup() {
         else
             log "Pod $pod_name is left on the cluster. To delete it, run 'kubectl delete pod $pod_name -n $k8s_namespace'"
         fi
-        rm "$kube_manifest_tmp"
     else
         if [[ -s "$tempPrefix-src_cid" ]]; then
             docker container kill $(cat "$tempPrefix-src_cid") 2>/dev/null || true

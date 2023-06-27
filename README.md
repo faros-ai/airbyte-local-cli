@@ -66,8 +66,8 @@ And here is an example of how to run the ServiceNow sync with [Faros Cloud](http
   --state state.json \
   --k8s-deployment \
   --k8s-namespace default \
-  --k8s-cpu-limit 0.5 \
-  --k8s-mem-limit 500Mi \
+  --max-cpus 0.5 \
+  --max-mem 500Mi \
   --keep-containers
 ```
 **Note**: To execute this command successfully, Kubernetes cluster context and credentials should be already configured.
@@ -119,14 +119,12 @@ and/or destination:
 | --connection-name                 |          | Connection name used in various places                                                            |
 | --raw-messages                    |          | Output raw Airbyte messages, i.e., without a log prefix or colors                                 |
 | --max-log-size \<size\>           |          | Set Docker maximum log size                                                                       |
-| --max-mem \<mem\>                 |          | Set the maximum amount of memory each Docker container can use, e.g `"1g"`                        |
-| --max-cpus \<cpus\>               |          | Set maximum CPUs each Docker container can use, e.g `"1"`                                         |
+| --max-mem \<mem\>                 |          | Set the maximum amount of memory for Docker or Kubernetes container, e.g., `"1g"` or `"1024Mi"`   |
+| --max-cpus \<cpus\>               |          | Set the maximum number of CPUs for each Docker or Kubernetes container, e.g, `"1"` or `"1000m"`   |
 | --src-docker-options "\<string\>" |          | Set additional options to pass to the `docker run <src>` command                                  |
 | --dst-docker-options "\<string\>" |          | Set additional options to pass to the `docker run <dst>` command                                  |
 | --k8s-deployment                  |          | Deploy and run source/destination connectors as a pod on a Kubernetes cluster                     |
 | --k8s-namespace \<name\>          |          | Kubernetes namespace where the source/destination connectors pod is deployed to                   |
-| --k8s-mem-limit \<mem\>           |          | Set memory resource limit for source and destination containers in Kubernetes deployment          |
-| --k8s-cpu-limit \<cpu\>           |          | Set cpu resource limit for source and destination containers in Kubernetes deployment             |
 | --keep-containers                 |          | Do not delete source and destination containers (or Kubernetes pod) after they exit               |
 | --debug                           |          | Enable debug logging                                                                              |
 
