@@ -308,7 +308,7 @@ function writeSrcConfig() {
     else
         writeConfig src_config "$tempdir/$src_config_filename"
     fi
-    if ((debug)); then
+    if [[ -z "${k8s_deployment}" && ${debug} -eq 1 ]]; then
         debug "Using source config: $(redactConfigSecrets "$(jq -c < $tempdir/$src_config_filename)" "$(specSrc)")"
     fi
 }
@@ -323,7 +323,7 @@ function writeDstConfig() {
     else
         writeConfig dst_config "$tempdir/$dst_config_filename"
     fi
-    if ((debug)); then
+    if [[ -z "${k8s_deployment}" && ${debug} -eq 1 ]]; then
         debug "Using destination config: $(redactConfigSecrets "$(jq -c < $tempdir/$dst_config_filename)" "$(specDst)")"
     fi
 }
