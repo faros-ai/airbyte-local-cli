@@ -1,12 +1,12 @@
 # Airbyte Local CLI [![CI](https://github.com/faros-ai/airbyte-local-cli/actions/workflows/ci.yaml/badge.svg)](https://github.com/faros-ai/airbyte-local-cli/actions/workflows/ci.yaml)
 
-CLI for running Airbyte sources & destinations locally without Airbyte server
+CLI for running Airbyte sources & destinations locally or on a Kubernetes cluster without an Airbyte server
 
 ![Alt Text](https://github.com/Faros-ai/airbyte-local-cli/raw/main/resources/demo.gif)
 
 ## Example Usage
 
-**Requirements**: `bash`, `docker`, `jq`, `tee`
+**Requirements**: `bash`, `jq`, `tee`. Additionally, `docker` when running syncs locally, or `kubectl` when running on a Kubernetes cluster. 
 
 Either [download the script manually](https://raw.githubusercontent.com/faros-ai/airbyte-local-cli/main/airbyte-local.sh) or invoke the script directly with curl:
 
@@ -46,12 +46,34 @@ Or with [Faros Community Edition](https://github.com/faros-ai/faros-community-ed
   --state state.json \
   --check-connection
 ```
-
 **Note**: The `src.*` and `dst.*` arguments will differ depending on the source and destination being used.
+
+Or on a Kubernetes cluster:
+
+```sh
+./airbyte-local.sh \
+  --src 'farosai/airbyte-servicenow-source' \
+  --src.username '<source_username>' \
+  --src.password '<source_password>' \
+  --src.url '<source_url>' \
+  --dst 'farosai/airbyte-faros-destination' \
+  --dst.edition_configs.edition 'cloud' \
+  --dst.edition_configs.api_url '<faros_api_url>' \
+  --dst.edition_configs.api_key '<faros_api_key>' \
+  --dst.edition_configs.graph 'default' \
+  --state state.json \
+  --k8s-deployment \
+  --k8s-namespace default \
+  --max-cpus 0.5 \
+  --max-mem 500Mi \
+  --keep-containers
+```
+**Note**: The command assumes Kubernetes cluster context, and credentials are already configured. For more info, see [official docs](https://kubernetes.io/docs/concepts/configuration/organize-cluster-access-kubeconfig/).
+
 
 ## Configuring Faros source/destination using a wizard
 
-**Note**: Faros Sources and/or Faros Destination only
+**Note**: Faros Sources and/or Faros Destination only. Not supported with Kubernetes deployment.
 
 Instead of passing `src.*` and `dst.*`, it is possible to invoke a configuration wizard for the Faros source 
 and/or destination:
@@ -95,10 +117,13 @@ and/or destination:
 | --connection-name                 |          | Connection name used in various places                                                            |
 | --raw-messages                    |          | Output raw Airbyte messages, i.e., without a log prefix or colors                                 |
 | --max-log-size \<size\>           |          | Set Docker maximum log size                                                                       |
-| --max-mem \<mem\>                 |          | Set the maximum amount of memory each Docker container can use, e.g `"1g"`                        |
-| --max-cpus \<cpus\>               |          | Set maximum CPUs each Docker container can use, e.g `"1"`                                         |
+| --max-mem \<mem\>                 |          | Set the maximum amount of memory for Docker or Kubernetes container, e.g., `"1g"` or `"1024Mi"`   |
+| --max-cpus \<cpus\>               |          | Set the maximum number of CPUs for each Docker or Kubernetes container, e.g, `"1"` or `"1000m"`   |
 | --src-docker-options "\<string\>" |          | Set additional options to pass to the `docker run <src>` command                                  |
 | --dst-docker-options "\<string\>" |          | Set additional options to pass to the `docker run <dst>` command                                  |
+| --k8s-deployment                  |          | Deploy and run source/destination connectors as a pod on a Kubernetes cluster                     |
+| --k8s-namespace \<name\>          |          | Kubernetes namespace where the source/destination connectors pod is deployed to                   |
+| --keep-containers                 |          | Do not delete source and destination containers (or Kubernetes pod) after they exit               |
 | --debug                           |          | Enable debug logging                                                                              |
 
 **Note**: when passing an array value for a parameter specify it as a json array, for example:

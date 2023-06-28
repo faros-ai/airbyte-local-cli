@@ -21,6 +21,78 @@ Describe 'source and destination image validation'
     End
 End
 
+Describe 'kubernetes options validation'
+    It 'fails if --src-only option is provided'
+        airbyte_local_test() {
+            echo $(
+                ../airbyte-local.sh \
+                --k8s-deployment \
+                --src 'farosai/dummy-source-image' \
+                --src-only \
+                --debug
+            )
+        }
+        When call airbyte_local_test
+        The output should include "Source only run is not supported with kubernetes deployment"
+    End
+    It 'fails if --dst-only option is provided'
+        airbyte_local_test() {
+            echo $(
+                ../airbyte-local.sh \
+                --k8s-deployment \
+                --src 'farosai/dummy-source-image' \
+                --dst 'farosai/dummy-destination-image' \
+                --dst-only \
+                --debug
+            )
+        }
+        When call airbyte_local_test
+        The output should include "Destination only run is not supported with kubernetes deployment"
+    End
+    It 'fails if --check-connection option is provided'
+        airbyte_local_test() {
+            echo $(
+                ../airbyte-local.sh \
+                --k8s-deployment \
+                --src 'farosai/dummy-source-image' \
+                --dst 'farosai/dummy-destination-image' \
+                --check-connection \
+                --debug
+            )
+        }
+        When call airbyte_local_test
+        The output should include "Check connection option is not supported with kubernetes deployment"
+    End
+    It 'fails if --src-wizard option is provided'
+        airbyte_local_test() {
+            echo $(
+                ../airbyte-local.sh \
+                --k8s-deployment \
+                --src 'farosai/dummy-source-image' \
+                --dst 'farosai/dummy-destination-image' \
+                --src-wizard \
+                --debug
+            )
+        }
+        When call airbyte_local_test
+        The output should include "Source wizard is not supported with kubernetes deployment"
+    End
+    It 'fails if --dst-wizard option is provided'
+        airbyte_local_test() {
+            echo $(
+                ../airbyte-local.sh \
+                --k8s-deployment \
+                --src 'farosai/dummy-source-image' \
+                --dst 'farosai/dummy-destination-image' \
+                --dst-wizard \
+                --debug
+            )
+        }
+        When call airbyte_local_test
+        The output should include "Destination wizard is not supported with kubernetes deployment"
+    End
+End
+
 Describe 'building source config'
     # Makes the docker command a noop since we don't need it for these tests
     docker() {
@@ -365,5 +437,95 @@ Describe 'building destination catalog'
                 --debug
 
         The output should include 'Using destination configured catalog: {"streams":[{"stream":{"name":"faros_feed","supported_sync_modes":["full_refresh","incremental"],"json_schema":{}},"sync_mode":"incremental","destination_sync_mode":"append"}]}'
+    End
+End
+
+Describe 'building kubernetes manifest - source image'
+    # kubectl call: kubectl apply -f ${kube_manifest_tmp} -n ${namespace}
+    kubectl() {
+        local manifest=$3
+        grep 'image: farosai/dummy-source-image' $manifest
+        exit $?
+    }
+
+    It 'sets source image'
+        When run source ../airbyte-local.sh \
+                --src 'farosai/dummy-source-image' \
+                --src.key 'value' \
+                --dst 'farosai/dummy-destination-image' \
+                --dst.key 'value' \
+                --k8s-deployment \
+                --keep-containers \
+                --debug
+
+        The output should include 'image: farosai/dummy-source-image'
+    End
+End
+
+Describe 'building kubernetes manifest - destination image'
+    # kubectl call: kubectl apply -f ${kube_manifest_tmp} -n ${namespace}
+    kubectl() {
+        local manifest=$3
+        grep 'image: farosai/dummy-destination-image' $manifest
+        exit $?
+    }
+
+    It 'sets source image'
+        When run source ../airbyte-local.sh \
+                --src 'farosai/dummy-source-image' \
+                --src.key 'value' \
+                --dst 'farosai/dummy-destination-image' \
+                --dst.key 'value' \
+                --k8s-deployment \
+                --keep-containers \
+                --debug
+
+        The output should include 'image: farosai/dummy-destination-image'
+    End
+End
+
+Describe 'building kubernetes manifest - mem limit'
+    # kubectl call: kubectl apply -f ${kube_manifest_tmp} -n ${namespace}
+    kubectl() {
+        local manifest=$3
+        grep 'memory: "700Mi"' $manifest
+        exit $?
+    }
+
+    It 'sets container memory limit'
+        When run source ../airbyte-local.sh \
+                --src 'farosai/dummy-source-image' \
+                --src.key 'value' \
+                --dst 'farosai/dummy-destination-image' \
+                --dst.key 'value' \
+                --k8s-deployment \
+                --max-mem 700Mi \
+                --keep-containers \
+                --debug
+
+        The output should include '          memory: "700Mi"'
+    End
+End
+
+Describe 'building kubernetes manifest - cpu limit'
+    # kubectl call: kubectl apply -f ${kube_manifest_tmp} -n ${namespace}
+    kubectl() {
+        local manifest=$3
+        grep 'cpu: "700m"' $manifest
+        exit $?
+    }
+
+    It 'sets container cpu limit'
+        When run source ../airbyte-local.sh \
+                --src 'farosai/dummy-source-image' \
+                --src.key 'value' \
+                --dst 'farosai/dummy-destination-image' \
+                --dst.key 'value' \
+                --k8s-deployment \
+                --max-cpus 700m \
+                --keep-containers \
+                --debug
+
+        The output should include '          cpu: "700m"'
     End
 End
