@@ -28,6 +28,7 @@ function help() {
     echo
     echo "options:"
     echo
+    echo "--local-src-command               Local source command to run instead of src image"
     echo "--src <image> (required)          Airbyte source Docker image"
     echo "--dst <image> (required)          Airbyte destination Docker image"
     echo "--src.<key> <value>               Add \"key\": \"value\" into the source config"
@@ -67,6 +68,7 @@ function help() {
 function setDefaults() {
     declare -Ag src_config=()
     declare -Ag dst_config=()
+    local_src_command=""
     keep_containers="--rm"
     log_level="info"
     max_log_size="10m"
@@ -90,6 +92,9 @@ function setDefaults() {
 function parseFlags() {
     while (($#)); do
         case "$1" in
+            --local-src-command)
+                local_src_command="$2"
+                shift 2 ;;
             --src)
                 src_docker_image="$2"
                 shift 2 ;;
@@ -252,7 +257,7 @@ function validateRequirements() {
 }
 
 function validateInput() {
-    if [[ -z "$src_docker_image" ]]; then
+    if [[ -z "$src_docker_image" ]] && [[ -z "$local_src_command" ]]; then
         err "Airbyte source Docker image must be set using '--src <image>'"
     fi
     if [[ -z "$dst_docker_image" ]] && ! ((run_src_only)); then
@@ -304,7 +309,11 @@ function writeSrcConfig() {
     elif [[ "$src_config_json" ]]; then
         echo "$src_config_json" > "$tempdir/$src_config_filename"
     elif ((run_src_wizard)); then
-        getConfigFromWizard "$src_docker_image" "$src_config_filename"
+        if [[ -z "$local_src_command" ]]; then 
+            getConfigFromWizard "$src_docker_image" "$src_config_filename"
+        else
+            $local_src_command airbyte-local-cli-wizard --json "$tempdir/$config_filename"
+        fi
     else
         writeConfig src_config "$tempdir/$src_config_filename"
     fi
@@ -703,18 +712,30 @@ function specSrc() {
 }
 
 function discoverSrc() {
-    docker run --rm -v "$tempdir:/configs" "$src_docker_image" discover \
-      --config "/configs/$src_config_filename"
+    if [[ -z "$local_src_command" ]]; then
+        docker run --rm -v "$tempdir:/configs" "$src_docker_image" discover \
+        --config "/configs/$src_config_filename"
+    else
+        $local_src_command discover --config "$tempdir/$src_config_filename"
+    fi
 }
 
 function readSrc() {
     if [[ "$src_file" ]]; then
         cat $src_file
     else
-        docker run $keep_containers $max_memory $max_cpus --init --cidfile="$tempPrefix-src_cid" -v "$tempdir:/configs" --log-opt max-size="$max_log_size" -a stdout -a stderr --env LOG_LEVEL="$log_level" $src_docker_options "$src_docker_image" read \
-          --config "/configs/$src_config_filename" \
-          --catalog "/configs/$src_catalog_filename" \
-          --state "/configs/$src_state_filename"
+        if [[ -z "$local_src_command" ]]; then
+            docker run $keep_containers $max_memory $max_cpus --init --cidfile="$tempPrefix-src_cid" -v "$tempdir:/configs" --log-opt max-size="$max_log_size" \
+            -a stdout -a stderr --env LOG_LEVEL="$log_level" $src_docker_options "$src_docker_image" read \
+            --config "/configs/$src_config_filename" \
+            --catalog "/configs/$src_catalog_filename" \
+            --state "/configs/$src_state_filename"
+        else
+            LOG_LEVEL="$log_level" $local_src_command read \
+            --config "$tempdir/$src_config_filename" \
+            --catalog "$tempdir/$src_catalog_filename" \
+            --state "$tempdir/$src_state_filename"
+        fi
     fi
 }
 
