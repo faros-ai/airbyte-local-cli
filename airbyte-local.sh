@@ -670,9 +670,9 @@ function waitForPodContainer() {
     container_status=""
     while [ -z "$container_status" ]
     do
-        container_status=$(kubectl get pod $pod -n $namespace -o jsonpath="{.status.containerStatuses[?(@.name==\"$container\")].state.$state}" || True)
+        container_status=$(kubectl get pod $pod -n $namespace -o jsonpath="{.status.containerStatuses[?(@.name==\"$container\")].state}" | grep -E "$state" || True)
         if [ -z "$container_status" ]; then # check also init container status
-            container_status=$(kubectl get pod $pod -n $namespace -o jsonpath="{.status.initContainerStatuses[?(@.name==\"$container\")].state.$state}" || True)
+            container_status=$(kubectl get pod $pod -n $namespace -o jsonpath="{.status.initContainerStatuses[?(@.name==\"$container\")].state}" | grep -E "$state" || True)
         fi
         log "Waiting for container $container in pod $pod to be in state $state, $status"
         sleep 2
@@ -748,11 +748,12 @@ function sync_kube() {
     local dst_container=destination
     local state_container=transformer
     local new_state_file=new_state.json
+    local wait_for_status="running|completed|terminated"
 
     generateKubeManifest ${kube_manifest_tmp}
     kubectl apply -f ${kube_manifest_tmp} -n ${namespace}
     # Wait for init container to start up
-    waitForPodContainer $namespace $pod init "running"
+    waitForPodContainer $namespace $pod init $wait_for_status
     echo "Copying config files to pod $pod"
     kubectl cp $tempdir/$src_config_filename $pod:/config/source_config.json -n ${namespace} -c init
     if [[ -s "$tempdir/$src_catalog_filename" ]]; then
@@ -766,12 +767,12 @@ function sync_kube() {
     touch $tempdir/FINISHED_UPLOADING && kubectl cp $tempdir/FINISHED_UPLOADING $pod:/config/ -n ${namespace} -c init
 
     # Wait for source container to start up
-    waitForPodContainer $namespace $pod $src_container "running"
+    waitForPodContainer $namespace $pod $src_container $wait_for_status
     # Tail source logs in the background
     log "Tailing source container logs in the background"
     kubectl logs -f $pod -c $src_container -n ${namespace} | jq -cR $jq_color_opt --unbuffered 'fromjson?' | jq -rR "$jq_src_msg" &
 
-    waitForPodContainer $namespace $pod $dst_container "running"
+    waitForPodContainer $namespace $pod $dst_container $wait_for_status
     log "Tailing destination container logs in the background"
     kubectl logs -f $pod -c $dst_container -n ${namespace} | JQ_COLORS="1;30:0;37:0;37:0;37:0;36:1;37:1;37" jq -cR $jq_color_opt --unbuffered 'fromjson?' | jq -rR "$jq_dst_msg"
     log "Copying $new_state_file from pod $pod"
