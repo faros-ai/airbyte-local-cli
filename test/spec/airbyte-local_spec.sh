@@ -412,9 +412,26 @@ Describe 'building destination catalog'
 
         The output should include 'Using destination configured catalog: {"streams":[{"stream":{"name":"mydummysourcesrc__dummy_source__faros_feed","supported_sync_modes":["full_refresh","incremental"],"json_schema":{}},"sync_mode":"incremental","destination_sync_mode":"append"}]}'
     End
+    It 'creates stream prefix when source and destination are Faros connectors and source image tag has hyphen'
+        When run source ../airbyte-local.sh \
+                --src 'farosai/airbyte-dummy-source-image:custom-tag' \
+                --dst 'farosai/airbyte-faros-destination' \
+                --debug
+
+        The output should include 'Using destination configured catalog: {"streams":[{"stream":{"name":"mydummysourcesrc__dummy_source__faros_feed","supported_sync_modes":["full_refresh","incremental"],"json_schema":{}},"sync_mode":"incremental","destination_sync_mode":"append"}]}'
+    End
     It 'creates stream prefix including connection_name when source and destination are Faros connectors'
         When run source ../airbyte-local.sh \
                 --src 'farosai/airbyte-dummy-source-image' \
+                --dst 'farosai/airbyte-faros-destination' \
+                --connection-name 'connectionXYZ' \
+                --debug
+
+        The output should include 'Using destination configured catalog: {"streams":[{"stream":{"name":"connectionXYZ__dummy_source__faros_feed","supported_sync_modes":["full_refresh","incremental"],"json_schema":{}},"sync_mode":"incremental","destination_sync_mode":"append"}]}'
+    End
+    It 'creates stream prefix including connection_name when source and destination are Faros connectors and source image tag has hyphen'
+        When run source ../airbyte-local.sh \
+                --src 'farosai/airbyte-dummy-source-image:custom-tag' \
                 --dst 'farosai/airbyte-faros-destination' \
                 --connection-name 'connectionXYZ' \
                 --debug

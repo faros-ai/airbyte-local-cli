@@ -424,7 +424,8 @@ function writeDstCatalog() {
 }
 
 function parseStreamPrefix() {
-    IFS='-' read -ra src_docker_image_parts <<< $src_docker_image
+    IFS=':' read -ra src_docker_image_and_tag <<< $src_docker_image
+    IFS='-' read -ra src_docker_image_parts <<< ${src_docker_image_and_tag[0]}
     if [[ $dst_docker_image == farosai/airbyte-faros-destination* ]]; then
         if [[ -z "$connection_name" ]] && [[ $src_docker_image == farosai/airbyte-faros-feeds-source* ]]; then
             # Source config may be missing if uploading from a file. In that case fallback
