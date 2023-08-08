@@ -11,6 +11,7 @@ src_state_filename=${filename_prefix}_src_state.json
 src_catalog_filename=${filename_prefix}_src_catalog.json
 dst_config_filename=${filename_prefix}_dst_config.json
 dst_catalog_filename=${filename_prefix}_dst_catalog.json
+spec_filename=${filename_prefix}_spec.json
 
 JQ_TIMESTAMP="(now|todate)"
 
@@ -331,8 +332,29 @@ function writeDstConfig() {
 function getConfigFromWizard() {
     local docker_image=$1
     local config_filename=$2
-    docker run -it --rm -v "$tempdir:/configs" "$docker_image" airbyte-local-cli-wizard \
-      --json "/configs/$config_filename"
+    if [[ $docker_image == farosai/* ]]; then
+        docker run -it --rm -v "$tempdir:/configs" "$docker_image" airbyte-local-cli-wizard \
+        --json "/configs/$config_filename"
+    else
+        docker run -it --rm "$docker_image" spec \
+        > "$tempdir/$spec_filename"
+
+        if [[ $src_docker_image == farosai/* ]]; then
+            wizard_docker_image="$src_docker_image"
+            log "Using source image $wizard_docker_image to run wizard"
+        elif [[ $dst_docker_image == farosai/* ]]; then
+            wizard_docker_image="$dst_docker_image"
+            log "Using destination image $wizard_docker_image to run wizard"
+        else
+            # Use an arbitrary farosai image to run the wizard
+            wizard_docker_image="farosai/airbyte-faros-graphql-source"
+            log "Pulling source image $wizard_docker_image to run wizard"
+            docker pull $wizard_docker_image
+        fi
+
+        docker run -it --rm -v "$tempdir:/configs" $wizard_docker_image airbyte-local-cli-wizard \
+        --json "/configs/$config_filename" --spec-file "/configs/$spec_filename"
+    fi
 }
 
 function writeConfig() {
