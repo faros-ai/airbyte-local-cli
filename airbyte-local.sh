@@ -214,6 +214,7 @@ function parseFlags() {
                 shift 2 ;;
             --debug)
                 debug=1
+                log_level="debug"
                 shift 1 ;;
             --help)
                 help ;;
