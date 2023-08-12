@@ -310,10 +310,8 @@ function writeSrcConfig() {
     else
         writeConfig src_config "$tempdir/$src_config_filename"
     fi
-    if [[ $src_docker_image == farosai/airbyte-faros-feeds-source* ]]; then
-        if ((debug)); then
-            echo "$(jq '.feed_cfg.debug = true' "$tempdir/$src_config_filename")" > "$tempdir/$src_config_filename"
-        fi
+    if [[ $src_docker_image == farosai/airbyte-faros-feeds-source* && ${debug} -eq 1 ]]; then
+        echo "$(jq '.feed_cfg.debug = true' "$tempdir/$src_config_filename")" > "$tempdir/$src_config_filename"
     fi 
     if [[ -z "${k8s_deployment}" && ${debug} -eq 1 ]]; then
         debug "Using source config: $(redactConfigSecrets "$(jq -c < $tempdir/$src_config_filename)" "$(specSrc)")"
