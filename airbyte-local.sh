@@ -219,8 +219,7 @@ function parseFlags() {
             --help)
                 help ;;
             *)
-                warn "Unrecognized arg: $1"
-                shift ;;
+                err "Unrecognized arg: $1" ;;
         esac
     done
 }
