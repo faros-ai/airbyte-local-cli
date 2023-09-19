@@ -876,6 +876,12 @@ function err() {
     exit 1
 }
 
+function logImageVersion() {
+    log "$1 image digest is $(docker inspect --format='{{index .RepoDigests 0}}' "$2")"
+    local image_label=$(docker inspect --format='{{index .Config.Labels "io.airbyte.version"}}' "$2")
+    log "$1 image version label is $image_label"
+}
+
 function checkBashVersion() {
     bash_minor_version=$(echo "${BASH_VERSION}" | cut -d '.' -f 2)
     if [ $bash_major_version -eq 4 ] && [ $bash_minor_version -lt 3 ]; then
@@ -908,6 +914,7 @@ main() {
             docker pull $src_docker_image
         fi
     fi
+    logImageVersion "Source" "$src_docker_image"
     writeSrcConfig
     writeSrcCatalog
 
@@ -925,6 +932,7 @@ main() {
                 docker pull $dst_docker_image
             fi
         fi
+        logImageVersion "Destination" "$dst_docker_image"
         parseStreamPrefix
         loadState
         writeDstConfig
