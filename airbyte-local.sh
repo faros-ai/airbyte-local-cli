@@ -880,7 +880,7 @@ function logImageVersion() {
     if [[ -z ${k8s_deployment+x} ]]; then
         log "$1 image digest is $(docker inspect --format='{{index .RepoDigests 0}}' "$2")"
         local image_label=$(docker inspect --format='{{index .Config.Labels "io.airbyte.version"}}' "$2")
-        log "$1 image version label is ${image_label:-unknown}"
+        log "$1 image version is ${image_label:-unknown}"
     fi
 }
 
