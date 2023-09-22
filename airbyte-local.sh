@@ -319,8 +319,10 @@ function writeSrcConfig() {
 
 function copyFarosConfig() {
     if [[ $src_docker_image == farosai/airbyte-faros-feeds-source* && $dst_docker_image == farosai/airbyte-faros-destination* ]]; then
+            # Extract Faros API config from destination config
             faros_config=$(jq '{faros: {api_url: .edition_configs.api_url, api_key: .edition_configs.api_key, graph: .edition_configs.graph, graphql_api: .edition_configs.graphql_api} | with_entries(if .value==null then empty else . end)}' "$tempdir/$dst_config_filename")
             debug "Updating source config with Faros API config from destination config: $(echo "$faros_config" | jq '.faros.api_key = "REDACTED"')"
+            # Merge Faros API config into source config
             jq --argjson faros_config "$faros_config" '$faros_config + .' "$tempdir/$src_config_filename" > "$tempdir/$src_config_filename.tmp"
             mv "$tempdir/$src_config_filename.tmp" "$tempdir/$src_config_filename"
             debug "Using source config: $(redactConfigSecrets "$(jq -c < $tempdir/$src_config_filename)" "$(specSrc)")"
