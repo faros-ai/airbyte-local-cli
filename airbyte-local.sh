@@ -317,6 +317,16 @@ function writeSrcConfig() {
     fi
 }
 
+function copyFarosConfig() {
+    if [[ $src_docker_image == farosai/airbyte-faros-feeds-source* && $dst_docker_image == farosai/airbyte-faros-destination* ]]; then
+            faros_config=$(jq '{faros: {api_url: .edition_configs.api_url, api_key: .edition_configs.api_key, graph: .edition_configs.graph, graphql_api: .edition_configs.graphql_api} | with_entries(if .value==null then empty else . end)}' "$tempdir/$dst_config_filename")
+            debug "Updating source config with Faros API config from destination config: $(echo "$faros_config" | jq '.faros.api_key = "REDACTED"')"
+            jq --argjson faros_config "$faros_config" '. | $faros_config + .' "$tempdir/$src_config_filename" > "$tempdir/$src_config_filename.tmp"
+            mv "$tempdir/$src_config_filename.tmp" "$tempdir/$src_config_filename"
+            debug "Using source config: $(redactConfigSecrets "$(jq -c < $tempdir/$src_config_filename)" "$(specSrc)")"
+    fi
+}
+
 function writeDstConfig() {
     if [[ "$dst_config_file" ]]; then
         cp "$dst_config_file" "$tempdir/$dst_config_filename"
@@ -372,7 +382,8 @@ function writeConfig() {
         printf '%s\0%s\0' "$key" "${config[$key]}"
     done |
     jq -Rs '
-      split("\u0000")
+      rtrimstr("\u0000")
+      | split("\u0000")
       | . as $a
       | reduce range(0; length/2) as $i
           ({}; . * setpath(($a[2*$i] / ".");($a[2*$i + 1]|fromjson? // if . == "true" then true elif . == "false" then false else . end)))' > "$2"
@@ -929,6 +940,7 @@ main() {
         loadState
         writeDstConfig
         writeDstCatalog
+        copyFarosConfig
 
         log "Running ${GREEN}source [SRC]${NC} and passing output to ${CYAN}destination [DST]${NC}"
         sync
