@@ -774,7 +774,7 @@ function sync_local() {
         tee >(jq -cR --unbuffered 'fromjson? | select(.type == "STATE") | .state.data' | tail -n 1 > "$new_source_state_file") |
         # https://stedolan.github.io/jq/manual/#Colors
         JQ_COLORS="1;30:0;37:0;37:0;37:0;36:1;37:1;37" \
-        jq -cR $jq_color_opt --unbuffered 'fromjson?' | jq -rR "$jq_dst_msg"
+        jq -cR $jq_color_opt --unbuffered 'fromjson? | select(.type != "STATE")' | jq -rR "$jq_dst_msg"
     cp "$new_source_state_file" "$src_state_filepath"
 }
 
