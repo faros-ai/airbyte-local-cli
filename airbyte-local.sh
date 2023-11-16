@@ -325,7 +325,9 @@ function copyFarosConfig() {
             # Merge Faros API config into source config
             jq --argjson faros_config "$faros_config" '$faros_config + .' "$tempdir/$src_config_filename" > "$tempdir/$src_config_filename.tmp"
             mv "$tempdir/$src_config_filename.tmp" "$tempdir/$src_config_filename"
-            debug "Using source config: $(redactConfigSecrets "$(jq -c < $tempdir/$src_config_filename)" "$(specSrc)")"
+            if [[ -z "${k8s_deployment}" && ${debug} -eq 1 ]]; then
+                debug "Using source config: $(redactConfigSecrets "$(jq -c < $tempdir/$src_config_filename)" "$(specSrc)")"
+            fi
     fi
 }
 
