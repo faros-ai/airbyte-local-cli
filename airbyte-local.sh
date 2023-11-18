@@ -406,9 +406,10 @@ function redactConfigSecrets() {
                                        | map(select(. != "properties" and
                                                     . != "oneOf" and
                                                     . != "anyOf" and
-                                                    (.|tostring|test("^\\d+$")|not)))' <<< "$config_properties"))
+                                                    (.|tostring|test("^\\d+$")|not))) | tostring' <<< "$config_properties"))
     for path in "${paths_to_redact[@]}"; do\
-        loggable_config="$(jq -c --argjson path "$path" 'if getpath($path) != null then setpath($path; "REDACTED") else . end' <<< "$loggable_config")"
+        path_json=$(echo $path | jq -c '.|fromjson')
+        loggable_config="$(jq -c --argjson path "$path_json" 'if getpath($path) != null then setpath($path; "REDACTED") else . end' <<< "$loggable_config")"
     done
     echo "$loggable_config"
 }
