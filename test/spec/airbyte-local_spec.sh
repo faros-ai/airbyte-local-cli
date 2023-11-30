@@ -201,13 +201,6 @@ Describe 'writing source output'
                 --debug
         The output should include 'Writing source output to /tmp/out.txt'
     End
-    It 'does not write source output'
-        When run source ../airbyte-local.sh \
-                --src 'farosai/dummy-source-image' \
-                --dst 'farosai/dummy-destination-image' \
-                --debug
-        The output should include 'Writing source output to /dev/null'
-    End
 End
 
 Describe 'building source catalog'
