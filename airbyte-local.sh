@@ -765,7 +765,9 @@ function specDst() {
 }
 
 function sync_local() {
-    debug "Writing source output to $output_filepath"
+    if [[ "$output_filepath" != "/dev/null" ]]; then
+       debug "Writing source output to $output_filepath"
+    fi
     new_source_state_file="$tempdir/new_state.json"
     readSrc |
         tee >(jq -cR $jq_color_opt --unbuffered 'fromjson? | select(.type != "RECORD" and .type != "STATE")' |
