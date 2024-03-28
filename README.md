@@ -119,8 +119,8 @@ and/or destination:
 | --max-log-size \<size\>           |          | Set Docker maximum log size                                                                       |
 | --max-mem \<mem\>                 |          | Set the maximum amount of memory for Docker or Kubernetes container, e.g., `"1g"` or `"1024Mi"`   |
 | --max-cpus \<cpus\>               |          | Set the maximum number of CPUs for each Docker or Kubernetes container, e.g, `"1"` or `"1000m"`   |
-| --src-docker-options "\<string\>" |          | Set additional options to pass to the `docker run <src>` command                                  |
-| --dst-docker-options "\<string\>" |          | Set additional options to pass to the `docker run <dst>` command                                  |
+| --src-docker-options "\<string\>" |          | Set additional options to pass to the `docker run <src>` command, e.g `--src-docker-options "-e NODE_OPTIONS=--max_old_space_size=2000"` |
+| --dst-docker-options "\<string\>" |          | Set additional options to pass to the `docker run <dst>` command, e.g `--dst-docker-options "-e NODE_OPTIONS=--max_old_space_size=2000"` |
 | --k8s-deployment                  |          | Deploy and run source/destination connectors as a pod on a Kubernetes cluster                     |
 | --k8s-namespace \<name\>          |          | Kubernetes namespace where the source/destination connectors pod is deployed to                   |
 | --keep-containers                 |          | Do not delete source and destination containers (or Kubernetes pod) after they exit               |
