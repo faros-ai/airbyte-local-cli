@@ -848,6 +848,8 @@ function cleanup() {
             docker container kill $(cat "$tempPrefix-dst_cid") 2>/dev/null || true
             rm "$tempPrefix-dst_cid"
         fi
+        src_exit_code=$(docker inspect $src_container_name --format="{{.State.ExitCode}}")
+        dst_exit_code=$(docker inspect $dst_container_name --format="{{.State.ExitCode}}")
         if ((keep_containers)); then
             log "Docker containers $src_container_name and $dst_container_name have been saved"
         else
@@ -855,6 +857,13 @@ function cleanup() {
         fi
     fi
     rm -rf "$tempdir"
+    if [ $src_exit_code -ne 0 ]; then
+      debug "Docker container $src_container_name exited with code $src_exit_code"
+      exit $src_exit_code
+    elif [ $dst_exit_code -ne 0 ]; then
+      debug "Docker container $dst_container_name exited with code $dst_exit_code"
+      exit $dst_exit_code
+    fi
 }
 
 function fmtLog(){
