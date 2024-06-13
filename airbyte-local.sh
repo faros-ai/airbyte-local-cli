@@ -850,13 +850,13 @@ function cleanup() {
         fi
         src_exit_code=$(docker inspect $src_container_name --format="{{.State.ExitCode}}")
         dst_exit_code=$(docker inspect $dst_container_name --format="{{.State.ExitCode}}")
+        debug "Docker container $src_container_name exited with code $src_exit_code"
+        debug "Docker container $dst_container_name exited with code $dst_exit_code"
         if ((keep_containers)); then
             log "Docker containers $src_container_name and $dst_container_name have been saved"
         else
             docker container rm -f $src_container_name $dst_container_name > /dev/null 2>&1 || true
         fi
-        debug "Docker container $src_container_name exited with code $src_exit_code"
-        debug "Docker container $dst_container_name exited with code $dst_exit_code"
     fi
     rm -rf "$tempdir"
     if [ -n "$src_exit_code" ] && [ "$src_exit_code" -ne 0 ]; then
