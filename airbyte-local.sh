@@ -855,10 +855,10 @@ function cleanup() {
         else
             docker container rm -f $src_container_name $dst_container_name > /dev/null 2>&1 || true
         fi
+        debug "Docker container $src_container_name exited with code $src_exit_code"
+        debug "Docker container $dst_container_name exited with code $dst_exit_code"
     fi
     rm -rf "$tempdir"
-    debug "Docker container $src_container_name exited with code $src_exit_code"
-    debug "Docker container $dst_container_name exited with code $dst_exit_code"
     if [ -n "$src_exit_code" ] && [ "$src_exit_code" -ne 0 ]; then
       exit $src_exit_code
     elif [ -n "$dst_exit_code" ] && [ "$dst_exit_code" -ne 0 ]; then
