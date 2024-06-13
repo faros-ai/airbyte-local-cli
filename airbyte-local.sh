@@ -857,11 +857,11 @@ function cleanup() {
         fi
     fi
     rm -rf "$tempdir"
+    debug "Docker container $src_container_name exited with code $src_exit_code"
+    debug "Docker container $dst_container_name exited with code $dst_exit_code"
     if [ -n "$src_exit_code" ] && [ "$src_exit_code" -ne 0 ]; then
-      debug "Docker container $src_container_name exited with code $src_exit_code"
       exit $src_exit_code
     elif [ -n "$dst_exit_code" ] && [ "$dst_exit_code" -ne 0 ]; then
-      debug "Docker container $dst_container_name exited with code $dst_exit_code"
       exit $dst_exit_code
     fi
 }
