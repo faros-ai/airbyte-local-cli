@@ -68,7 +68,6 @@ function help() {
 function setDefaults() {
     declare -Ag src_config=()
     declare -Ag dst_config=()
-    keep_containers="--rm"
     log_level="info"
     max_log_size="10m"
     max_memory=""
@@ -192,7 +191,7 @@ function parseFlags() {
                 jq_color_opt="-M"
                 shift 1 ;;
             --keep-containers)
-                keep_containers=""
+                keep_containers=1
                 shift 1 ;;
             --k8s-deployment)
                 k8s_deployment=1
@@ -753,7 +752,7 @@ function readSrc() {
     if [[ "$src_file" ]]; then
         cat $src_file
     else
-        docker run $keep_containers $max_memory $max_cpus --init --cidfile="$tempPrefix-src_cid" -v "$tempdir:/configs" --log-opt max-size="$max_log_size" -a stdout -a stderr --env LOG_LEVEL="$log_level" $src_docker_options "$src_docker_image" read \
+        docker run --name $src_container_name $max_memory $max_cpus --init --cidfile="$tempPrefix-src_cid" -v "$tempdir:/configs" --log-opt max-size="$max_log_size" -a stdout -a stderr --env LOG_LEVEL="$log_level" $src_docker_options "$src_docker_image" read \
           --config "/configs/$src_config_filename" \
           --catalog "/configs/$src_catalog_filename" \
           --state "/configs/$src_state_filename"
@@ -774,7 +773,7 @@ function sync_local() {
             jq -rR --unbuffered "$jq_src_msg" >&2) |
         jq -cR --unbuffered "fromjson? | select(.type == \"RECORD\" or .type == \"STATE\") | .record.stream |= \"${dst_stream_prefix}\" + ." |
         tee "$output_filepath" |
-        docker run $keep_containers $dst_use_host_network $max_memory $max_cpus --cidfile="$tempPrefix-dst_cid" -i --init -v "$tempdir:/configs" --log-opt max-size="$max_log_size" -a stdout -a stderr -a stdin --env LOG_LEVEL="$log_level" $dst_docker_options "$dst_docker_image" write \
+        docker run --name $dst_container_name $dst_use_host_network $max_memory $max_cpus --cidfile="$tempPrefix-dst_cid" -i --init -v "$tempdir:/configs" --log-opt max-size="$max_log_size" -a stdout -a stderr -a stdin --env LOG_LEVEL="$log_level" $dst_docker_options "$dst_docker_image" write \
         --config "/configs/$dst_config_filename" --catalog "/configs/$dst_catalog_filename" |
         tee >(jq -cR --unbuffered 'fromjson? | select(.type == "STATE") | .state.data' | tail -n 1 > "$new_source_state_file") |
         # https://stedolan.github.io/jq/manual/#Colors
@@ -834,11 +833,11 @@ function sync() {
 
 function cleanup() {
     if ((k8s_deployment)); then
-        if [[ ! -z "$keep_containers" ]]; then
+        if ((keep_containers)); then
+            log "Pod $pod_name is left on the cluster. To delete it, run 'kubectl delete pod $pod_name -n $k8s_namespace'"
+        else
             log "Deleting pod $pod_name"
             kubectl delete pod $pod_name -n $k8s_namespace
-        else
-            log "Pod $pod_name is left on the cluster. To delete it, run 'kubectl delete pod $pod_name -n $k8s_namespace'"
         fi
     else
         if [[ -s "$tempPrefix-src_cid" ]]; then
@@ -848,6 +847,11 @@ function cleanup() {
         if [[ -s "$tempPrefix-dst_cid" ]]; then
             docker container kill $(cat "$tempPrefix-dst_cid") 2>/dev/null || true
             rm "$tempPrefix-dst_cid"
+        fi
+        if ((keep_containers)); then
+            log "Docker containers $src_container_name and $dst_container_name have been saved"
+        else
+            docker container rm -f $src_container_name $dst_container_name > /dev/null 2>&1 || true
         fi
     fi
     rm -rf "$tempdir"
@@ -919,9 +923,12 @@ main() {
     validateRequirements
     setTheme
     validateInput
-    tempPrefix="tmp-$(jq -r -n "now")"
+    timestamp=$(jq -r -n "now")
+    tempPrefix="tmp-$timestamp"
     tempPath="$(pwd)/$tempPrefix"
     tempdir=$(mkdir -p $tempPath && echo $tempPath)
+    src_container_name="airbyte-local-src-$timestamp"
+    dst_container_name="airbyte-local-dst-$timestamp"
     trap cleanup EXIT
     trap cleanup SIGINT
     echo "Created folder $tempdir for temporary Airbyte files"
