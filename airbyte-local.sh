@@ -779,7 +779,14 @@ function sync_local() {
         # https://stedolan.github.io/jq/manual/#Colors
         JQ_COLORS="1;30:0;37:0;37:0;37:0;36:1;37:1;37" \
         jq -cR $jq_color_opt --unbuffered 'fromjson? | select(.type != "STATE")' | jq -rR "$jq_dst_msg"
-    cp "$new_source_state_file" "$src_state_filepath"
+
+    if [ ! -f "$new_source_state_file" ]; then
+        warn "No new state file was generated. Existing state file will not be overwritten."
+    elif [ ! -s "$new_source_state_file" ]; then
+        warn "An empty state file was generated. Existing state file will not be overwritten."
+    else
+        cp "$new_source_state_file" "$src_state_filepath"
+    fi
 }
 
 function sync_kube() {
