@@ -781,9 +781,9 @@ function sync_local() {
         jq -cR $jq_color_opt --unbuffered 'fromjson? | select(.type != "STATE")' | jq -rR "$jq_dst_msg"
 
     if [ ! -f "$new_source_state_file" ]; then
-        warn "No new state file was written. Existing state file will not be overwritten."
+        warn "No new state file was generated. Existing state file will not be overwritten."
     elif [ ! -s "$new_source_state_file" ]; then
-        warn "An empty state file was written. Existing state file will not be overwritten."
+        warn "An empty state file was generated. Existing state file will not be overwritten."
     else
         cp "$new_source_state_file" "$src_state_filepath"
     fi
