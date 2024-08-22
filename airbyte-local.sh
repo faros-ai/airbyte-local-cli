@@ -309,8 +309,9 @@ function writeSrcConfig() {
         writeConfig src_config "$tempdir/$src_config_filename"
     fi
     if [[ $src_docker_image == farosai/airbyte-faros-feeds-source* && ${debug} -eq 1 ]]; then
-        echo "$(jq '.feed_cfg.debug = true' "$tempdir/$src_config_filename")" > "$tempdir/$src_config_filename"
-    fi 
+        cat "$tempdir/$src_config_filename" | jq '.feed_cfg.debug = true' > "$tempdir/$src_config_filename.tmp"
+        mv "$tempdir/$src_config_filename.tmp" "$tempdir/$src_config_filename"
+    fi
     if [[ -z "${k8s_deployment}" && ${debug} -eq 1 ]]; then
         debug "Using source config: $(redactConfigSecrets "$(jq -c < $tempdir/$src_config_filename)" "$(specSrc)")"
     fi
@@ -319,10 +320,10 @@ function writeSrcConfig() {
 function copyFarosConfig() {
     if [[ $src_docker_image == farosai/airbyte-faros-feeds-source* && $dst_docker_image == farosai/airbyte-faros-destination* ]]; then
             # Extract Faros API config from destination config
-            faros_config=$(jq '{faros: {api_url: .edition_configs.api_url, api_key: .edition_configs.api_key, graph: .edition_configs.graph, graphql_api: .edition_configs.graphql_api} | with_entries(if .value==null then empty else . end)}' "$tempdir/$dst_config_filename")
+            faros_config=$(cat "$tempdir/$dst_config_filename" | jq '{faros: {api_url: .edition_configs.api_url, api_key: .edition_configs.api_key, graph: .edition_configs.graph, graphql_api: .edition_configs.graphql_api} | with_entries(if .value==null then empty else . end)}')
             debug "Updating source config with Faros API settings from destination config: $(echo "$faros_config" | jq -c '.faros.api_key = "REDACTED"')"
             # Merge Faros API config into source config
-            jq --argjson faros_config "$faros_config" '$faros_config + .' "$tempdir/$src_config_filename" > "$tempdir/$src_config_filename.tmp"
+            cat "$tempdir/$src_config_filename" | jq --argjson faros_config "$faros_config" '$faros_config + .' > "$tempdir/$src_config_filename.tmp"
             mv "$tempdir/$src_config_filename.tmp" "$tempdir/$src_config_filename"
             if [[ -z "${k8s_deployment}" && ${debug} -eq 1 ]]; then
                 debug "Using source config: $(redactConfigSecrets "$(jq -c < $tempdir/$src_config_filename)" "$(specSrc)")"
@@ -470,7 +471,7 @@ function parseStreamPrefix() {
         if [[ -z "$connection_name" ]] && [[ $src_docker_image == farosai/airbyte-faros-feeds-source* ]]; then
             # Source config may be missing if uploading from a file. In that case fallback
             # to name extracted from source image (see below).
-            feed_name=$(jq -r '.feed_cfg.feed_name // empty' "$tempdir/$src_config_filename")
+            feed_name=$(cat "$tempdir/$src_config_filename" | jq -r '.feed_cfg.feed_name // empty')
             if [[ -n "$feed_name" ]]; then
                 connection_name=${feed_name%"-feed"}
             fi
