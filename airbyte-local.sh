@@ -65,6 +65,7 @@ function help() {
     exit
 }
 
+# Set default values like log level, max log size, etc.
 function setDefaults() {
     declare -Ag src_config=()
     declare -Ag dst_config=()
@@ -87,6 +88,7 @@ function setDefaults() {
     use_colors=1
 }
 
+# Parse arguments
 function parseFlags() {
     while (($#)); do
         case "$1" in
@@ -234,6 +236,7 @@ function setTheme() {
     fi
 }
 
+# Check docker and jq installation
 function validateRequirements() {
     if ((k8s_deployment)); then
         declare -a required_cmds=("kubectl" "jq")
@@ -251,6 +254,7 @@ function validateRequirements() {
     fi
 }
 
+# Validate input arguments
 function validateInput() {
     if [[ -z "$src_docker_image" ]]; then
         err "Airbyte source Docker image must be set using '--src <image>'"
@@ -298,6 +302,7 @@ function validateInput() {
     fi
 }
 
+# Write source config to a file
 function writeSrcConfig() {
     if [[ "$src_config_file" ]]; then
         cp "$src_config_file" "$tempdir/$src_config_filename"
@@ -331,6 +336,7 @@ function copyFarosConfig() {
     fi
 }
 
+# Write destination config to a file
 function writeDstConfig() {
     if [[ "$dst_config_file" ]]; then
         cp "$dst_config_file" "$tempdir/$dst_config_filename"
@@ -346,6 +352,7 @@ function writeDstConfig() {
     fi
 }
 
+# Run the wizard docker image to get a config
 function getConfigFromWizard() {
     local docker_image=$1
     local config_filename=$2
@@ -374,6 +381,7 @@ function getConfigFromWizard() {
     fi
 }
 
+# Converts a Bash associative array into a JSON object and writes it to a file
 function writeConfig() {
     if ((use_eval)); then
         var=$(declare -p "$1")
@@ -464,6 +472,7 @@ function writeDstCatalog() {
     debug "Using destination configured catalog: $(jq -c < $tempdir/$dst_catalog_filename)"
 }
 
+# Processe Docker image names to set up stream prefixes for a destination
 function parseStreamPrefix() {
     IFS=':' read -ra src_docker_image_and_tag <<< $src_docker_image
     IFS='-' read -ra src_docker_image_parts <<< ${src_docker_image_and_tag[0]}
@@ -728,6 +737,8 @@ function generatePodName() {
     name=faros-${name//_/\-}-$(date +%s) # replace "_" with "-"" and add prefix faros-
     echo $name
 }
+
+# Check source connection
 function checkSrc() {
     if ((check_src_connection)); then
         log "Validating connection to source..."
@@ -749,6 +760,7 @@ function discoverSrc() {
       --config "/configs/$src_config_filename"
 }
 
+# Run source to pull data
 function readSrc() {
     if [[ "$src_file" ]]; then
         cat $src_file
@@ -764,6 +776,7 @@ function specDst() {
     docker run --rm "$dst_docker_image" spec
 }
 
+# Run source docker and pipe output to destination docker
 function sync_local() {
     if [[ "$output_filepath" != "/dev/null" ]]; then
        debug "Writing source output to $output_filepath"
@@ -927,6 +940,7 @@ function logImageVersion() {
     fi
 }
 
+# Check if bash version is newer than 4.3
 function checkBashVersion() {
     bash_minor_version=$(echo "${BASH_VERSION}" | cut -d '.' -f 2)
     if [ $bash_major_version -eq 4 ] && [ $bash_minor_version -lt 3 ]; then
@@ -938,12 +952,23 @@ function checkBashVersion() {
 }
 
 main() {
+    # Check if bash version is newer than 4.3
     checkBashVersion
+
+    # Set default values like log level, max log size, etc.
     setDefaults
+
+    # Parse arguments
     parseFlags "$@"
+
+    # Check docker and jq installation
     validateRequirements
+
     setTheme
+
+    # Validate input arguments
     validateInput
+    
     timestamp=$(jq -r -n "now")
     tempPrefix="tmp-$timestamp"
     tempPath="$(pwd)/$tempPrefix"
@@ -963,13 +988,19 @@ main() {
         fi
     fi
     logImageVersion "Source" "$src_docker_image"
+
+    # Write source config and catalog to files
     writeSrcConfig
     writeSrcCatalog
 
+    # Check source connection
     checkSrc
+
     if ((run_src_only)); then
         log "Only running source"
+        # Load state file
         loadState
+        # Read from the input source data file
         readSrc | jq -cR $jq_color_opt --unbuffered 'fromjson?' | jq -rR "$jq_src_msg"
     else
         if [[ -z ${k8s_deployment+x} ]]; then
@@ -981,10 +1012,16 @@ main() {
             fi
         fi
         logImageVersion "Destination" "$dst_docker_image"
+        # Processe Docker image names to set up stream prefixes for a destination
         parseStreamPrefix
+        # Load state file
         loadState
+
+        # Write desitination config and catalog to files
         writeDstConfig
         writeDstCatalog
+        
+        # Copy Faros API config from destination config to source config
         copyFarosConfig
 
         log "Running ${GREEN}source [SRC]${NC} and passing output to ${CYAN}destination [DST]${NC}"
