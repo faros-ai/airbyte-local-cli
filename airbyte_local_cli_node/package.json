@@ -1,0 +1,46 @@
+{
+  "name": "@faros-ai/airbyte-local-cli-node",
+  "version": "1.0.0",
+  "description": "Airbyte local cli node js version",
+  "private": true,
+  "packageManager": "^npm@10.8.2",
+  "scripts": {
+    "build": "tsc -p src",
+    "clean": "rm -rf lib node_modules",
+    "test": "jest",
+    "vercel-pkg": "esbuild src/index.ts --bundle --platform=node --outfile=dist/index.js && pkg dist/index.js --out-path out/vercel-pkg",
+    "yao-pkg": "esbuild src/index.ts --bundle --platform=node --outfile=dist/index.js && pkg dist/index.js --out-path out/yao-pkg"
+  },
+  "homepage": "https://github.com/faros-ai/airbyte-local-cli#readme",
+  "author": "Faros AI, Inc.",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/faros-ai/airbyte-local-cli.git"
+  },
+  "keywords": [],
+  "bugs": {
+    "url": "https://github.com/faros-ai/airbyte-local-cli/issues"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "main": "lib/",
+  "devDependencies": {
+    "@tsconfig/node20": "^20.1.4",
+    "@tsconfig/strictest": "^2.0.5",
+    "@types/jest": "^29.5.13",
+    "@types/node": "^20.16.11",
+    "@typescript-eslint/eslint-plugin": "^7.18.0",
+    "@typescript-eslint/parser": "^7.18.0",
+    "eslint": "^8.57.1",
+    "eslint-config-faros": "^0.0.2",
+    "eslint-config-prettier": "^9.1.0",
+    "eslint-plugin-simple-import-sort": "^10.0.0",
+    "prettier": "^3.3.3",
+    "ts-jest": "^29.2.5",
+    "typescript": "~5.5.4"
+  },
+  "dependencies": {
+    "commander": "^12.1.0"
+  }
+}

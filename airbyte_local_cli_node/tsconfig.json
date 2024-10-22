@@ -1,0 +1,12 @@
+{
+  "extends": ["@tsconfig/node20/tsconfig", "@tsconfig/strictest/tsconfig"],
+  "compilerOptions": {
+    "module": "commonjs",
+    "moduleResolution": "node",
+    "declaration": true,
+    "sourceMap": true,
+    "experimentalDecorators": true,
+    "composite": true
+  },
+  "exclude": ["lib", "node_modules"]
+}
