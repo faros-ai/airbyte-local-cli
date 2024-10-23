@@ -1,6 +1,8 @@
 import {Command} from 'commander';
+import Docker from 'dockerode';
 
 const program = new Command();
+const docker = new Docker();
 
 program
   .name('airbyte-local.sh')
@@ -38,7 +40,35 @@ program
   .option('--dst-docker-options <string>', 'Set additional options to pass to the "docker run <dst>" command')
   .option('--debug', 'Enable debug logging');
 
-program.parse(process.argv);
+/** Spin up a test docker container */
+async function runDocker() {
+  const src_docker_image = 'farosai/airbyte-faros-feeds-source';
+  try {
+    const container = await docker.createContainer({
+      Image: src_docker_image,
+      Entrypoint: ['/bin/sh', '-c'],
+      Cmd: ['echo "Hello World" && sleep 10'],
+    });
+    console.info('Creating the docker container...');
+    await container.start();
+    await container.wait();
+    console.info('Docker container is finished.');
+    // await container.remove();
+  } catch (error: any) {
+    console.error(`Error spinning up the docker: ${error.message}`);
+  }
+}
 
-const options = program.opts();
-console.log('Options:', options);
+async function main() {
+  // echo the command line arguments
+  program.parse(process.argv);
+  const options = program.opts();
+  console.log('Options:', options);
+
+  // spin up a test docker container
+  await runDocker();
+}
+
+main().catch((error) => {
+  console.error('Error:', error);
+});

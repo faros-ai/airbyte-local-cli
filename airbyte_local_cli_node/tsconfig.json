@@ -8,5 +8,6 @@
     "experimentalDecorators": true,
     "composite": true
   },
+  "include": ["src"],
   "exclude": ["lib", "node_modules"]
 }
