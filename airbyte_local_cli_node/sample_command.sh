@@ -11,3 +11,10 @@ vercel-pkg/index-macos \
   --dst 'farosai/airbyte-faros-destination' \
   --state state.json \
   --check-connection
+
+./out/sea/test-cli --help
+./out/sea/test-cli \
+  --src 'farosai/airbyte-servicenow-source' \
+  --dst 'farosai/airbyte-faros-destination' \
+  --state state.json \
+  --check-connection

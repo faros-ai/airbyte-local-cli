@@ -8,8 +8,9 @@
     "build": "tsc -p src",
     "clean": "rm -rf lib node_modules",
     "test": "jest",
-    "vercel-pkg": "esbuild src/index.ts --bundle --platform=node --outfile=dist/index.js && pkg dist/index.js --out-path out/vercel-pkg",
-    "yao-pkg": "esbuild src/index.ts --bundle --platform=node --outfile=dist/index.js && pkg dist/index.js --out-path out/yao-pkg"
+    "bundle": "esbuild src/index.ts --bundle --platform=node --outfile=dist/index.js",
+    "vercel-pkg": "npm run bundle && pkg dist/index.js --out-path out/vercel-pkg",
+    "yao-pkg": "npm run bundle && pkg dist/index.js --out-path out/yao-pkg"
   },
   "homepage": "https://github.com/faros-ai/airbyte-local-cli#readme",
   "author": "Faros AI, Inc.",
@@ -41,6 +42,7 @@
     "typescript": "~5.5.4"
   },
   "dependencies": {
-    "commander": "^12.1.0"
+    "commander": "^12.1.0",
+    "dockerode": "^4.0.2"
   }
 }
