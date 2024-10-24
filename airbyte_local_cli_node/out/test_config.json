@@ -1,0 +1,16 @@
+{
+  "srcPull": true,
+  "dstPull": true,
+  "src": "farosai/airbyte-servicenow-source",
+  "dst": "farosai/airbyte-faros-destination",
+  "state": "state.json",
+  "checkConnection": true,
+  "srcConfig": {
+    "username": "<source_username>",
+    "password": "<source_password>",
+    "url": "<source_url>"
+  },
+  "dstConfig": {
+    "edition_configs": "default"
+  }
+}
