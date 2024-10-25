@@ -1,0 +1,12 @@
+lib/
+dist/
+node_modules/
+.DS_Store
+*.code-workspace
+.idea/
+*.zip
+.vscode/
+target/
+.env
+!*.json
+out/pkg
