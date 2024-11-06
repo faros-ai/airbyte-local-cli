@@ -15,14 +15,14 @@ interface CliOptions {
   srcOutputFile?: string;
   srcCheckConnection?: boolean;
   srcOnly?: boolean;
-  noSrcPull?: boolean;
+  srcPull?: boolean;
 
   // destination
   dstImage: string;
   dstConfig?: Record<string, any>;
   dstUseHostNetwork?: boolean;
   dstOnly?: string;
-  noDstPull?: boolean;
+  dstPull?: boolean;
 
   // general connector settings
   connectionName?: string;
@@ -57,8 +57,8 @@ export interface FarosConfig {
   srcInputFile?: string | undefined; // if dstOnly is true
   srcCheckConnection?: boolean | undefined;
   dstUseHostNetwork?: boolean | undefined;
-  noSrcPull?: boolean | undefined;
-  noDstPull?: boolean | undefined;
+  srcPull?: boolean | undefined;
+  dstPull?: boolean | undefined;
   connectionName?: string | undefined;
   stateFile: string | undefined;
   fullRefresh?: boolean | undefined;
@@ -228,7 +228,6 @@ function validateConfigFileInput(config: FarosConfig, inputType: AirbyteConfigIn
 // parse the command line arguments
 export async function parseAndValidateInputs(argv: string[]) {
   // Parse the command line arguments
-  logger.info(argv, 'argv:');
   const program = command().parse(argv);
 
   // Handle the src and dst config options passed as options
@@ -238,6 +237,7 @@ export async function parseAndValidateInputs(argv: string[]) {
 
   // Get the options
   const options = program.opts();
+  logger.info({options}, 'Options');
   const cliOptions = convertToCliOptions(options);
   logger.info({cliOptions}, 'Cli options');
 
@@ -245,14 +245,14 @@ export async function parseAndValidateInputs(argv: string[]) {
   const farosConfig: FarosConfig = {
     // The default source output file is stdout if `srcOnly` is true
     // Take the non-default value if provided with `srcOutputFile` option
-    srcOutputFile: cliOptions.srcOnly ? (cliOptions.srcOutputFile ?? '/dev/null') : undefined,
+    srcOutputFile: cliOptions.srcOnly ? '/dev/null' : cliOptions.srcOutputFile,
     // Rename the `dstOnly` file path to `srcInputFile`
     srcInputFile: cliOptions.dstOnly,
     srcCheckConnection: cliOptions.srcCheckConnection,
     dstUseHostNetwork: cliOptions.dstUseHostNetwork,
     // If `dstOnly` is true, do not pull the source image. Otherwise, fall back to option `noSrcPull`
-    noSrcPull: cliOptions.dstOnly ? true : cliOptions.noSrcPull,
-    noDstPull: cliOptions.noDstPull,
+    srcPull: cliOptions.dstOnly ? false : cliOptions.srcPull,
+    dstPull: cliOptions.srcOnly ? false : cliOptions.dstPull,
     connectionName: cliOptions.connectionName,
     stateFile: cliOptions.stateFile,
     fullRefresh: cliOptions.fullRefresh,
@@ -265,11 +265,11 @@ export async function parseAndValidateInputs(argv: string[]) {
     farosConfig.src = {
       image: cliOptions.srcImage,
       config: cliOptions.srcConfig,
-    } as AirbtyeConfig; // TODO: type not matching
+    } as AirbtyeConfig;
     farosConfig.dst = {
       image: cliOptions.dstImage,
       config: cliOptions.dstConfig,
-    } as AirbtyeConfig; // TODO: type not matching
+    } as AirbtyeConfig;
     validateConfigFileInput(farosConfig, AirbyteConfigInputType.OPTION);
   } else if (cliOptions.configFile) {
     logger.info('Read config file...');

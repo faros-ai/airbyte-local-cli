@@ -66,6 +66,12 @@ npx tsx src/index.ts \
   --src-output-file 'out/src-config.json' \
   --src-only \
   --debug
+npx tsx src/index.ts \
+  --src 'farosai/airbyte-servicenow-source' \
+  --dst 'farosai/airbyte-faros-destination' \
+  --no-src-pull \
+  --no-dst-pull \
+  --debug
 
 ./out/pkg/index-macos  \
   --src 'farosai/airbyte-servicenow-source' \
