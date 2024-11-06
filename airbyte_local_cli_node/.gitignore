@@ -10,3 +10,4 @@ target/
 .env
 !*.json
 out/pkg
+sample_command.sh
