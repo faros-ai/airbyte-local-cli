@@ -70,8 +70,7 @@
     },
     "testPathIgnorePatterns": [
       ".d.ts",
-      ".js"
-    ],
-    "testMatch": ["**/test/**/*.[jt]s?(x)"]
+      "\\.js"
+    ]
   }
 }
