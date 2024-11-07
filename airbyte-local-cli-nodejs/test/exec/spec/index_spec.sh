@@ -56,40 +56,34 @@ Describe 'Cli options validation'
   It 'fails if using unknown options'
     airbyte_local_test() {
       ./airbyte-local \
+        --src 'farosai/airbyte-servicenow-source' \
+        --dst 'farosai/airbyte-faros-destination' \
         --unknown-option
     }
     When call airbyte_local_test
     The output should include "Unknown option: --unknown-option"
     The status should equal 1
   End
-  # It 'should not fail if using --src.* options'
-  #   airbyte_local_test() {
-  #     ./airbyte-local \
-  #       --src.username '<source_username>' 
-  #   }
-  #   When call airbyte_local_test
-  #   The status should equal 0
-  # End
-  # Missing configuration options
-  # Missing src or dst image options
-  # Have unknown options
-  # It 'fails if missing source image'
-  #   airbyte_local_test() {
-  #     ./airbyte-local \
-  #       --dst 'farosai/dummy-destination-image'
-  #   }
-  #   When call airbyte_local_test
-  #   The output should include "error: required option '--src <image>' not specified"
-  #   The status should equal 1
-  # End
-  # It 'fails if missing destination image'
-  #   airbyte_local_test() {
-  #     ./airbyte-local \
-  #       --src 'farosai/dummy-source-image'
-  #   }
-  #   When call airbyte_local_test
-  #   The output should include "error: required option '--dst <image>' not specified"
-  #   The status should equal 1
-  # End
+  It 'should not fail if using --src.* options'
+    airbyte_local_test() {
+      ./airbyte-local \
+        --src 'farosai/airbyte-servicenow-source' \
+        --dst 'farosai/airbyte-faros-destination' \
+        --src.username 'source_username' 
+    }
+    When call airbyte_local_test
+    The status should equal 0
+  End
+
+  # Check for config file
+  It 'should pass with config file'
+    airbyte_local_test() {
+      ./airbyte-local \
+        --config-file './resources/test_config_file.json'
+    }
+    When call airbyte_local_test
+    The output should include "Reading config file"
+    The status should equal 0
+  End
   
 End

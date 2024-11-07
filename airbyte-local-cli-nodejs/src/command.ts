@@ -274,13 +274,13 @@ export async function parseAndValidateInputs(argv: string[]) {
     } as AirbtyeConfig;
     validateConfigFileInput(farosConfig, AirbyteConfigInputType.OPTION);
   } else if (cliOptions.configFile) {
-    logger.info('Read config file...');
+    logger.info('Reading config file...');
     const airbyteConfig = await parseConfigFile(cliOptions.configFile);
     farosConfig.src = airbyteConfig.src;
     farosConfig.dst = airbyteConfig.dst;
     validateConfigFileInput(farosConfig, AirbyteConfigInputType.FILE);
   } else if (cliOptions.wizard) {
-    logger.info('Run wizard...');
+    logger.info('Runing wizard...');
     // TODO: @FAI-13889 Implement the wizard
   }
   return farosConfig;

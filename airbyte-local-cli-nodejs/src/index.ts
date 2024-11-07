@@ -7,6 +7,6 @@ async function main() {
 }
 
 main().catch((error) => {
-  logger.error('Error:', error);
+  logger.error(error.message, 'Error');
   process.exit(1);
 });
