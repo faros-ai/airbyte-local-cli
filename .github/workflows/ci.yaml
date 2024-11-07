@@ -56,7 +56,7 @@ jobs:
 
       - name: Install
         working-directory: airbyte-local-cli-nodejs
-        run: npm install
+        run: npm ci --no-audit --no-fund
 
       - name: Build
         working-directory: airbyte-local-cli-nodejs
@@ -74,10 +74,5 @@ jobs:
         working-directory: airbyte-local-cli-nodejs
         run: npm run pkg
 
-      - name: Install ShellSpec
-        working-directory: airbyte-local-cli-nodejs
-        run: curl -fsSL https://git.io/shellspec | sh
-
-      - name: Execuatble test
-        working-directory: airbyte-local-cli-nodejs
-        run: ./shellspec --chdir ./test/exec
+      - name: Run execuatble test with ShellSpec
+        run: docker run --rm -v "${{ github.workspace }}:/project" shellspec/shellspec:latest --chdir /project/airbyte-local-cli-nodejs/test/exec
