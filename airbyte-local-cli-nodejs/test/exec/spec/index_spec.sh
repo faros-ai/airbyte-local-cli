@@ -2,7 +2,7 @@ Describe 'Cli options validation'
   # Option conflict failures
   It 'fails if using both --config-file and --src'
     airbyte_local_test() {
-      ../../out/pkg/airbyte-local-cli \
+      ../../out/pkg/airbyte-local \
         --config-file 'some_test_path' \
         --src 'farosai/airbyte-servicenow-source'
     }
@@ -12,7 +12,7 @@ Describe 'Cli options validation'
   End
   It 'fails if using both --config-file and --dst'
     airbyte_local_test() {
-      ../../out/pkg/airbyte-local-cli \
+      ../../out/pkg/airbyte-local \
         --config-file 'some_test_path' \
         --dst 'farosai/airbyte-faros-destination'
     }
@@ -22,7 +22,7 @@ Describe 'Cli options validation'
   End
   It 'fails if using both --config-file and --wizard'
     airbyte_local_test() {
-      ../../out/pkg/airbyte-local-cli \
+      ../../out/pkg/airbyte-local \
         --config-file 'some_test_path' \
         --wizard github
     }
@@ -32,7 +32,7 @@ Describe 'Cli options validation'
   End
   It 'fails if using both --src/--dst and --wizard'
     airbyte_local_test() {
-      ../../out/pkg/airbyte-local-cli \
+      ../../out/pkg/airbyte-local \
         --src 'farosai/airbyte-servicenow-source' \
         --dst 'farosai/airbyte-faros-destination' \
         --wizard github
@@ -43,7 +43,7 @@ Describe 'Cli options validation'
   End
   It 'fails if using both --src-only and --src-output-file'
     airbyte_local_test() {
-      ../../out/pkg/airbyte-local-cli \
+      ../../out/pkg/airbyte-local \
         --src-output-file 'some_test_path' \
         --src-only
     }
@@ -55,7 +55,7 @@ Describe 'Cli options validation'
   # Check for unknown options
   It 'fails if using unknown options'
     airbyte_local_test() {
-      ../../out/pkg/airbyte-local-cli \
+      ../../out/pkg/airbyte-local \
         --unknown-option
     }
     When call airbyte_local_test
@@ -64,7 +64,7 @@ Describe 'Cli options validation'
   End
   It 'should not fail if using --src.* options'
     airbyte_local_test() {
-      ../../out/pkg/airbyte-local-cli \
+      ../../out/pkg/airbyte-local \
         --src.username '<source_username>' 
     }
     When call airbyte_local_test
@@ -75,7 +75,7 @@ Describe 'Cli options validation'
   # Have unknown options
   # It 'fails if missing source image'
   #   airbyte_local_test() {
-  #     ../../out/pkg/airbyte-local-cli \
+  #     ../../out/pkg/airbyte-local \
   #       --dst 'farosai/dummy-destination-image'
   #   }
   #   When call airbyte_local_test
@@ -84,7 +84,7 @@ Describe 'Cli options validation'
   # End
   # It 'fails if missing destination image'
   #   airbyte_local_test() {
-  #     ../../out/pkg/airbyte-local-cli \
+  #     ../../out/pkg/airbyte-local \
   #       --src 'farosai/dummy-source-image'
   #   }
   #   When call airbyte_local_test

@@ -1,5 +1,5 @@
 {
-  "name": "@faros-ai/airbyte-local-cli-node",
+  "name": "@faros-ai/airbyte-local-cli-nodejs",
   "version": "1.0.0",
   "description": "Airbyte local cli node js version",
   "private": true,
@@ -7,11 +7,13 @@
   "scripts": {
     "version": "node -p \"'export const CLI_VERSION = \\'' + require('./package.json').version + '\\';'\" > src/version.ts",
     "build": "tsc -p src",
-    "clean": "rm -rf lib node_modules",
-    "test": "jest",
-    "shellspec": "npm run pkg && shellspec --chdir ./test/exec",
+    "lint": "./scripts/lint",
+    "lint-fix": "npm run lint -- --fix",
+    "clean": "rm -rf lib node_modules package-lock.json",
     "bundle": "npm run build && esbuild src/index.ts --bundle --platform=node --outfile=dist/index.js",
-    "pkg": "npm run bundle && pkg --output out/pkg/airbyte-local-cli dist/index.js"
+    "pkg": "npm run bundle && pkg --output out/pkg/airbyte-local dist/index.js",
+    "test": "jest",
+    "shellspec": "npm run pkg && shellspec --chdir ./test/exec"
   },
   "homepage": "https://github.com/faros-ai/airbyte-local-cli#readme",
   "author": "Faros AI, Inc.",
@@ -33,17 +35,17 @@
     "@types/dockerode": "^3.3.31",
     "@types/jest": "^29.5.14",
     "@types/lodash": "^4.17.13",
-    "@types/node": "^20.17.1",
-    "@typescript-eslint/eslint-plugin": "^7.18.0",
-    "@typescript-eslint/parser": "^7.18.0",
-    "@yao-pkg/pkg": "^6.0.0",
+    "@types/node": "^20.17.6",
+    "@typescript-eslint/eslint-plugin": "^8.13.0",
+    "@typescript-eslint/parser": "^8.13.0",
+    "@yao-pkg/pkg": "^6.1.0",
     "eslint": "^8.57.1",
-    "eslint-config-faros": "^0.0.2",
+    "eslint-config-faros": "^0.1.0",
     "eslint-config-prettier": "^9.1.0",
-    "eslint-plugin-simple-import-sort": "^10.0.0",
+    "eslint-plugin-simple-import-sort": "^12.1.1",
     "prettier": "^3.3.3",
     "ts-jest": "^29.2.5",
-    "tsx": "^4.19.1",
+    "tsx": "^4.19.2",
     "typescript": "^5.6.3"
   },
   "dependencies": {
@@ -59,7 +61,7 @@
     "testTimeout": 30000,
     "coverageDirectory": "out/coverage",
     "transform": {
-      "\\.(ts|tsx)$": [
+      "\\.ts$": [
         "ts-jest",
         {
           "tsconfig": "test/tsconfig.json"
@@ -69,6 +71,7 @@
     "testPathIgnorePatterns": [
       ".d.ts",
       ".js"
-    ]
+    ],
+    "testMatch": ["**/test/**/*.[jt]s?(x)"]
   }
 }

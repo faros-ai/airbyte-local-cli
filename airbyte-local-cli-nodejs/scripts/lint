@@ -1,0 +1,37 @@
+#!/bin/bash
+
+declare -x FORCE_COLOR=1
+
+prettier_command=("prettier" "--no-error-on-unmatched-pattern" "--check")
+eslint_command=("eslint" "--no-error-on-unmatched-pattern")
+
+for opt in "$@"
+do
+  case $opt in
+    --fix)
+    prettier_command+=("--write")
+    eslint_command+=("--fix")
+    ;;
+    *)
+    ;;
+  esac
+done
+
+patterns=("src/**/*.ts" "test/**/*.ts" "scripts/**/*.ts")
+prettier_command+=("${patterns[@]}")
+eslint_command+=("${patterns[@]}")
+
+# Run commands and capture their exit codes
+"${prettier_command[@]}"
+prettier_exit_code=$?
+
+"${eslint_command[@]}"
+eslint_exit_code=$?
+
+# Exit with the highest exit code
+highest_exit_code=$prettier_exit_code
+if [[ $eslint_exit_code -gt $highest_exit_code ]]; then
+  highest_exit_code=$eslint_exit_code
+fi
+
+exit $highest_exit_code
