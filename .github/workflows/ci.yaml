@@ -69,5 +69,11 @@ jobs:
       - name: Test
         run: npm run test
 
+      - name: Package
+        run: npm run pkg
+
+      - name: Install ShellSpec
+        run: curl -fsSL https://git.io/shellspec | sh
+
       - name: Execuatble test
-        run: npm run shellspec
+        run: ./shellspec --chdir ./test/exec
