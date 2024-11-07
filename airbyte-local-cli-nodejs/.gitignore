@@ -12,3 +12,4 @@ target/
 out/pkg
 sample_command.sh
 test_config.json
+*airbyte-local
