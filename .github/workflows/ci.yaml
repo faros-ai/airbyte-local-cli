@@ -74,11 +74,15 @@ jobs:
         working-directory: airbyte-local-cli-nodejs
         run: npm run pkg
 
-      - name: Run execuatble test with ShellSpec
+      - name: Build Shellspec image
+        working-directory: test
+        run: |
+          docker build . -t 'farosai/shellspec:kcov'
+    
+      - name: Run ShellSpec tests
         working-directory: airbyte-local-cli-nodejs
         run: |
-          chmod +x out/pkg/airbyte-local
           docker run --rm \
             -v "$PWD/test/exec:/src" \
-            -v "$PWD/out/pkg/airbyte-local:/src/airbyte-local" \
-            shellspec/shellspec 
+            -v "$PWD/out/pkg/airbyte-local:/airbyte-local" \
+            farosai/shellspec:kcov

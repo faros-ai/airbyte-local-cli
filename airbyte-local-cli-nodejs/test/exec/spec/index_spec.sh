@@ -2,7 +2,6 @@ Describe 'Cli options validation'
   # Option conflict failures
   It 'fails if using both --config-file and --src'
     airbyte_local_test() {
-      ls -la
       ./airbyte-local \
         --config-file 'some_test_path' \
         --src 'farosai/airbyte-servicenow-source'
