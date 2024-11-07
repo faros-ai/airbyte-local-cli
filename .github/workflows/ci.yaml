@@ -49,31 +49,35 @@ jobs:
       - name: Check out
         uses: actions/checkout@v4
 
-      - name: Change directory
-        run: cd airbyte-local-cli-nodejs
-
       - name: Set up Node
         uses: actions/setup-node@v4
         with:
           node-version: 20.x
 
       - name: Install
-        run: npm ci --no-audit --no-fund
+        working-directory: airbyte-local-cli-nodejs
+        run: npm install
 
       - name: Build
+        working-directory: airbyte-local-cli-nodejs
         run: npm run build
 
       - name: Lint
+        working-directory: airbyte-local-cli-nodejs
         run: npm run lint
 
       - name: Test
+        working-directory: airbyte-local-cli-nodejs
         run: npm run test
 
       - name: Package
+        working-directory: airbyte-local-cli-nodejs
         run: npm run pkg
 
       - name: Install ShellSpec
+        working-directory: airbyte-local-cli-nodejs
         run: curl -fsSL https://git.io/shellspec | sh
 
       - name: Execuatble test
+        working-directory: airbyte-local-cli-nodejs
         run: ./shellspec --chdir ./test/exec
