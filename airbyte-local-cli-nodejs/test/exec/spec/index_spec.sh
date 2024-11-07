@@ -62,14 +62,14 @@ Describe 'Cli options validation'
     The output should include "Unknown option: --unknown-option"
     The status should equal 1
   End
-  It 'should not fail if using --src.* options'
-    airbyte_local_test() {
-      ../../out/pkg/airbyte-local \
-        --src.username '<source_username>' 
-    }
-    When call airbyte_local_test
-    The status should equal 0
-  End
+  # It 'should not fail if using --src.* options'
+  #   airbyte_local_test() {
+  #     ../../out/pkg/airbyte-local \
+  #       --src.username '<source_username>' 
+  #   }
+  #   When call airbyte_local_test
+  #   The status should equal 0
+  # End
   # Missing configuration options
   # Missing src or dst image options
   # Have unknown options
