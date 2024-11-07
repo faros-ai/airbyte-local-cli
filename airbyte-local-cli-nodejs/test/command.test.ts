@@ -135,6 +135,18 @@ describe('Check src and dst config parsing', () => {
   });
 });
 
+describe('Check wizard option parsing', () => {
+  it('should parse and validate options: wizard', async () => {
+    const argv = ['./airbyte-local-cli', 'index.js', '--wizard', 'jira'];
+    await expect(parseAndValidateInputs(argv)).resolves.not.toThrow();
+  });
+
+  it('should parse and validate options: wizard with dst', async () => {
+    const argv = ['./airbyte-local-cli', 'index.js', '--wizard', 'jira', 'faros'];
+    await expect(parseAndValidateInputs(argv)).resolves.not.toThrow();
+  });
+});
+
 describe('Check other options', () => {
   it('should parse and validate options: all optional ones', async () => {
     const argv = [
@@ -179,6 +191,17 @@ describe('Check other options', () => {
       fullRefresh: true,
       rawMessages: true,
       keepContainers: true,
+      logLevel: 'debug',
+    });
+  });
+
+  it('should parse and validate options: debug', async () => {
+    const argv = ['./airbyte-local-cli', 'index.js', '--src', 'source-image', '--dst', 'destination-image', '--debug'];
+    const result = await parseAndValidateInputs(argv);
+    expect(result).toEqual({
+      ...defaultConfig,
+      src: {image: 'source-image', config: {}},
+      dst: {image: 'destination-image', config: {}},
       logLevel: 'debug',
     });
   });

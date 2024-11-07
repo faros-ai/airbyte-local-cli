@@ -138,13 +138,6 @@ function command() {
         cmd.setOptionValue('logLevel', 'debug');
       }
 
-      // Check for unknown options
-      const unknown = cmd.parseOptions(process.argv).unknown;
-      unknown.forEach((arg) => {
-        if (!arg.startsWith('--src.') && !arg.startsWith('--dst.')) {
-          cmd.error(`Unknown option: ${arg}`);
-        }
-      });
       // Check if Airbyte config is provided
       if (!opts.configFile && !(opts.src || opts.dst) && !opts.wizard) {
         cmd.error(
@@ -157,6 +150,7 @@ function command() {
 }
 
 // Parse the key-value pair of source and destination configurations
+// Throw error if the value is not provided or the key is not valid
 function parseSrcAndDstConfig(argv: string[]) {
   const srcConfig: Record<string, string> = {};
   const dstConfig: Record<string, string> = {};
@@ -230,6 +224,14 @@ export async function parseAndValidateInputs(argv: string[]) {
   // Parse the command line arguments
   const program = command().parse(argv);
 
+  // Check for unknown options
+  const unknown = program.parseOptions(argv).unknown;
+  unknown.forEach((u) => {
+    if (u.startsWith('--') && !u.startsWith('--src.') && !u.startsWith('--dst.')) {
+      throw new Error(`Unknown option: ${u}`);
+    }
+  });
+
   // Handle the src and dst config options passed as options
   const configKeyValues = parseSrcAndDstConfig(argv);
   program.setOptionValue('srcConfig', configKeyValues.srcConfig);
@@ -237,9 +239,9 @@ export async function parseAndValidateInputs(argv: string[]) {
 
   // Get the options
   const options = program.opts();
-  logger.info({options}, 'Options');
+  logger.debug({options}, 'Options');
   const cliOptions = convertToCliOptions(options);
-  logger.info({cliOptions}, 'Cli options');
+  logger.debug({cliOptions}, 'Cli options');
 
   // Convert the cli options to FarosConfig
   const farosConfig: FarosConfig = {
