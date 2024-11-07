@@ -77,6 +77,8 @@ jobs:
       - name: Run execuatble test with ShellSpec
         working-directory: airbyte-local-cli-nodejs
         run: |
+          pwd
+          ls -la ./out/pkg/airbyte-local
           docker run --rm \
             -v "$PWD:/project" \
             shellspec/shellspec --chdir /project/test/exec
