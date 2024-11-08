@@ -4,6 +4,7 @@ Describe 'Cli options validation'
     airbyte_local_test() {
       ls -la
       ls -la airbyte-local
+      file ./airbyte-local
       ./airbyte-local --help
       airbyte-local --help
       ./airbyte-local \
@@ -11,6 +12,7 @@ Describe 'Cli options validation'
         --src 'farosai/airbyte-servicenow-source'
     }
     When call airbyte_local_test
+    When run ./airbyte-local --help
     The output should include "option '--config-file <path>' cannot be used with option '--src <image>'"
     The status should equal 1
   End
