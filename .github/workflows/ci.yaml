@@ -73,13 +73,6 @@ jobs:
       - name: Package
         working-directory: airbyte-local-cli-nodejs
         run: npm run pkg-linuxstatic
-      
-      - name: debug
-        working-directory: airbyte-local-cli-nodejs
-        run: |
-          ls -la
-          ls -la out/pkg
-          ls -la out/pkg/airbyte-local
 
       - name: Build Shellspec image
         working-directory: test
