@@ -53,18 +53,18 @@ enum AirbyteConfigInputType {
 export interface FarosConfig {
   src?: AirbtyeConfig;
   dst?: AirbtyeConfig;
-  srcOutputFile?: string | undefined; // if srcOnly is true
-  srcInputFile?: string | undefined; // if dstOnly is true
-  srcCheckConnection?: boolean | undefined;
-  dstUseHostNetwork?: boolean | undefined;
-  srcPull?: boolean | undefined;
-  dstPull?: boolean | undefined;
-  connectionName?: string | undefined;
+  srcOutputFile: string | undefined; // if srcOnly is true
+  srcInputFile: string | undefined; // if dstOnly is true
+  srcCheckConnection: boolean | undefined;
+  dstUseHostNetwork: boolean | undefined;
+  srcPull: boolean | undefined;
+  dstPull: boolean | undefined;
+  connectionName: string | undefined;
   stateFile: string | undefined;
-  fullRefresh?: boolean | undefined;
-  rawMessages?: boolean | undefined;
-  keepContainers?: boolean | undefined;
-  logLevel?: string | undefined;
+  fullRefresh: boolean | undefined;
+  rawMessages: boolean | undefined;
+  keepContainers: boolean | undefined;
+  logLevel: string | undefined;
 }
 
 // Command line program
