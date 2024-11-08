@@ -11,8 +11,8 @@ on:
     - main
 
 jobs:
-  build:
-    name: Build
+  test:
+    name: Test
     timeout-minutes: 10
     runs-on: ubuntu-latest
     steps:
