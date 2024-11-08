@@ -150,7 +150,6 @@ function command() {
 }
 
 // Parse the key-value pair of source and destination configurations
-// Throw error if the value is not provided or the key is not valid
 function parseSrcAndDstConfig(argv: string[]) {
   const srcConfig: Record<string, string> = {};
   const dstConfig: Record<string, string> = {};

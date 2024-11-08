@@ -1,6 +1,4 @@
-import {writeFileSync} from 'node:fs';
 import {readFile} from 'node:fs/promises';
-import {join} from 'node:path';
 
 import pino from 'pino';
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -29,11 +27,4 @@ export async function parseConfigFile(configFilePath: string) {
   } catch (error: any) {
     throw new Error(`Failed to read config file: ${error.message}`);
   }
-}
-
-/** Write the config to a json file */
-export function writeConfig(config: any) {
-  const customPath = config.outputConfig ?? 'out/test_config.json';
-  const file = join(process.cwd(), customPath);
-  writeFileSync(file, JSON.stringify(config, null, 2));
 }

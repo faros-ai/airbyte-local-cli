@@ -14,7 +14,7 @@
     "pkg": "npm run bundle && pkg --output ./out/pkg/airbyte-local dist/index.js",
     "pkg-linuxstatic": "npm run bundle && pkg --output ./out/pkg/airbyte-local -t linuxstatic dist/index.js",
     "test": "jest",
-    "shellspec": "npm run pkg && cp ./out/pkg/airbyte-local ./test/exec/airbyte-local && shellspec --chdir ./test/exec"
+    "shellspec": "npm run bundle && pkg --output ./test/exec/airbyte-local dist/index.js && shellspec --chdir ./test/exec"
   },
   "homepage": "https://github.com/faros-ai/airbyte-local-cli#readme",
   "author": "Faros AI, Inc.",
