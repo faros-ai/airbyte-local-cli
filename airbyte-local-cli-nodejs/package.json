@@ -12,6 +12,7 @@
     "clean": "rm -rf lib node_modules package-lock.json",
     "bundle": "npm run build && esbuild src/index.ts --bundle --platform=node --outfile=dist/index.js",
     "pkg": "npm run bundle && pkg --output ./out/pkg/airbyte-local dist/index.js",
+    "pkg-linuxstatic": "npm run bundle && pkg --output ./out/pkg/airbyte-local -t linuxstatic dist/index.js",
     "test": "jest",
     "shellspec": "npm run pkg && cp ./out/pkg/airbyte-local ./test/exec/airbyte-local && shellspec --chdir ./test/exec"
   },

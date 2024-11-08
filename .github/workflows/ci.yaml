@@ -72,7 +72,7 @@ jobs:
 
       - name: Package
         working-directory: airbyte-local-cli-nodejs
-        run: npm run pkg
+        run: npm run pkg-linuxstatic
       
       - name: debug
         working-directory: airbyte-local-cli-nodejs
