@@ -12,7 +12,16 @@ Describe 'Cli options validation'
         --src 'farosai/airbyte-servicenow-source'
     }
     When call airbyte_local_test
+    The output should include "option '--config-file <path>' cannot be used with option '--src <image>'"
+    The status should equal 1
+  End
+  It 'fails if using both --config-file and --dst'
     When run ./airbyte-local --help
+    The output should include "option '--config-file <path>' cannot be used with option '--src <image>'"
+    The status should equal 1
+  End
+  It 'fails if using both --config-file and --dst'
+    When run file ./airbyte-local
     The output should include "option '--config-file <path>' cannot be used with option '--src <image>'"
     The status should equal 1
   End
