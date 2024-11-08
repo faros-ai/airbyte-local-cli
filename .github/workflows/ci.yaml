@@ -11,36 +11,6 @@ on:
     - main
 
 jobs:
-  test:
-    name: Test
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    env:
-      FORCE_COLOR: true
-    steps:
-    - uses: actions/checkout@v2
-    # Based on https://github.com/snyk/snyk/blob/master/.github/workflows/smoke-tests.yml
-    
-    # Shellspec base image does not have curl, jq, awk, sed
-    - name: Build Shellspec image
-      working-directory: test
-      run: |
-        docker build . -t 'farosai/shellspec:kcov'
-    
-    - name: Run ShellSpec tests
-      run: |
-        docker run --rm \
-          -v "$PWD/test:/src" \
-          -v "$PWD/airbyte-local.sh:/airbyte-local.sh" \
-          farosai/shellspec:kcov
-
-    - name: SonarCloud Scan
-      uses: sonarsource/sonarcloud-github-action@master
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-
-  # Build job for airbyte-local nodejs
   build:
     name: Build
     timeout-minutes: 10
@@ -68,7 +38,7 @@ jobs:
 
       - name: Test
         working-directory: airbyte-local-cli-nodejs
-        run: npm run test
+        run: npm run test -- --coverage --color
 
       - name: Package
         working-directory: airbyte-local-cli-nodejs
@@ -79,6 +49,7 @@ jobs:
         run: |
           docker build . -t 'farosai/shellspec:kcov'
     
+      # Run shellspec tests againgst airbyte-local nodejs
       - name: Run ShellSpec tests
         working-directory: airbyte-local-cli-nodejs
         run: |
@@ -86,3 +57,17 @@ jobs:
             -v "$PWD/test/exec:/src" \
             -v "$PWD/out/pkg/airbyte-local:/src/airbyte-local" \
             farosai/shellspec:kcov
+
+      # Run shellspec tests againgst airbyte-local.sh
+      - name: Run ShellSpec tests
+        run: |
+          docker run --rm \
+            -v "$PWD/test:/src" \
+            -v "$PWD/airbyte-local.sh:/airbyte-local.sh" \
+            farosai/shellspec:kcov  
+
+      - name: SonarCloud Scan
+        uses: sonarsource/sonarcloud-github-action@master
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}

@@ -1,0 +1,105 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<coverage generated="1731105869769" clover="3.2.0">
+  <project timestamp="1731105869769" name="All files">
+    <metrics statements="90" coveredstatements="73" conditionals="55" coveredconditionals="44" methods="15" coveredmethods="12" elements="160" coveredelements="129" complexity="0" loc="90" ncloc="90" packages="1" files="3" classes="3"/>
+    <file name="command.ts" path="/Users/jenniegao/Documents/airbyte-local-cli/airbyte-local-cli-nodejs/src/command.ts">
+      <metrics statements="76" coveredstatements="66" conditionals="53" coveredconditionals="44" methods="13" coveredmethods="12"/>
+      <line num="1" count="1" type="stmt"/>
+      <line num="3" count="1" type="stmt"/>
+      <line num="4" count="1" type="stmt"/>
+      <line num="47" count="1" type="cond" truecount="2" falsecount="0"/>
+      <line num="48" count="1" type="stmt"/>
+      <line num="49" count="1" type="stmt"/>
+      <line num="72" count="15" type="stmt"/>
+      <line num="86" count="10" type="stmt"/>
+      <line num="87" count="0" type="stmt"/>
+      <line num="136" count="10" type="cond" truecount="1" falsecount="0"/>
+      <line num="137" count="2" type="stmt"/>
+      <line num="138" count="2" type="stmt"/>
+      <line num="142" count="10" type="cond" truecount="5" falsecount="1"/>
+      <line num="143" count="0" type="stmt"/>
+      <line num="149" count="15" type="stmt"/>
+      <line num="154" count="10" type="stmt"/>
+      <line num="155" count="10" type="stmt"/>
+      <line num="158" count="6" type="stmt"/>
+      <line num="159" count="6" type="stmt"/>
+      <line num="160" count="8" type="cond" truecount="2" falsecount="0"/>
+      <line num="161" count="6" type="stmt"/>
+      <line num="163" count="2" type="cond" truecount="1" falsecount="0"/>
+      <line num="164" count="1" type="stmt"/>
+      <line num="166" count="2" type="stmt"/>
+      <line num="171" count="10" type="stmt"/>
+      <line num="172" count="85" type="cond" truecount="2" falsecount="0"/>
+      <line num="173" count="2" type="stmt"/>
+      <line num="174" count="2" type="stmt"/>
+      <line num="175" count="2" type="cond" truecount="4" falsecount="0"/>
+      <line num="176" count="2" type="stmt"/>
+      <line num="178" count="83" type="cond" truecount="1" falsecount="0"/>
+      <line num="179" count="4" type="stmt"/>
+      <line num="180" count="4" type="stmt"/>
+      <line num="181" count="4" type="cond" truecount="4" falsecount="0"/>
+      <line num="182" count="4" type="stmt"/>
+      <line num="186" count="10" type="stmt"/>
+      <line num="187" count="10" type="stmt"/>
+      <line num="188" count="10" type="stmt"/>
+      <line num="193" count="10" type="stmt"/>
+      <line num="202" count="8" type="cond" truecount="2" falsecount="1"/>
+      <line num="203" count="0" type="cond" truecount="0" falsecount="2"/>
+      <line num="204" count="0" type="stmt"/>
+      <line num="206" count="0" type="stmt"/>
+      <line num="209" count="8" type="cond" truecount="2" falsecount="1"/>
+      <line num="210" count="0" type="cond" truecount="0" falsecount="2"/>
+      <line num="211" count="0" type="stmt"/>
+      <line num="213" count="0" type="stmt"/>
+      <line num="216" count="8" type="cond" truecount="2" falsecount="1"/>
+      <line num="217" count="0" type="stmt"/>
+      <line num="222" count="1" type="stmt"/>
+      <line num="224" count="15" type="stmt"/>
+      <line num="227" count="10" type="stmt"/>
+      <line num="228" count="10" type="stmt"/>
+      <line num="229" count="12" type="cond" truecount="3" falsecount="1"/>
+      <line num="230" count="0" type="stmt"/>
+      <line num="235" count="10" type="stmt"/>
+      <line num="236" count="10" type="stmt"/>
+      <line num="237" count="10" type="stmt"/>
+      <line num="240" count="10" type="stmt"/>
+      <line num="241" count="10" type="stmt"/>
+      <line num="242" count="10" type="stmt"/>
+      <line num="243" count="10" type="stmt"/>
+      <line num="246" count="10" type="stmt"/>
+      <line num="265" count="10" type="cond" truecount="4" falsecount="0"/>
+      <line num="266" count="7" type="stmt"/>
+      <line num="270" count="7" type="stmt"/>
+      <line num="274" count="7" type="stmt"/>
+      <line num="275" count="3" type="cond" truecount="2" falsecount="0"/>
+      <line num="276" count="1" type="stmt"/>
+      <line num="277" count="1" type="stmt"/>
+      <line num="278" count="1" type="stmt"/>
+      <line num="279" count="1" type="stmt"/>
+      <line num="280" count="1" type="stmt"/>
+      <line num="281" count="2" type="cond" truecount="1" falsecount="0"/>
+      <line num="282" count="2" type="stmt"/>
+      <line num="285" count="10" type="stmt"/>
+    </file>
+    <file name="utils.ts" path="/Users/jenniegao/Documents/airbyte-local-cli/airbyte-local-cli-nodejs/src/utils.ts">
+      <metrics statements="13" coveredstatements="6" conditionals="2" coveredconditionals="0" methods="2" coveredmethods="0"/>
+      <line num="1" count="1" type="stmt"/>
+      <line num="3" count="1" type="stmt"/>
+      <line num="5" count="1" type="stmt"/>
+      <line num="10" count="1" type="stmt"/>
+      <line num="12" count="1" type="stmt"/>
+      <line num="13" count="0" type="cond" truecount="0" falsecount="2"/>
+      <line num="17" count="1" type="stmt"/>
+      <line num="18" count="0" type="stmt"/>
+      <line num="19" count="0" type="stmt"/>
+      <line num="20" count="0" type="stmt"/>
+      <line num="21" count="0" type="stmt"/>
+      <line num="26" count="0" type="stmt"/>
+      <line num="28" count="0" type="stmt"/>
+    </file>
+    <file name="version.ts" path="/Users/jenniegao/Documents/airbyte-local-cli/airbyte-local-cli-nodejs/src/version.ts">
+      <metrics statements="1" coveredstatements="1" conditionals="0" coveredconditionals="0" methods="0" coveredmethods="0"/>
+      <line num="1" count="1" type="stmt"/>
+    </file>
+  </project>
+</coverage>
