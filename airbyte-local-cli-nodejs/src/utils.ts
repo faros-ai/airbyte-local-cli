@@ -1,7 +1,7 @@
+import {exec} from 'node:child_process';
 import {readFile} from 'node:fs/promises';
 
 import pino from 'pino';
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 import pretty from 'pino-pretty';
 
 import {AirbyteConfig} from './command';
@@ -27,4 +27,17 @@ export async function parseConfigFile(configFilePath: string) {
   } catch (error: any) {
     throw new Error(`Failed to read config file: ${error.message}`);
   }
+}
+
+// Check if Docker is installed
+export function checkDockerInstalled(): Promise<void> {
+  return new Promise((resolve, reject) => {
+    exec('docker --version', (error, _stdout, _stderr) => {
+      if (error) {
+        reject(new Error('Docker is not installed.'));
+      } else {
+        resolve();
+      }
+    });
+  });
 }
