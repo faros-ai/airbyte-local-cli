@@ -16,23 +16,31 @@ export function updateLogLevel(debug: boolean | undefined) {
 // Read the config file and covert to AirbyteConfig
 export async function parseConfigFile(configFilePath: string) {
   try {
-    const file = await readFile(configFilePath, 'utf8');
-    const configJson = JSON.parse(file);
+    const data = await readFile(configFilePath, 'utf8');
+    const configJson = JSON.parse(data);
     const config = {
       src: configJson.src as AirbyteConfig,
       dst: configJson.dst as AirbyteConfig,
     };
 
+    const validateConfig = (cfg: AirbyteConfig) => {
+      const allowedKeys = ['image', 'config', 'catalog', 'dockerOptions'];
+      return Object.keys(cfg).every((key) => allowedKeys.includes(key));
+    };
+    if (!validateConfig(config.src) || !validateConfig(config.dst)) {
+      throw new Error(`Invalid config file json format. Please check if it contains invalid properties.`);
+    }
+
     return config;
   } catch (error: any) {
-    throw new Error(`Failed to read config file: ${error.message}`);
+    throw new Error(`Failed to read or parse config file: ${error.message}`);
   }
 }
 
 // Check if Docker is installed
-export function checkDockerInstalled(): Promise<void> {
+export function checkDockerInstalled(command = 'docker --version'): Promise<void> {
   return new Promise((resolve, reject) => {
-    exec('docker --version', (error, _stdout, _stderr) => {
+    exec(command, (error, _stdout, _stderr) => {
       if (error) {
         reject(new Error('Docker is not installed.'));
       } else {
