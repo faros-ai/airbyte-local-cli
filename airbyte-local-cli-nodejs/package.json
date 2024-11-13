@@ -1,0 +1,78 @@
+{
+  "name": "@faros-ai/airbyte-local-cli-nodejs",
+  "version": "0.0.1",
+  "description": "Airbyte local cli node js version",
+  "private": true,
+  "packageManager": "^npm@10.8.2",
+  "scripts": {
+    "version": "node -p \"'export const CLI_VERSION = \\'' + require('./package.json').version + '\\';'\" > src/version.ts",
+    "build": "tsc -p src",
+    "lint": "./scripts/lint",
+    "lint-fix": "npm run lint -- --fix",
+    "clean": "rm -rf lib node_modules package-lock.json",
+    "bundle": "npm run build && esbuild src/index.ts --bundle --platform=node --outfile=dist/index.js",
+    "pkg": "npm run bundle && pkg --output ./out/pkg/airbyte-local dist/index.js",
+    "pkg-linuxstatic": "npm run bundle && pkg --output ./out/pkg/airbyte-local -t linuxstatic dist/index.js",
+    "test": "jest",
+    "shellspec": "npm run bundle && pkg --output ./test/exec/airbyte-local dist/index.js && shellspec --chdir ./test/exec"
+  },
+  "homepage": "https://github.com/faros-ai/airbyte-local-cli#readme",
+  "author": "Faros AI, Inc.",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/faros-ai/airbyte-local-cli.git"
+  },
+  "keywords": [],
+  "bugs": {
+    "url": "https://github.com/faros-ai/airbyte-local-cli/issues"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "main": "lib/",
+  "devDependencies": {
+    "@tsconfig/node20": "^20.1.4",
+    "@tsconfig/strictest": "^2.0.5",
+    "@types/dockerode": "^3.3.31",
+    "@types/jest": "^29.5.14",
+    "@types/lodash": "^4.17.13",
+    "@types/node": "^20.17.6",
+    "@typescript-eslint/eslint-plugin": "^8.13.0",
+    "@typescript-eslint/parser": "^8.13.0",
+    "@yao-pkg/pkg": "^6.1.0",
+    "eslint": "^8.57.1",
+    "eslint-config-faros": "^0.1.0",
+    "eslint-config-prettier": "^9.1.0",
+    "eslint-plugin-simple-import-sort": "^12.1.1",
+    "prettier": "^3.3.3",
+    "ts-jest": "^29.2.5",
+    "tsx": "^4.19.2",
+    "typescript": "^5.6.3"
+  },
+  "dependencies": {
+    "commander": "^12.1.0",
+    "dockerode": "^4.0.2",
+    "lodash": "^4.17.21",
+    "pino": "^9.5.0",
+    "pino-pretty": "^11.3.0"
+  },
+  "jest": {
+    "silent": false,
+    "preset": "ts-jest",
+    "testEnvironment": "node",
+    "testTimeout": 30000,
+    "coverageDirectory": "out/coverage",
+    "transform": {
+      "\\.ts$": [
+        "ts-jest",
+        {
+          "tsconfig": "test/tsconfig.json"
+        }
+      ]
+    },
+    "testPathIgnorePatterns": [
+      ".d.ts",
+      "\\.js"
+    ]
+  }
+}
