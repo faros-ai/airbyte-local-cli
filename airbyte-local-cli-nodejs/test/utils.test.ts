@@ -1,11 +1,6 @@
-import {exec} from 'node:child_process';
 import {readFile} from 'node:fs/promises';
 
 import {checkDockerInstalled, parseConfigFile} from '../src/utils';
-
-jest.mock('node:child_process', () => ({
-  exec: jest.fn(),
-}));
 
 jest.mock('node:fs/promises', () => ({
   readFile: jest.fn(),
@@ -52,17 +47,11 @@ describe('parseConfigFile', () => {
 });
 
 describe('checkDockerInstalled', () => {
-  it('should pass if docker is installed', async () => {
-    (exec as unknown as jest.Mock).mockImplementation((_command, callback) => {
-      callback(null, 'Docker version 27.0.3', '');
-    });
-    await expect(checkDockerInstalled()).resolves.toBeUndefined();
+  it('should pass if docker is installed', () => {
+    expect(checkDockerInstalled('pwd', [])).toBeUndefined();
   });
 
-  it('should fail if docker is not installed', async () => {
-    (exec as unknown as jest.Mock).mockImplementation((_command, callback) => {
-      callback(new Error('Docker is not installed.'), '', '');
-    });
-    await expect(checkDockerInstalled()).rejects.toThrow('Docker is not installed.');
+  it('should fail if docker is not installed', () => {
+    expect(() => checkDockerInstalled('bad-command')).toThrow();
   });
 });

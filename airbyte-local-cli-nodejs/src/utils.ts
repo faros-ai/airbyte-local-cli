@@ -1,4 +1,4 @@
-import {exec} from 'node:child_process';
+import {spawnSync} from 'node:child_process';
 import {readFile} from 'node:fs/promises';
 
 import pino from 'pino';
@@ -38,14 +38,12 @@ export async function parseConfigFile(configFilePath: string) {
 }
 
 // Check if Docker is installed
-export function checkDockerInstalled(command = 'docker --version'): Promise<void> {
-  return new Promise((resolve, reject) => {
-    exec(command, (error, _stdout, _stderr) => {
-      if (error) {
-        reject(new Error('Docker is not installed.'));
-      } else {
-        resolve();
-      }
-    });
-  });
+export function checkDockerInstalled(command = 'docker', args = ['--version']) {
+  const result = spawnSync(command, args, {shell: false});
+
+  if (result.error) {
+    throw new Error(`Docker is not installed: ${result.error.message}`);
+  } else if (result.status !== 0) {
+    throw new Error(`Docker is not installed: ${result.stderr.toString()}`);
+  }
 }
