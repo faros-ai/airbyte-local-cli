@@ -26,7 +26,7 @@ interface CliOptions {
 
   // general connector settings
   connectionName?: string;
-  stateFile: string;
+  stateFile?: string;
   fullRefresh?: boolean;
   rawMessages?: boolean;
   keepContainers?: boolean;
@@ -37,7 +37,7 @@ interface CliOptions {
 }
 
 // Airbyte connector source or destination config
-export interface AirbtyeConfig {
+export interface AirbyteConfig {
   image: string;
   config?: object;
   catalog?: object;
@@ -51,20 +51,20 @@ enum AirbyteConfigInputType {
 
 // Config that are needed for running this Airbyte Cli
 export interface FarosConfig {
-  src?: AirbtyeConfig;
-  dst?: AirbtyeConfig;
+  src?: AirbyteConfig;
+  dst?: AirbyteConfig;
   srcOutputFile: string | undefined; // if srcOnly is true
   srcInputFile: string | undefined; // if dstOnly is true
-  srcCheckConnection: boolean | undefined;
-  dstUseHostNetwork: boolean | undefined;
-  srcPull: boolean | undefined;
-  dstPull: boolean | undefined;
+  srcCheckConnection: boolean;
+  dstUseHostNetwork: boolean;
+  srcPull: boolean;
+  dstPull: boolean;
   connectionName: string | undefined;
   stateFile: string | undefined;
-  fullRefresh: boolean | undefined;
-  rawMessages: boolean | undefined;
-  keepContainers: boolean | undefined;
-  logLevel: string | undefined;
+  fullRefresh: boolean;
+  rawMessages: boolean;
+  keepContainers: boolean;
+  logLevel: string;
 }
 
 // Command line program
@@ -249,28 +249,28 @@ export async function parseAndValidateInputs(argv: string[]) {
     srcOutputFile: cliOptions.srcOnly ? '/dev/null' : cliOptions.srcOutputFile,
     // Rename the `dstOnly` file path to `srcInputFile`
     srcInputFile: cliOptions.dstOnly,
-    srcCheckConnection: cliOptions.srcCheckConnection,
-    dstUseHostNetwork: cliOptions.dstUseHostNetwork,
-    // If `dstOnly` is true, do not pull the source image. Otherwise, fall back to option `noSrcPull`
-    srcPull: cliOptions.dstOnly ? false : cliOptions.srcPull,
-    dstPull: cliOptions.srcOnly ? false : cliOptions.dstPull,
     connectionName: cliOptions.connectionName,
     stateFile: cliOptions.stateFile,
-    fullRefresh: cliOptions.fullRefresh,
-    rawMessages: cliOptions.rawMessages,
-    keepContainers: cliOptions.keepContainers,
-    logLevel: cliOptions.logLevel,
+    srcCheckConnection: cliOptions.srcCheckConnection ?? false,
+    dstUseHostNetwork: cliOptions.dstUseHostNetwork ?? false,
+    // If `dstOnly` is true, do not pull the source image. Otherwise, fall back to option `noSrcPull`
+    srcPull: (cliOptions.dstOnly ? false : cliOptions.srcPull) ?? true,
+    dstPull: (cliOptions.srcOnly ? false : cliOptions.dstPull) ?? true,
+    fullRefresh: cliOptions.fullRefresh ?? false,
+    rawMessages: cliOptions.rawMessages ?? false,
+    keepContainers: cliOptions.keepContainers ?? false,
+    logLevel: cliOptions.logLevel ?? 'info',
   };
 
   if (cliOptions.srcImage || cliOptions.dstImage) {
     farosConfig.src = {
       image: cliOptions.srcImage,
       config: cliOptions.srcConfig,
-    } as AirbtyeConfig;
+    } as AirbyteConfig;
     farosConfig.dst = {
       image: cliOptions.dstImage,
       config: cliOptions.dstConfig,
-    } as AirbtyeConfig;
+    } as AirbyteConfig;
     validateConfigFileInput(farosConfig, AirbyteConfigInputType.OPTION);
   } else if (cliOptions.configFile) {
     logger.info('Reading config file...');

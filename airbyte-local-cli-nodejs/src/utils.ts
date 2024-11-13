@@ -4,7 +4,7 @@ import pino from 'pino';
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 import pretty from 'pino-pretty';
 
-import {AirbtyeConfig} from './command';
+import {AirbyteConfig} from './command';
 
 // Create a pino logger instance
 export const logger = pino(pretty({colorize: true}));
@@ -19,8 +19,8 @@ export async function parseConfigFile(configFilePath: string) {
     const file = await readFile(configFilePath, 'utf8');
     const configJson = JSON.parse(file);
     const config = {
-      src: configJson.src as AirbtyeConfig,
-      dst: configJson.dst as AirbtyeConfig,
+      src: configJson.src as AirbyteConfig,
+      dst: configJson.dst as AirbyteConfig,
     };
 
     return config;

@@ -6,6 +6,11 @@ jest.mock('../src/utils');
 const defaultConfig = {
   srcPull: true,
   dstPull: true,
+  srcCheckConnection: false,
+  dstUseHostNetwork: false,
+  fullRefresh: false,
+  rawMessages: false,
+  keepContainers: false,
   logLevel: 'info',
 };
 
