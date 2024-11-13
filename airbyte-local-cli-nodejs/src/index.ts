@@ -3,7 +3,7 @@ import {checkDockerInstalled, logger} from './utils';
 
 async function main() {
   await parseAndValidateInputs(process.argv);
-  await checkDockerInstalled();
+  checkDockerInstalled();
 }
 
 main().catch((error) => {
