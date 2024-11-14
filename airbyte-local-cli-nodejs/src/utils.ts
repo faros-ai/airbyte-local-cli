@@ -1,10 +1,12 @@
-import {exec} from 'node:child_process';
+import {exec, spawnSync} from 'node:child_process';
+import {mkdtempSync, writeFileSync} from 'node:fs';
 import {readFile} from 'node:fs/promises';
+import {tmpdir} from 'node:os';
 
 import pino from 'pino';
 import pretty from 'pino-pretty';
 
-import {AirbyteConfig} from './command';
+import {AirbyteConfig} from './types';
 
 // Create a pino logger instance
 export const logger = pino(pretty({colorize: true}));
@@ -48,4 +50,29 @@ export function checkDockerInstalled(command = 'docker --version'): Promise<void
       }
     });
   });
+}
+
+// Create a temporary directory
+export function createTmpDir() {
+  const systmeTmpDirPath = tmpdir();
+  logger.info(`Creating temporary directory for temporary Airbyte files...`);
+  const tmpDirPath = mkdtempSync(systmeTmpDirPath);
+  logger.info(`Temporary directory created: ${tmpDirPath}.`);
+  return tmpDirPath;
+}
+
+// Load the state file and write to temp folder state file
+export async function loadStateFile(tempDir: string, file: string | undefined, connectionName: string | undefined) {
+  const stateFilePath = file ?? (connectionName ? `${connectionName}__state.json` : 'state.json');
+  logger.info(`Loading state file: '${stateFilePath}'...`);
+
+  const state = (await readFile(stateFilePath, 'utf8')) ?? '{}';
+  writeFileSync(`${tempDir}/${stateFilePath}`, state);
+
+  return stateFilePath;
+}
+
+export function cleanUp(context: AirbyteCliContext) {
+  logger.info('Cleaning up...');
+  spawnSync(`rm -rf ${context.tmpDir}`);
 }
