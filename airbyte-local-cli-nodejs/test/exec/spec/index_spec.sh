@@ -85,4 +85,13 @@ Describe 'Cli options validation'
     The output should include "Reading config file"
     The status should equal 0
   End
+  It 'should fail with invalid json config file'
+    airbyte_local_test() {
+      ./airbyte-local \
+        --config-file './resources/test_config_file_invalid'
+    }
+    When call airbyte_local_test
+    The output should include "Failed to read or parse config file"
+    The status should equal 1
+  End
 End
