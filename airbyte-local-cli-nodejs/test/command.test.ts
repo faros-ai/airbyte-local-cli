@@ -19,53 +19,51 @@ afterEach(() => {
 });
 
 describe('Check options conflict', () => {
-  it('should fail if using both --config-file and --src', async () => {
+  it('should fail if using both --config-file and --src', () => {
     jest.spyOn(process, 'exit').mockImplementation(() => {
       throw new Error('process.exit() was called by commander js');
     });
     const argv = ['./airbyte-local-cli', 'index.js', '--config-file', 'config-file-path', '--src', 'source-image'];
-    await expect(parseAndValidateInputs(argv)).rejects.toThrow();
+    expect(() => parseAndValidateInputs(argv)).toThrow('process.exit() was called by commander js');
   });
 
-  it('should fail if using both --config-file and --dst', async () => {
+  it('should fail if using both --config-file and --dst', () => {
     jest.spyOn(process, 'exit').mockImplementation(() => {
       throw new Error('process.exit() was called by commander js');
     });
     const argv = ['./airbyte-local-cli', 'index.js', '--config-file', 'config-file-path', '--dst', 'destination-image'];
-    await expect(parseAndValidateInputs(argv)).rejects.toThrow();
+    expect(() => parseAndValidateInputs(argv)).toThrow();
   });
 
-  it('should fail if using both --config-file and --wizard', async () => {
+  it('should fail if using both --config-file and --wizard', () => {
     jest.spyOn(process, 'exit').mockImplementation(() => {
       throw new Error('process.exit() was called by commander js');
     });
     const argv = ['./airbyte-local-cli', 'index.js', '--config-file', 'config-file-path', '--wizard'];
-    await expect(parseAndValidateInputs(argv)).rejects.toThrow();
+    expect(() => parseAndValidateInputs(argv)).toThrow();
   });
 
-  it('should fail if using both --config-file and --wizard', async () => {
+  it('should fail if using both --config-file and --wizard', () => {
     jest.spyOn(process, 'exit').mockImplementation(() => {
       throw new Error('process.exit() was called by commander js');
     });
     const argv = ['./airbyte-local-cli', 'index.js', '--src', 'source-image', '--dst', 'destination-image', '--wizard'];
-    await expect(parseAndValidateInputs(argv)).rejects.toThrow();
+    expect(() => parseAndValidateInputs(argv)).toThrow();
   });
 
-  it('should fail if using both --src-only and --src-output-file', async () => {
+  it('should fail if using both --src-only and --src-output-file', () => {
     jest.spyOn(process, 'exit').mockImplementation(() => {
       throw new Error('process.exit() was called by commander js');
     });
     const argv = ['./airbyte-local-cli', 'index.js', '--src-only', '--src-output-file', 'some_test_path'];
-    await expect(parseAndValidateInputs(argv)).rejects.toThrow();
+    expect(() => parseAndValidateInputs(argv)).toThrow();
   });
 });
 
 describe('Check src and dst config parsing', () => {
-  const mockedParseConfigFile = parseConfigFile as jest.Mock;
-
-  it('should parse and validate options: src and dst', async () => {
+  it('should parse and validate options: src and dst', () => {
     const argv = ['./airbyte-local-cli', 'index.js', '--src', 'source-image', '--dst', 'destination-image'];
-    const result = await parseAndValidateInputs(argv);
+    const result = parseAndValidateInputs(argv);
     expect(result).toEqual({
       ...defaultConfig,
       src: {image: 'source-image', config: {}},
@@ -73,14 +71,15 @@ describe('Check src and dst config parsing', () => {
     });
   });
 
-  it('should parse and validate options: configFile', async () => {
-    mockedParseConfigFile.mockResolvedValue({
+  it('should parse and validate options: configFile', () => {
+    const mockedParseConfigFile = parseConfigFile as jest.Mock;
+    mockedParseConfigFile.mockReturnValue({
       src: {image: 'source-image', config: {}},
       dst: {image: 'destination-image', config: {}},
     });
 
     const argv = ['./airbyte-local-cli', 'index.js', '--config-file', 'config-file-path'];
-    const result = await parseAndValidateInputs(argv);
+    const result = parseAndValidateInputs(argv);
     expect(result).toEqual({
       ...defaultConfig,
       src: {image: 'source-image', config: {}},
@@ -88,7 +87,7 @@ describe('Check src and dst config parsing', () => {
     });
   });
 
-  it('should parse and validate options: src.* and dst.*', async () => {
+  it('should parse and validate options: src.* and dst.*', () => {
     const argv = [
       './airbyte-local-cli',
       'index.js',
@@ -105,7 +104,7 @@ describe('Check src and dst config parsing', () => {
       '--dst.password',
       'dst-password',
     ];
-    const result = await parseAndValidateInputs(argv);
+    const result = parseAndValidateInputs(argv);
     expect(result).toEqual({
       ...defaultConfig,
       src: {image: 'source-image', config: {username: 'src-username', password: 'src-password'}},
@@ -113,7 +112,7 @@ describe('Check src and dst config parsing', () => {
     });
   });
 
-  it('should parse and validate options: nested src.* and dst.*', async () => {
+  it('should parse and validate options: nested src.* and dst.*', () => {
     const argv = [
       './airbyte-local-cli',
       'index.js',
@@ -126,7 +125,7 @@ describe('Check src and dst config parsing', () => {
       '--dst.edition_config.edition',
       'cloud',
     ];
-    const result = await parseAndValidateInputs(argv);
+    const result = parseAndValidateInputs(argv);
     expect(result).toEqual({
       ...defaultConfig,
       src: {image: 'source-image', config: {}},
@@ -141,19 +140,19 @@ describe('Check src and dst config parsing', () => {
 });
 
 describe('Check wizard option parsing', () => {
-  it('should parse and validate options: wizard', async () => {
+  it('should parse and validate options: wizard', () => {
     const argv = ['./airbyte-local-cli', 'index.js', '--wizard', 'jira'];
-    await expect(parseAndValidateInputs(argv)).resolves.not.toThrow();
+    expect(() => parseAndValidateInputs(argv)).not.toThrow();
   });
 
-  it('should parse and validate options: wizard with dst', async () => {
+  it('should parse and validate options: wizard with dst', () => {
     const argv = ['./airbyte-local-cli', 'index.js', '--wizard', 'jira', 'faros'];
-    await expect(parseAndValidateInputs(argv)).resolves.not.toThrow();
+    expect(() => parseAndValidateInputs(argv)).not.toThrow();
   });
 });
 
 describe('Check other options', () => {
-  it('should parse and validate options: all optional ones', async () => {
+  it('should parse and validate options: all optional ones', () => {
     const argv = [
       './airbyte-local-cli',
       'index.js',
@@ -180,7 +179,7 @@ describe('Check other options', () => {
       '--keep-containers',
       '--debug',
     ];
-    const result = await parseAndValidateInputs(argv);
+    const result = parseAndValidateInputs(argv);
     expect(result).toEqual({
       ...defaultConfig,
       src: {image: 'source-image', config: {}},
@@ -200,9 +199,9 @@ describe('Check other options', () => {
     });
   });
 
-  it('should parse and validate options: debug', async () => {
+  it('should parse and validate options: debug', () => {
     const argv = ['./airbyte-local-cli', 'index.js', '--src', 'source-image', '--dst', 'destination-image', '--debug'];
-    const result = await parseAndValidateInputs(argv);
+    const result = parseAndValidateInputs(argv);
     expect(result).toEqual({
       ...defaultConfig,
       src: {image: 'source-image', config: {}},
@@ -211,9 +210,9 @@ describe('Check other options', () => {
     });
   });
 
-  it('should not fail on src-only without providing dst image', async () => {
+  it('should not fail on src-only without providing dst image', () => {
     const argv = ['./airbyte-local-cli', 'index.js', '--src', 'source-image', '--src-only'];
-    const result = await parseAndValidateInputs(argv);
+    const result = parseAndValidateInputs(argv);
     expect(result).toEqual({
       ...defaultConfig,
       src: {image: 'source-image', config: {}},
@@ -223,9 +222,9 @@ describe('Check other options', () => {
     });
   });
 
-  it('should not fail on dst-only without providing src image', async () => {
+  it('should not fail on dst-only without providing src image', () => {
     const argv = ['./airbyte-local-cli', 'index.js', '--dst', 'destination-image', '--dst-only', 'test_src_input_file'];
-    const result = await parseAndValidateInputs(argv);
+    const result = parseAndValidateInputs(argv);
     expect(result).toEqual({
       ...defaultConfig,
       src: {image: undefined, config: {}},
