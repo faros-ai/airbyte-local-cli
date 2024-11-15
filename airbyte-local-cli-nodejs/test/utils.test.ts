@@ -1,8 +1,10 @@
+import {spawnSync} from 'node:child_process';
 import {readFileSync} from 'node:fs';
 
-import {checkDockerInstalled, cleanUp, createTmpDir, execCommand, loadStateFile, parseConfigFile} from '../src/utils';
+import {checkDockerInstalled, parseConfigFile} from '../src/utils';
 
 jest.mock('node:fs');
+jest.mock('node:child_process');
 
 describe('parseConfigFile', () => {
   it('should pass if config file is valid json', () => {
@@ -46,33 +48,12 @@ describe('parseConfigFile', () => {
 
 describe('checkDockerInstalled', () => {
   it('should pass if docker is installed', () => {
-    expect(checkDockerInstalled('pwd')).toBeUndefined();
+    (spawnSync as jest.Mock).mockReturnValue({status: 0});
+    expect(() => checkDockerInstalled()).not.toThrow();
   });
 
   it('should fail if docker is not installed', () => {
-    expect(() => checkDockerInstalled('bad-command')).toThrow();
-  });
-});
-
-describe.skip('createTmpDir', () => {
-  it('should pass if temporary directory is created', () => {
-    const tmpDirPath = createTmpDir();
-    expect(execCommand('ls ' + tmpDirPath)).not.toThrow();
-    expect(cleanUp({tmpDir: tmpDirPath})).not.toThrow();
-  });
-});
-
-describe.skip('loadStateFile', () => {
-  it('should pass', () => {
-    const state = '{}';
-    (readFileSync as jest.Mock).mockReturnValue(state);
-    expect(loadStateFile('./', 'test-state-file', undefined)).toBe('test-state-file');
-  });
-
-  it('should fail if state file is not loaded', () => {
-    (readFileSync as jest.Mock).mockReturnValue(undefined);
-    expect(loadStateFile('test-temp-dir', 'test-state-file', 'test-connection-name')).not.toThrow(
-      'Failed to read or parse config file',
-    );
+    (spawnSync as jest.Mock).mockReturnValue({status: 1, error: {message: 'command not found'}});
+    expect(() => checkDockerInstalled()).toThrow('Docker is not installed: command not found');
   });
 });

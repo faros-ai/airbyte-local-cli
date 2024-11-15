@@ -1,6 +1,5 @@
 export interface AirbyteCliContext {
   tmpDir?: string;
-  stateFilePath?: string;
 }
 
 // Cli options provided by the user

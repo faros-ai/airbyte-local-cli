@@ -8,7 +8,7 @@ function main() {
     const cfg = parseAndValidateInputs(process.argv);
     checkDockerInstalled();
     context.tmpDir = createTmpDir();
-    context.stateFilePath = loadStateFile(context.tmpDir, cfg.stateFile, cfg.connectionName);
+    loadStateFile(context.tmpDir, cfg?.stateFile, cfg?.connectionName);
   } catch (error: any) {
     logger.error(error.message, 'Error');
     cleanUp(context);

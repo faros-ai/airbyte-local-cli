@@ -1,5 +1,6 @@
 import {spawnSync} from 'node:child_process';
-import {accessSync, mkdtempSync, readFileSync, writeFileSync} from 'node:fs';
+import {accessSync, constants, mkdtempSync, readFileSync, rmSync, writeFileSync} from 'node:fs';
+import {sep} from 'node:path';
 
 import pino from 'pino';
 import pretty from 'pino-pretty';
@@ -38,13 +39,12 @@ export function parseConfigFile(configFilePath: string) {
 }
 
 // Run a command and throw an error if it fails
-export function execCommand(command: string, options?: {errMsg: string}) {
-  const result = spawnSync(command, {shell: false});
-
-  const errInfoMsg = options?.errMsg ? `${options?.errMsg}: ` : '';
-  const errMsg = (result.error ? result.error.message : result.stderr.toString()) ?? `unknown error`;
+function execCommand(command: string, options?: {errMsg: string}) {
+  const result = spawnSync(command, {shell: true});
 
   if (result.error || result.status !== 0) {
+    const errInfoMsg = options?.errMsg ? `${options?.errMsg}: ` : '';
+    const errMsg = (result.error ? result.error?.message : result.stderr?.toString()) ?? `unknown error`;
     throw new Error(`${errInfoMsg}${errMsg}`);
   }
 }
@@ -55,27 +55,48 @@ export function checkDockerInstalled(command = 'docker --version') {
 }
 
 // Create a temporary directory
-export function createTmpDir() {
-  logger.info(`Creating temporary directory for temporary Airbyte files...`);
-  const tmpDirPath = mkdtempSync('tmp-');
-  logger.info(`Temporary directory created: ${tmpDirPath}.`);
+export function createTmpDir(tmpDir?: string) {
+  logger.debug(`Creating temporary directory for temporary Airbyte files...`);
+  const currentDir = process.cwd();
+  const tmpDirPath = mkdtempSync(tmpDir ?? `${currentDir}${sep}tmp-`);
+  logger.debug(`Temporary directory created: ${tmpDirPath}.`);
   return tmpDirPath;
 }
 
-// Load the state file and write to temp folder state file
-export function loadStateFile(tempDir: string, file: string | undefined, connectionName: string | undefined) {
-  const stateFilePath = file ?? (connectionName ? `${connectionName}__state.json` : 'state.json');
-  logger.info(`Loading state file: '${stateFilePath}'...`);
+// Load the existing state file and write to the temporary folder
+export function loadStateFile(tempDir: string, filePath?: string, connectionName?: string) {
+  const path = filePath ?? (connectionName ? `${connectionName}__state.json` : 'state.json');
+  const name = 'state.json';
 
-  accessSync(stateFilePath);
-
-  const state = readFileSync(stateFilePath, 'utf8') ?? '{}';
-  writeFileSync(`${tempDir}/${stateFilePath}`, state);
-  return stateFilePath;
+  // Read the state file and write to temp folder
+  // Write an empty state file if the state file hasn't existed yet
+  try {
+    accessSync(path, constants.R_OK);
+    const stateData = readFileSync(path, 'utf8');
+    logger.debug(`Writing state file to temporary directory: '${tempDir}/${name}'...`);
+    writeFileSync(`${tempDir}/${name}`, stateData);
+  } catch (error: any) {
+    if (error.code !== 'ENOENT') {
+      throw new Error(`Failed to read state file '${path}' : ${error.message}`);
+    } else if (filePath) {
+      throw new Error(
+        `State file '${filePath}' not found. Please make sure the state file exists and have read access.`,
+      );
+    }
+    writeFileSync(`${tempDir}/${name}`, '{}');
+    logger.debug(`State file '${name}' not found. An empty state file is created.`);
+  }
 }
 
 export function cleanUp(context: AirbyteCliContext) {
   logger.info('Cleaning up...');
-  execCommand(`rm -rf ${context.tmpDir}`, {errMsg: 'Failed to clean up temporary directory'});
+  if (context.tmpDir !== undefined) {
+    try {
+      rmSync(context.tmpDir, {recursive: true, force: true});
+      logger.debug(`Temporary directory ${context.tmpDir} removed.`);
+    } catch (error: any) {
+      logger.error(`Failed to remove temporary directory ${context.tmpDir}: ${error.message}`);
+    }
+  }
   logger.info('Clean up completed.');
 }
