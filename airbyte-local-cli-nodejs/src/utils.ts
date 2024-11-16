@@ -39,8 +39,8 @@ export function parseConfigFile(configFilePath: string) {
 }
 
 // Run a command and throw an error if it fails
-function execCommand(command: string, options?: {errMsg: string}) {
-  const result = spawnSync(command, {shell: true});
+function execCommand(command: string, args: string[], options?: {errMsg: string}) {
+  const result = spawnSync(command, args, {shell: false});
 
   if (result.error || result.status !== 0) {
     const errInfoMsg = options?.errMsg ? `${options?.errMsg}: ` : '';
@@ -50,8 +50,8 @@ function execCommand(command: string, options?: {errMsg: string}) {
 }
 
 // Check if Docker is installed
-export function checkDockerInstalled(command = 'docker --version') {
-  execCommand(command, {errMsg: 'Docker is not installed'});
+export function checkDockerInstalled(command = 'docker', args = ['--version']) {
+  execCommand(command, args, {errMsg: 'Docker is not installed'});
 }
 
 // Create a temporary directory
