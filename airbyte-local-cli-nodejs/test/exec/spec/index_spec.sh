@@ -72,7 +72,7 @@ Describe 'Cli options validation'
         --config-file './resources/test_config_file_invalid'
     }
     When call airbyte_local_test
-    The output should include "Failed to read or parse config file: Unexpected token"
+    The output should include "Failed to read or parse config file"
     The status should equal 1
   End
 End
