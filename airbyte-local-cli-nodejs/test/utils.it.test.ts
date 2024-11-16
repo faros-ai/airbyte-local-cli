@@ -13,7 +13,7 @@ describe('parseConfigFile', () => {
 
 describe('checkDockerInstalled', () => {
   it('should pass if docker is installed', () => {
-    expect(checkDockerInstalled('pwd')).toBeUndefined();
+    expect(checkDockerInstalled('pwd', [])).toBeUndefined();
   });
 
   it('should fail if docker is not installed', () => {
