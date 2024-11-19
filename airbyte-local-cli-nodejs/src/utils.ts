@@ -1,5 +1,6 @@
 import {spawnSync} from 'node:child_process';
 import {accessSync, constants, mkdtempSync, readFileSync, rmSync, writeFileSync} from 'node:fs';
+import {tmpdir} from 'node:os';
 import {sep} from 'node:path';
 
 import pino from 'pino';
@@ -10,12 +11,12 @@ import {AirbyteCliContext, AirbyteConfig} from './types';
 // Create a pino logger instance
 export const logger = pino(pretty({colorize: true}));
 
-export function updateLogLevel(debug: boolean | undefined) {
+export function updateLogLevel(debug: boolean | undefined): void {
   logger.level = debug ? 'debug' : 'info';
 }
 
 // Read the config file and covert to AirbyteConfig
-export function parseConfigFile(configFilePath: string) {
+export function parseConfigFile(configFilePath: string): {src: AirbyteConfig; dst: AirbyteConfig} {
   try {
     const data = readFileSync(configFilePath, 'utf8');
     const configJson = JSON.parse(data);
@@ -39,7 +40,7 @@ export function parseConfigFile(configFilePath: string) {
 }
 
 // Run a command and throw an error if it fails
-function execCommand(command: string, args: string[], options?: {errMsg: string}) {
+function execCommand(command: string, args: string[], options?: {errMsg: string}): void {
   const result = spawnSync(command, args, {shell: false});
 
   if (result.error || result.status !== 0) {
@@ -50,21 +51,26 @@ function execCommand(command: string, args: string[], options?: {errMsg: string}
 }
 
 // Check if Docker is installed
-export function checkDockerInstalled(command = 'docker', args = ['--version']) {
+export function checkDockerInstalled(command = 'docker', args = ['--version']): void {
   execCommand(command, args, {errMsg: 'Docker is not installed'});
 }
 
 // Create a temporary directory
-export function createTmpDir(tmpDir?: string) {
-  logger.debug(`Creating temporary directory for temporary Airbyte files...`);
-  const currentDir = process.cwd();
-  const tmpDirPath = mkdtempSync(tmpDir ?? `${currentDir}${sep}tmp-`);
-  logger.debug(`Temporary directory created: ${tmpDirPath}.`);
-  return tmpDirPath;
+// The default temporary directory would be under system default temporaray dir e.g. `/tmp`
+// with appending six random characters for uniqueness, like `/tmp/abc123`
+export function createTmpDir(tmpDir?: string): string {
+  try {
+    logger.debug(`Creating temporary directory for temporary Airbyte files...`);
+    const tmpDirPath = mkdtempSync(tmpDir ?? `${tmpdir()}${sep}`);
+    logger.debug(`Temporary directory created: ${tmpDirPath}.`);
+    return tmpDirPath;
+  } catch (error: any) {
+    throw new Error(`Failed to create temporary directory: ${error.message}`);
+  }
 }
 
 // Load the existing state file and write to the temporary folder
-export function loadStateFile(tempDir: string, filePath?: string, connectionName?: string) {
+export function loadStateFile(tempDir: string, filePath?: string, connectionName?: string): void {
   const path = filePath ?? (connectionName ? `${connectionName}__state.json` : 'state.json');
   const name = 'state.json';
 
@@ -88,7 +94,7 @@ export function loadStateFile(tempDir: string, filePath?: string, connectionName
   }
 }
 
-export function cleanUp(context: AirbyteCliContext) {
+export function cleanUp(context: AirbyteCliContext): void {
   logger.info('Cleaning up...');
   if (context.tmpDir !== undefined) {
     try {
