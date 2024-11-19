@@ -1,13 +1,20 @@
 import {parseAndValidateInputs} from './command';
-import {checkDockerInstalled, logger, writeConfig} from './utils';
+import {AirbyteCliContext} from './types';
+import {checkDockerInstalled, cleanUp, createTmpDir, loadStateFile, logger} from './utils';
 
-async function main() {
-  const config = await parseAndValidateInputs(process.argv);
-  checkDockerInstalled();
-  writeConfig('<tmpDir_placeholder>', config);
+function main() {
+  const context: AirbyteCliContext = {};
+  try {
+    const cfg = parseAndValidateInputs(process.argv);
+    checkDockerInstalled();
+    context.tmpDir = createTmpDir();
+    loadStateFile(context.tmpDir, cfg?.stateFile, cfg?.connectionName);
+  } catch (error: any) {
+    logger.error(error.message, 'Error');
+    cleanUp(context);
+    logger.error('Exit Airbyte CLI with errors.');
+    process.exit(1);
+  }
 }
 
-main().catch((error) => {
-  logger.error(error.message, 'Error');
-  process.exit(1);
-});
+main();
