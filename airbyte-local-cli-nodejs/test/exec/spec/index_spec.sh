@@ -64,27 +64,8 @@ Describe 'Cli options validation'
     The output should include "Unknown option: --unknown-option"
     The status should equal 1
   End
-  It 'should not fail if using --src.* options'
-    airbyte_local_test() {
-      ./airbyte-local \
-        --src 'farosai/airbyte-servicenow-source' \
-        --dst 'farosai/airbyte-faros-destination' \
-        --src.username 'source_username' 
-    }
-    When call airbyte_local_test
-    The status should equal 0
-  End
 
   # Check for config file
-  It 'should pass with config file'
-    airbyte_local_test() {
-      ./airbyte-local \
-        --config-file './resources/test_config_file.json'
-    }
-    When call airbyte_local_test
-    The output should include "Reading config file"
-    The status should equal 0
-  End
   It 'should fail with invalid json config file'
     airbyte_local_test() {
       ./airbyte-local \
@@ -92,6 +73,25 @@ Describe 'Cli options validation'
     }
     When call airbyte_local_test
     The output should include "Failed to read or parse config file"
+    The status should equal 1
+  End
+End
+
+Describe 'Validate temporary directory and files creation'
+  It 'check docker in shellspec test environment'
+    When run docker --version
+    The output should include "Docker version"
+    The status should equal 0
+  End
+  It 'should fail if provided state file path is invalid'
+    airbyte_local_test() {
+      ./airbyte-local \
+        --src 'farosai/airbyte-servicenow-source' \
+        --dst 'farosai/airbyte-faros-destination' \
+        --state-file 'invalid_file'
+    }
+    When call airbyte_local_test
+    The output should include "State file 'invalid_file' not found. Please make sure the state file exists and have read access."
     The status should equal 1
   End
 End

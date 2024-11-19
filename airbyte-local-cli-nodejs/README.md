@@ -1,4 +1,4 @@
-# Airbyte CLI Rewrite
+# WIP: Airbyte CLI Rewrite
 
 ```
 nvm use           # Use Node v20

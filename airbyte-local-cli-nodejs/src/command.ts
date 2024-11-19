@@ -1,71 +1,8 @@
 import {Command, Option} from 'commander';
 
+import {AirbyteConfig, AirbyteConfigInputType, CliOptions, FarosConfig} from './types';
 import {logger, parseConfigFile, updateLogLevel} from './utils';
 import {CLI_VERSION} from './version';
-
-// Cli options provided by the user
-interface CliOptions {
-  // source and destination config
-  configFile?: string;
-  wizard?: object;
-
-  // source
-  srcImage: string;
-  srcConfig?: Record<string, any>;
-  srcOutputFile?: string;
-  srcCheckConnection?: boolean;
-  srcOnly?: boolean;
-  srcPull?: boolean;
-
-  // destination
-  dstImage: string;
-  dstConfig?: Record<string, any>;
-  dstUseHostNetwork?: boolean;
-  dstOnly?: string;
-  dstPull?: boolean;
-
-  // general connector settings
-  connectionName?: string;
-  stateFile?: string;
-  fullRefresh?: boolean;
-  rawMessages?: boolean;
-  keepContainers?: boolean;
-  logLevel?: string;
-
-  // logging
-  debug?: boolean;
-}
-
-// Airbyte connector source or destination config
-export interface AirbyteConfig {
-  image: string;
-  config?: object;
-  catalog?: object;
-  dockerOptions?: string;
-}
-
-enum AirbyteConfigInputType {
-  FILE = 'file',
-  OPTION = 'option',
-}
-
-// Config that are needed for running this Airbyte Cli
-export interface FarosConfig {
-  src?: AirbyteConfig;
-  dst?: AirbyteConfig;
-  srcOutputFile: string | undefined; // if srcOnly is true
-  srcInputFile: string | undefined; // if dstOnly is true
-  srcCheckConnection: boolean;
-  dstUseHostNetwork: boolean;
-  srcPull: boolean;
-  dstPull: boolean;
-  connectionName: string | undefined;
-  stateFile: string | undefined;
-  fullRefresh: boolean;
-  rawMessages: boolean;
-  keepContainers: boolean;
-  logLevel: string;
-}
 
 // Command line program
 function command() {
@@ -219,7 +156,7 @@ function validateConfigFileInput(config: FarosConfig, inputType: AirbyteConfigIn
 }
 
 // parse the command line arguments
-export async function parseAndValidateInputs(argv: string[]) {
+export function parseAndValidateInputs(argv: string[]) {
   // Parse the command line arguments
   const program = command().parse(argv);
 
@@ -274,7 +211,7 @@ export async function parseAndValidateInputs(argv: string[]) {
     validateConfigFileInput(farosConfig, AirbyteConfigInputType.OPTION);
   } else if (cliOptions.configFile) {
     logger.info('Reading config file...');
-    const airbyteConfig = await parseConfigFile(cliOptions.configFile);
+    const airbyteConfig = parseConfigFile(cliOptions.configFile);
     farosConfig.src = airbyteConfig.src;
     farosConfig.dst = airbyteConfig.dst;
     validateConfigFileInput(farosConfig, AirbyteConfigInputType.FILE);
