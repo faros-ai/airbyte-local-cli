@@ -1,7 +1,9 @@
+import {writeFileSync} from 'node:fs';
 import {readFile} from 'node:fs/promises';
 
-import {checkDockerInstalled, parseConfigFile} from '../src/utils';
+import {checkDockerInstalled, parseConfigFile, writeConfig} from '../src/utils';
 
+jest.mock('node:fs');
 jest.mock('node:fs/promises', () => ({
   readFile: jest.fn(),
 }));
@@ -53,5 +55,24 @@ describe('checkDockerInstalled', () => {
 
   it('should fail if docker is not installed', () => {
     expect(() => checkDockerInstalled('bad-command')).toThrow();
+  });
+});
+
+describe.only('writeConfig', () => {
+  it('should pass if config is written to file', () => {
+    const config = {
+      src: {
+        image: 'source-image',
+        config: {},
+      },
+      dst: {
+        image: 'destination-image',
+        config: {},
+      },
+    };
+    const tmpDir = 'test-tmp-dir';
+    const expectedConfigFile = `${tmpDir}/faros_airbyte_cli_config.json`;
+    writeConfig(tmpDir, config);
+    expect(writeFileSync).toHaveBeenCalledWith(expectedConfigFile, JSON.stringify(config));
   });
 });

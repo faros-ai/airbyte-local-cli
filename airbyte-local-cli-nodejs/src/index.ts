@@ -1,9 +1,10 @@
 import {parseAndValidateInputs} from './command';
-import {checkDockerInstalled, logger} from './utils';
+import {checkDockerInstalled, logger, writeConfig} from './utils';
 
 async function main() {
-  await parseAndValidateInputs(process.argv);
+  const config = await parseAndValidateInputs(process.argv);
   checkDockerInstalled();
+  writeConfig('<tmpDir_placeholder>', config);
 }
 
 main().catch((error) => {

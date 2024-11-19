@@ -65,6 +65,7 @@ export interface FarosConfig {
   rawMessages: boolean;
   keepContainers: boolean;
   logLevel: string;
+  debug: boolean;
 }
 
 // Command line program
@@ -260,6 +261,7 @@ export async function parseAndValidateInputs(argv: string[]) {
     rawMessages: cliOptions.rawMessages ?? false,
     keepContainers: cliOptions.keepContainers ?? false,
     logLevel: cliOptions.logLevel ?? 'info',
+    debug: cliOptions.debug ?? false,
   };
 
   if (cliOptions.srcImage || cliOptions.dstImage) {
