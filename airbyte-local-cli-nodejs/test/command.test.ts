@@ -12,6 +12,7 @@ const defaultConfig = {
   rawMessages: false,
   keepContainers: false,
   logLevel: 'info',
+  debug: false,
 };
 
 afterEach(() => {
@@ -196,6 +197,7 @@ describe('Check other options', () => {
       rawMessages: true,
       keepContainers: true,
       logLevel: 'debug',
+      debug: true,
     });
   });
 
@@ -207,6 +209,7 @@ describe('Check other options', () => {
       src: {image: 'source-image', config: {}},
       dst: {image: 'destination-image', config: {}},
       logLevel: 'debug',
+      debug: true,
     });
   });
 

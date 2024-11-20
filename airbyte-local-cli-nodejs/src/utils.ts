@@ -6,7 +6,10 @@ import {sep} from 'node:path';
 import pino from 'pino';
 import pretty from 'pino-pretty';
 
-import {AirbyteCliContext, AirbyteConfig} from './types';
+import {AirbyteCliContext, AirbyteConfig, FarosConfig} from './types';
+
+// constants
+export const FILENAME_PREFIX = 'faros_airbyte_cli';
 
 // Create a pino logger instance
 export const logger = pino(pretty({colorize: true}));
@@ -105,4 +108,52 @@ export function cleanUp(context: AirbyteCliContext): void {
     }
   }
   logger.info('Clean up completed.');
+}
+
+// Write Airbyte config and catalog to temporary dir and a json file
+export function writeConfig(tmpDir: string, config: FarosConfig): void {
+  const airbyteConfig = {
+    src: config.src ?? ({} as AirbyteConfig),
+    dst: config.dst ?? ({} as AirbyteConfig),
+  };
+
+  // write Airbyte config for user's reference
+  // TODO: @FAI-14122 React secrets
+  logger.debug(`Writing Airbyte config for user reference...`);
+  writeFileSync(`${FILENAME_PREFIX}_config.json`, JSON.stringify(airbyteConfig, null, 2));
+  logger.debug(airbyteConfig, `Airbyte config: `);
+  logger.debug(`Airbyte config written to: ${FILENAME_PREFIX}_config.json`);
+
+  // add config `feed_cfg.debug` if debug is enabled
+  const regex = /^farosai\/airbyte-faros-feeds-source.*/;
+  if (config.debug && regex.exec(airbyteConfig.src.image ?? '')) {
+    airbyteConfig.src.config = {
+      ...airbyteConfig.src.config,
+      feed_cfg: {debug: true},
+    };
+  }
+
+  // write config to temporary directory config files
+  logger.debug(`Writing Airbyte config to files...`);
+  const srcConfigFilePath = `${tmpDir}${sep}${FILENAME_PREFIX}_src_config.json`;
+  const dstConfigFilePath = `${tmpDir}${sep}${FILENAME_PREFIX}_dst_config.json`;
+  writeFileSync(srcConfigFilePath, JSON.stringify(airbyteConfig.src.config ?? {}, null, 2));
+  writeFileSync(dstConfigFilePath, JSON.stringify(airbyteConfig.dst.config ?? {}, null, 2));
+  logger.debug(`Airbyte config files written to: ${srcConfigFilePath}, ${dstConfigFilePath}`);
+
+  // write catalog to temporary directory catalog files
+  // TODO: @FAI-14134 Discover catalog
+  logger.debug(`Writing Airbyte catalog to files...`);
+  const srcCatalogFilePath = `${tmpDir}${sep}${FILENAME_PREFIX}_src_catalog.json`;
+  const dstCatalogFilePath = `${tmpDir}${sep}${FILENAME_PREFIX}_dst_catalog.json`;
+  if (
+    (!airbyteConfig.dst.catalog || Object.keys(airbyteConfig.dst.catalog).length === 0) &&
+    airbyteConfig.src.catalog &&
+    Object.keys(airbyteConfig.src.catalog).length > 0
+  ) {
+    airbyteConfig.dst.catalog = airbyteConfig.src.catalog;
+  }
+  writeFileSync(srcCatalogFilePath, JSON.stringify(airbyteConfig.src.catalog ?? {}, null, 2));
+  writeFileSync(dstCatalogFilePath, JSON.stringify(airbyteConfig.dst.catalog ?? {}, null, 2));
+  logger.debug(`Airbyte catalog files written to: ${srcCatalogFilePath}, ${dstCatalogFilePath}`);
 }
