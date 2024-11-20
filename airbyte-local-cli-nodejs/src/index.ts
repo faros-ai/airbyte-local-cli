@@ -2,7 +2,7 @@ import {parseAndValidateInputs} from './command';
 import {AirbyteCliContext} from './types';
 import {checkDockerInstalled, cleanUp, createTmpDir, loadStateFile, logger, writeConfig} from './utils';
 
-function main() {
+function main(): void {
   const context: AirbyteCliContext = {};
   try {
     const cfg = parseAndValidateInputs(process.argv);

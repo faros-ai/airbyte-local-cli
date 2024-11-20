@@ -111,7 +111,7 @@ export function cleanUp(context: AirbyteCliContext): void {
 }
 
 // Write Airbyte config and catalog to temporary dir and a json file
-export function writeConfig(tmpDir: string, config: FarosConfig) {
+export function writeConfig(tmpDir: string, config: FarosConfig): void {
   const airbyteConfig = {
     src: config.src ?? ({} as AirbyteConfig),
     dst: config.dst ?? ({} as AirbyteConfig),
