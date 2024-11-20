@@ -6,7 +6,7 @@ import {sep} from 'node:path';
 import pino from 'pino';
 import pretty from 'pino-pretty';
 
-import {AirbyteConfig} from './types';
+import {AirbyteCliContext, AirbyteConfig, FarosConfig} from './types';
 
 // constants
 export const FILENAME_PREFIX = 'faros_airbyte_cli';
@@ -111,8 +111,6 @@ export function cleanUp(context: AirbyteCliContext): void {
 }
 
 // Write Airbyte config and catalog to temporary dir and a json file
-// TODO: @FAI-14122 React secrets
-// TODO: @FAI-14134 Discover catalog
 export function writeConfig(tmpDir: string, config: FarosConfig) {
   const airbyteConfig = {
     src: config.src ?? ({} as AirbyteConfig),
@@ -120,6 +118,7 @@ export function writeConfig(tmpDir: string, config: FarosConfig) {
   };
 
   // write Airbyte config for user's reference
+  // TODO: @FAI-14122 React secrets
   logger.debug(`Writing Airbyte config for user reference...`);
   writeFileSync(`${FILENAME_PREFIX}_config.json`, JSON.stringify(airbyteConfig, null, 2));
   logger.debug(airbyteConfig, `Airbyte config: `);
@@ -143,6 +142,8 @@ export function writeConfig(tmpDir: string, config: FarosConfig) {
   logger.debug(`Airbyte config files written to: ${srcConfigFilePath}, ${dstConfigFilePath}`);
 
   // write catalog to temporary directory catalog files
+  // TODO: @FAI-14134 Discover catalog
+  logger.debug(`Writing Airbyte catalog to files...`);
   const srcCatalogFilePath = `${tmpDir}${sep}${FILENAME_PREFIX}_src_catalog.json`;
   const dstCatalogFilePath = `${tmpDir}${sep}${FILENAME_PREFIX}_dst_catalog.json`;
   if (
@@ -154,4 +155,5 @@ export function writeConfig(tmpDir: string, config: FarosConfig) {
   }
   writeFileSync(srcCatalogFilePath, JSON.stringify(airbyteConfig.src.catalog ?? {}, null, 2));
   writeFileSync(dstCatalogFilePath, JSON.stringify(airbyteConfig.dst.catalog ?? {}, null, 2));
+  logger.debug(`Airbyte catalog files written to: ${srcCatalogFilePath}, ${dstCatalogFilePath}`);
 }

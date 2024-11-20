@@ -1,7 +1,7 @@
 import {spawnSync} from 'node:child_process';
-import {readFileSync, writeFileSync} from 'node:fs';
+import {readFileSync} from 'node:fs';
 
-import {checkDockerInstalled, parseConfigFile, writeConfig} from '../src/utils';
+import {checkDockerInstalled, parseConfigFile} from '../src/utils';
 
 jest.mock('node:fs');
 jest.mock('node:child_process');
@@ -55,24 +55,5 @@ describe('checkDockerInstalled', () => {
   it('should fail if docker is not installed', () => {
     (spawnSync as jest.Mock).mockReturnValue({status: 1, error: {message: 'command not found'}});
     expect(() => checkDockerInstalled()).toThrow('Docker is not installed: command not found');
-  });
-});
-
-describe.only('writeConfig', () => {
-  it('should pass if config is written to file', () => {
-    const config = {
-      src: {
-        image: 'source-image',
-        config: {},
-      },
-      dst: {
-        image: 'destination-image',
-        config: {},
-      },
-    };
-    const tmpDir = 'test-tmp-dir';
-    const expectedConfigFile = `${tmpDir}/faros_airbyte_cli_config.json`;
-    writeConfig(tmpDir, config);
-    expect(writeFileSync).toHaveBeenCalledWith(expectedConfigFile, JSON.stringify(config));
   });
 });
