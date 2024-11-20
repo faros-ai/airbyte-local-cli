@@ -126,7 +126,7 @@ function parseSrcAndDstConfig(argv: string[]) {
 }
 
 // Convert the options to CliOptions type
-function convertToCliOptions(options: any) {
+function convertToCliOptions(options: any): CliOptions {
   return {
     ...options,
     srcImage: options.src,
@@ -135,7 +135,7 @@ function convertToCliOptions(options: any) {
 }
 
 // Validate the input options
-function validateConfigFileInput(config: FarosConfig, inputType: AirbyteConfigInputType) {
+function validateConfigFileInput(config: FarosConfig, inputType: AirbyteConfigInputType): void {
   if (!config.src?.image && !config.srcInputFile) {
     if (inputType === AirbyteConfigInputType.OPTION) {
       throw new Error(`Missing source image. Please use '--src <image>' to provide the source image`);
@@ -156,7 +156,7 @@ function validateConfigFileInput(config: FarosConfig, inputType: AirbyteConfigIn
 }
 
 // parse the command line arguments
-export function parseAndValidateInputs(argv: string[]) {
+export function parseAndValidateInputs(argv: string[]): FarosConfig {
   // Parse the command line arguments
   const program = command().parse(argv);
 
@@ -197,6 +197,7 @@ export function parseAndValidateInputs(argv: string[]) {
     rawMessages: cliOptions.rawMessages ?? false,
     keepContainers: cliOptions.keepContainers ?? false,
     logLevel: cliOptions.logLevel ?? 'info',
+    debug: cliOptions.debug ?? false,
   };
 
   if (cliOptions.srcImage || cliOptions.dstImage) {

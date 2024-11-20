@@ -63,4 +63,5 @@ export interface FarosConfig {
   rawMessages: boolean;
   keepContainers: boolean;
   logLevel: string;
+  debug: boolean;
 }

@@ -1,10 +1,5 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
-exports[`loadStateFile should pass with existing state file 1`] = `
-"{"format":"base64/gzip","data":"dGVzdA=="}
-"
-`;
-
 exports[`parseConfigFile should pass 1`] = `
 {
   "dst": {
@@ -31,4 +26,9 @@ exports[`parseConfigFile should pass 1`] = `
     "image": "farosai/airbyte-servicenow-source",
   },
 }
+`;
+
+exports[`write files to temporary dir loadStateFile should pass with existing state file 1`] = `
+"{"format":"base64/gzip","data":"dGVzdA=="}
+"
 `;
