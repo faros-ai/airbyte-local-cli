@@ -10,6 +10,10 @@ import {AirbyteCliContext, AirbyteConfig, FarosConfig} from './types';
 
 // constants
 export const FILENAME_PREFIX = 'faros_airbyte_cli';
+export const SRC_CONFIG_FILENAME = `${FILENAME_PREFIX}_src_config.json`;
+export const DST_CONFIG_FILENAME = `${FILENAME_PREFIX}_dst_config.json`;
+export const SRC_CATALOG_FILENAME = `${FILENAME_PREFIX}_src_catalog.json`;
+export const DST_CATALOG_FILENAME = `${FILENAME_PREFIX}_dst_catalog.json`;
 
 // Create a pino logger instance
 export const logger = pino(pretty({colorize: true}));
@@ -58,13 +62,17 @@ export function checkDockerInstalled(command = 'docker', args = ['--version']): 
   execCommand(command, args, {errMsg: 'Docker is not installed'});
 }
 
-// Create a temporary directory
-// The default temporary directory would be under system default temporaray dir e.g. `/tmp`
-// with appending six random characters for uniqueness, like `/tmp/abc123`
-export function createTmpDir(tmpDir?: string): string {
+/**
+ * Create a temporary directory
+ * The default temporary directory would be under system default temporaray dir e.g. `/tmp`
+ * with appending six random characters for uniqueness, like `/tmp/abc123`
+ * @param absTmpDir Testing purpose. Customized absolute path to the temporary directory
+ * @returns The absolute path of the temporary directory
+ */
+export function createTmpDir(absTmpDir?: string): string {
   try {
     logger.debug(`Creating temporary directory for temporary Airbyte files...`);
-    const tmpDirPath = mkdtempSync(tmpDir ?? `${tmpdir()}${sep}`);
+    const tmpDirPath = mkdtempSync(absTmpDir ?? `${tmpdir()}${sep}`);
     logger.debug(`Temporary directory created: ${tmpDirPath}.`);
     return tmpDirPath;
   } catch (error: any) {
@@ -135,7 +143,7 @@ export function writeConfig(tmpDir: string, config: FarosConfig): void {
 
   // write config to temporary directory config files
   logger.debug(`Writing Airbyte config to files...`);
-  const srcConfigFilePath = `${tmpDir}${sep}${FILENAME_PREFIX}_src_config.json`;
+  const srcConfigFilePath = `${tmpDir}${sep}${SRC_CONFIG_FILENAME}`;
   const dstConfigFilePath = `${tmpDir}${sep}${FILENAME_PREFIX}_dst_config.json`;
   writeFileSync(srcConfigFilePath, JSON.stringify(airbyteConfig.src.config ?? {}, null, 2));
   writeFileSync(dstConfigFilePath, JSON.stringify(airbyteConfig.dst.config ?? {}, null, 2));

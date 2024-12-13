@@ -13,3 +13,4 @@ out/pkg
 sample_command.sh
 *airbyte-local
 test/exec/resources
+tmp*

@@ -1,21 +1,36 @@
 import {parseAndValidateInputs} from './command';
+import {checkDockerInstalled, checkSrcConnection, pullDockerImage} from './docker';
 import {AirbyteCliContext} from './types';
-import {checkDockerInstalled, cleanUp, createTmpDir, loadStateFile, logger, writeConfig} from './utils';
+import {cleanUp, createTmpDir, loadStateFile, logger, writeConfig} from './utils';
 
-function main(): void {
+async function main(): Promise<void> {
   const context: AirbyteCliContext = {};
   try {
+    // Parse and validate cli arguments
     const cfg = parseAndValidateInputs(process.argv);
-    checkDockerInstalled();
+    await checkDockerInstalled();
+
+    // Create temporary directory, load state file, write config to files
     context.tmpDir = createTmpDir();
     loadStateFile(context.tmpDir, cfg?.stateFile, cfg?.connectionName);
     writeConfig(context.tmpDir, cfg);
+
+    // Pull source docker image
+    if (cfg.srcPull && cfg.src?.image) {
+      await pullDockerImage(cfg.src.image);
+    }
+    // Check source connection
+    if (cfg.srcCheckConnection && cfg.src?.image) {
+      await checkSrcConnection(context.tmpDir, cfg.src.image);
+    }
   } catch (error: any) {
     logger.error(error.message, 'Error');
     cleanUp(context);
-    logger.error('Exit Airbyte CLI with errors.');
-    process.exit(1);
+    throw error;
   }
 }
 
-main();
+main().catch((_error) => {
+  logger.error('Exit Airbyte CLI with errors.');
+  process.exit(1);
+});
