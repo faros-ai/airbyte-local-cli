@@ -44,7 +44,7 @@ export async function pullDockerImage(image: string): Promise<void> {
  * {"connectionStatus":{"status":"SUCCEEDED"},"type":"CONNECTION_STATUS"}
  * {"connectionStatus":{"status":"FAILED","message":"Faros API key was not provided"},"type":"CONNECTION_STATUS"}
  */
-export async function checkSrcConnection(tmpDir: string, image: string): Promise<void> {
+export async function checkSrcConnection(tmpDir: string, image: string, srcConfigFile?: string): Promise<void> {
   logger.info('Validating connection to source...');
 
   if (!image) {
@@ -52,7 +52,8 @@ export async function checkSrcConnection(tmpDir: string, image: string): Promise
   }
 
   try {
-    const command = ['check', '--config', `/configs/${SRC_CONFIG_FILENAME}`];
+    const cfgFile = srcConfigFile ?? SRC_CONFIG_FILENAME;
+    const command = ['check', '--config', `/configs/${cfgFile}`];
     const createOptions: Docker.ContainerCreateOptions = {
       HostConfig: {
         Binds: [`${tmpDir}:/configs`],
