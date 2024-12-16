@@ -1,0 +1,9 @@
+{
+  "src": {
+    "image": "farosai/airbyte-example-source",
+    "config": {}
+  },
+  "dst": {
+    "config": {}
+  }
+}

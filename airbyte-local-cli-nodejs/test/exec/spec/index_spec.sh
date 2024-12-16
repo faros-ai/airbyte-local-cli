@@ -95,3 +95,17 @@ Describe 'Validate temporary directory and files creation'
     The status should equal 1
   End
 End
+
+Describe 'Check source connection'
+  It 'should fail if source connection fails'
+    airbyte_local_test() {
+      ./airbyte-local \
+        --src 'farosai/airbyte-example-source' \
+        --src-check-connection \
+        --src-only
+    }
+    When call airbyte_local_test
+    The output should include "Failed to validate source connection: User is not chris."
+    The status should equal 1
+  End
+End
