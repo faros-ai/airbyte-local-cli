@@ -10,7 +10,7 @@
     "lint": "./scripts/lint",
     "lint-fix": "npm run lint -- --fix",
     "clean": "rm -rf lib node_modules package-lock.json",
-    "bundle": "npm run build && esbuild src/index.ts --bundle --platform=node --outfile=dist/index.js",
+    "bundle": "npm run build && esbuild src/index.ts --bundle --platform=node --outfile=dist/index.js --external:*.node",
     "pkg": "npm run bundle && pkg --output ./out/pkg/airbyte-local dist/index.js",
     "pkg-linuxstatic": "npm run bundle && pkg --output ./out/pkg/airbyte-local -t linuxstatic dist/index.js",
     "test": "jest",
