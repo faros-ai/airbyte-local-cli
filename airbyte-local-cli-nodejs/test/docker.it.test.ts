@@ -1,4 +1,8 @@
-import {checkSrcConnection} from '../src/docker';
+import {checkSrcConnection, pullDockerImage} from '../src/docker';
+
+beforeAll(async () => {
+  await pullDockerImage('farosai/airbyte-example-source');
+});
 
 describe('checkSrcConnection', () => {
   it('should success', async () => {

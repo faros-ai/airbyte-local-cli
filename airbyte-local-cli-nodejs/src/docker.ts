@@ -27,7 +27,10 @@ export async function pullDockerImage(image: string): Promise<void> {
   logger.info(`Pulling docker image: ${image}`);
 
   try {
-    await _docker.pull(image);
+    const stream = await _docker.pull(image);
+    await new Promise((resolve, reject) => {
+      _docker.modem.followProgress(stream, (err, res) => (err ? reject(err) : resolve(res)));
+    });
     logger.info(`Docker image pulled: ${image}`);
   } catch (error: any) {
     logger.error(`Failed to pull docker image: ${image}`);
@@ -91,6 +94,6 @@ export async function checkSrcConnection(tmpDir: string, image: string, srcConfi
       throw new Error(status?.connectionStatus.message);
     }
   } catch (error: any) {
-    throw new Error(`Failed to validate source connection: ${error.message}.`);
+    throw new Error(`Failed to validate source connection: ${error.message ?? JSON.stringify(error)}.`);
   }
 }
