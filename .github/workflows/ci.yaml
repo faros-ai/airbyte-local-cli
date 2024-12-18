@@ -48,16 +48,6 @@ jobs:
         working-directory: test
         run: |
           docker build . -t 'farosai/shellspec:kcov'
-    
-      # Run shellspec tests againgst airbyte-local nodejs
-      - name: Run ShellSpec tests
-        working-directory: airbyte-local-cli-nodejs
-        run: |
-          docker run --rm \
-            -v "$PWD/test/exec:/src" \
-            -v "$PWD/test/resources:/src/resources" \
-            -v "$PWD/out/pkg/airbyte-local:/src/airbyte-local" \
-            farosai/shellspec:kcov
 
       # Run shellspec tests againgst airbyte-local.sh
       - name: Run ShellSpec tests
@@ -66,6 +56,18 @@ jobs:
             -v "$PWD/test:/src" \
             -v "$PWD/airbyte-local.sh:/airbyte-local.sh" \
             farosai/shellspec:kcov  
+
+      - name: Install ShellSpec
+        run: |
+          curl -fsSL https://git.io/shellspec | sh -s 0.28.1
+    
+      # Run shellspec tests againgst airbyte-local nodejs
+      - name: Run ShellSpec tests
+        working-directory: airbyte-local-cli-nodejs
+        run: |
+          pkg --output ./test/exec/airbyte-local -t linuxstatic dist/index.js
+          cp -rf ./test/resources ./test/exec/resources
+          shellspec --chdir ./test/exec
 
       - name: SonarCloud Scan
         uses: sonarsource/sonarcloud-github-action@master
