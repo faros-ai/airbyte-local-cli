@@ -65,7 +65,7 @@ jobs:
       - name: Run ShellSpec tests
         working-directory: airbyte-local-cli-nodejs
         run: |
-          pkg --output ./test/exec/airbyte-local -t linuxstatic dist/index.js
+          cp ./out/pkg/airbyte-local ./test/exec/airbyte-local
           cp -rf ./test/resources ./test/exec/resources
           shellspec --chdir ./test/exec
 
