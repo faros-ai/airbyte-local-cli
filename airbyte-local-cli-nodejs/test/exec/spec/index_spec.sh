@@ -83,6 +83,7 @@ Describe 'Validate temporary directory and files creation'
     The output should include "Docker version"
     The status should equal 0
   End
+  Skip 'TODO @FAI-14452 - Run docker tests in CI'
   It 'should fail if provided state file path is invalid'
     airbyte_local_test() {
       ./airbyte-local \
@@ -97,6 +98,7 @@ Describe 'Validate temporary directory and files creation'
 End
 
 Describe 'Check source connection'
+  Skip 'TODO @FAI-14452 - Run docker tests in CI'
   It 'should fail if source connection fails'
     airbyte_local_test() {
       ./airbyte-local \
