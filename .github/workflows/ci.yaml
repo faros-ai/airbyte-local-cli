@@ -59,7 +59,7 @@ jobs:
 
       - name: Install ShellSpec
         run: |
-          curl -fsSL https://git.io/shellspec | sh -s 0.28.1
+          curl -fsSL https://git.io/shellspec | sh -s 0.28.1 --yes
     
       # Run shellspec tests againgst airbyte-local nodejs
       - name: Run ShellSpec tests
