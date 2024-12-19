@@ -50,7 +50,9 @@ function command() {
     // Options: Airbyte connector settings
     .option('--no-src-pull', 'Skip pulling Airbyte source image')
     .option('--no-dst-pull', 'Skip pulling Airbyte destination image')
-    .option('--src-check-connection', 'Validate the Airbyte source connection')
+    .addOption(
+      new Option('--src-check-connection', `Validate the Airbyte source connection`).conflicts('srcOutputFile'),
+    )
     .addOption(
       new Option(
         '--src-only',

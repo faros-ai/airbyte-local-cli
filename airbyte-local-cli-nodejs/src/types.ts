@@ -65,3 +65,32 @@ export interface FarosConfig {
   logLevel: string;
   debug: boolean;
 }
+
+/**
+ * Copy types from faros-ai/airtype-connectors
+ * https://github.com/faros-ai/airbyte-connectors/blob/main/faros-airbyte-cdk/src/protocol.ts
+ */
+export enum AirbyteConnectionStatus {
+  SUCCEEDED = 'SUCCEEDED',
+  FAILED = 'FAILED',
+}
+export enum AirbyteMessageType {
+  CATALOG = 'CATALOG',
+  CONNECTION_STATUS = 'CONNECTION_STATUS',
+  LOG = 'LOG',
+  RECORD = 'RECORD',
+  SPEC = 'SPEC',
+  STATE = 'STATE',
+  TRACE = 'TRACE',
+}
+export interface AirbyteMessage {
+  readonly type: AirbyteMessageType;
+}
+export declare class AirbyteConnectionStatusMessage implements AirbyteMessage {
+  readonly connectionStatus: {
+    status: AirbyteConnectionStatus;
+    message?: string;
+  };
+  readonly type: AirbyteMessageType;
+  constructor(connectionStatus: {status: AirbyteConnectionStatus; message?: string});
+}

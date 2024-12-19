@@ -6,8 +6,9 @@
     "declaration": true,
     "sourceMap": true,
     "experimentalDecorators": true,
-    "composite": true
+    "composite": true,
+    "forceConsistentCasingInFileNames": true
   },
   "include": ["src"],
-  "exclude": ["lib", "node_modules"]
+  "exclude": ["lib", "node_modules", "dist", "out", "scripts"]
 }
