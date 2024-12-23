@@ -40,7 +40,12 @@ export interface AirbyteConfig {
   image: string;
   config?: object;
   catalog?: object;
-  dockerOptions?: string;
+  dockerOptions?: AirbyteConfigDockerOptions;
+}
+export interface AirbyteConfigDockerOptions {
+  maxMemory?: number; // unit: MB
+  maxCpus?: number; // unit: CPU
+  maxLogSize?: string; // default: 10m (10MB)
 }
 export enum AirbyteConfigInputType {
   FILE = 'file',

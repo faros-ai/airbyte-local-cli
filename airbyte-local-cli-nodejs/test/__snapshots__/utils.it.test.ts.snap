@@ -12,7 +12,10 @@ exports[`parseConfigFile should pass 1`] = `
         "graph": "default",
       },
     },
-    "dockerOptions": "--memory 2048m --cpus 2",
+    "dockerOptions": {
+      "maxCpus": 2,
+      "maxMemory": 2048,
+    },
     "image": "farosai/airbyte-servicenow-destination",
   },
   "src": {
@@ -22,7 +25,10 @@ exports[`parseConfigFile should pass 1`] = `
       "url": "https://test-instance.service-now.com",
       "username": "test-username",
     },
-    "dockerOptions": "--memory 2048m --cpus 2",
+    "dockerOptions": {
+      "maxCpus": 2,
+      "maxMemory": 2048,
+    },
     "image": "farosai/airbyte-servicenow-source",
   },
 }
