@@ -46,7 +46,7 @@ describe('checkSrcConnection', () => {
   });
 });
 
-describe.only('runSrcSync', () => {
+describe('runSrcSync', () => {
   // Clean up files created by the test
   afterAll(() => {
     const pattern = /.*-src_cid$/;
