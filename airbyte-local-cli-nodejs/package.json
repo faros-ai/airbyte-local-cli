@@ -35,16 +35,16 @@
     "@tsconfig/strictest": "^2.0.5",
     "@types/dockerode": "^3.3.32",
     "@types/jest": "^29.5.14",
-    "@types/lodash": "^4.17.13",
+    "@types/lodash": "^4.17.14",
     "@types/node": "^20.17.6",
-    "@typescript-eslint/eslint-plugin": "^8.13.0",
+    "@typescript-eslint/eslint-plugin": "^8.19.1",
     "@typescript-eslint/parser": "^8.13.0",
-    "@yao-pkg/pkg": "^6.1.1",
+    "@yao-pkg/pkg": "^6.2.0",
     "eslint": "^8.57.1",
     "eslint-config-faros": "^0.1.0",
     "eslint-config-prettier": "^9.1.0",
     "eslint-plugin-simple-import-sort": "^12.1.1",
-    "prettier": "^3.4.1",
+    "prettier": "^3.4.2",
     "ts-jest": "^29.2.5",
     "tsx": "^4.19.2",
     "typescript": "~5.6.3"
@@ -53,8 +53,8 @@
     "commander": "^12.1.0",
     "dockerode": "^4.0.2",
     "lodash": "^4.17.21",
-    "pino": "^9.5.0",
-    "pino-pretty": "^11.3.0"
+    "pino": "^9.6.0",
+    "pino-pretty": "^13.0.0"
   },
   "jest": {
     "silent": false,
