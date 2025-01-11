@@ -122,7 +122,7 @@ export async function checkSrcConnection(tmpDir: string, image: string, srcConfi
  *
  * @argument command - for testing purposes only
  */
-export async function runSrcSync(tmpDir: string, config: FarosConfig, command?: string[]): Promise<string> {
+export async function runSrcSync(tmpDir: string, config: FarosConfig): Promise<string> {
   logger.info('Running source connector...');
 
   if (!config.src?.image) {
@@ -132,7 +132,7 @@ export async function runSrcSync(tmpDir: string, config: FarosConfig, command?: 
   try {
     const timestamp = Date.now();
     const srcContainerName = `airbyte-local-src-${timestamp}`;
-    const cmd = command ?? [
+    const cmd = [
       'read',
       '--config',
       `/configs/${SRC_CONFIG_FILENAME}`,
@@ -146,13 +146,19 @@ export async function runSrcSync(tmpDir: string, config: FarosConfig, command?: 
     const maxMemory =
       config.src?.dockerOptions?.maxMemory !== undefined ? config.src.dockerOptions.maxMemory * 1024 * 1024 : undefined;
     const createOptions: Docker.ContainerCreateOptions = {
+      // Default config: can be overridden by the docker options provided by users
       name: srcContainerName,
       Image: config.src.image,
+      ...config.src?.dockerOptions?.additionalOptions,
+
+      // Default options: cannot be overridden by users
       Cmd: cmd,
+      AttachStdout: true,
+      AttachStderr: true,
+      platform: 'linux/amd64',
+      Env: [`LOG_LEVEL=${config.logLevel}`, ...(config.src?.dockerOptions?.additionalOptions?.Env || [])],
       HostConfig: {
-        Binds: [`${tmpDir}:/configs`],
-        AutoRemove: true,
-        Init: true,
+        // Defautl host config: can be overridden by users
         NanoCpus: maxNanoCpus, // 1e9 nano cpus = 1 cpu
         Memory: maxMemory, // 1024 * 1024 bytes = 1MB
         LogConfig: {
@@ -161,11 +167,12 @@ export async function runSrcSync(tmpDir: string, config: FarosConfig, command?: 
             'max-size': config.src?.dockerOptions?.maxLogSize ?? DEFAULT_MAX_LOG_SIZE,
           },
         },
+        ...config.src?.dockerOptions?.additionalOptions?.HostConfig,
+        // Default options: cannot be overridden by users
+        Binds: [`${tmpDir}:/configs`],
+        AutoRemove: true,
+        Init: true,
       },
-      AttachStdout: true,
-      AttachStderr: true,
-      Env: [`LOG_LEVEL=${config.logLevel}`],
-      platform: 'linux/amd64',
     };
 
     // Create the Docker container
