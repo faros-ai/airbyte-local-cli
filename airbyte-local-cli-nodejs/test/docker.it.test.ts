@@ -1,5 +1,6 @@
 import {readdirSync, unlinkSync} from 'node:fs';
 import path from 'node:path';
+import {Writable} from 'node:stream';
 
 import {checkSrcConnection, pullDockerImage, runSrcSync} from '../src/docker';
 import {FarosConfig} from '../src/types';
@@ -47,6 +48,13 @@ describe('checkSrcConnection', () => {
 });
 
 describe('runSrcSync', () => {
+  const testCfg: FarosConfig = {
+    ...defaultConfig,
+    src: {
+      image: 'farosai/airbyte-example-source',
+    },
+  };
+
   // Clean up files created by the test
   afterAll(() => {
     const pattern = /.*-src_cid$/;
@@ -60,12 +68,32 @@ describe('runSrcSync', () => {
   });
 
   it('should success', async () => {
-    const cfg: FarosConfig = {
-      ...defaultConfig,
-      src: {
-        image: 'farosai/airbyte-example-source',
+    await expect(
+      runSrcSync(`${process.cwd()}/test/resources/dockerIt_runSrcSync_success`, testCfg),
+    ).resolves.not.toThrow();
+  });
+
+  // Check the error message is correctly redirect to process.stderr
+  it('should fail', async () => {
+    // Capture process.stderr
+    let stderrData = '';
+    const originalStderrWrite = process.stderr.write;
+    const stderrStream = new Writable({
+      write(chunk, _encoding, callback) {
+        stderrData += chunk.toString();
+        callback();
       },
-    };
-    await expect(runSrcSync(`${process.cwd()}/test/resources/dockerIt_runSrcSync_success`, cfg)).resolves.not.toThrow();
+    });
+    process.stderr.write = stderrStream.write.bind(stderrStream) as any;
+
+    try {
+      await expect(
+        runSrcSync(`${process.cwd()}/test/resources/dockerIt_runSrcSync_fail`, testCfg, ['/bin/bash']),
+      ).rejects.toThrow();
+    } finally {
+      process.stderr.write = originalStderrWrite;
+    }
+
+    expect(stderrData).toContain(`error: unknown command '/bin/bash'`);
   });
 });

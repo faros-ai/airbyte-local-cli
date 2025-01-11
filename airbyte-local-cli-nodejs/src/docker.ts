@@ -104,6 +104,9 @@ export async function checkSrcConnection(tmpDir: string, image: string, srcConfi
 
 /**
  * Spinning up a docker container to run source airbyte connector.
+ * Platform is set to 'linux/amd64' as we only publish airbyte connectors images for linux/amd64.
+ *
+ * Docker cli command:
  *  docker run --name $src_container_name --init \
  *    -v "$tempdir:/configs" \
  *    $max_memory $max_cpus --log-opt max-size="$max_log_size" \
@@ -117,11 +120,9 @@ export async function checkSrcConnection(tmpDir: string, image: string, srcConfi
  *    --catalog "/configs/$src_catalog_filename" \
  *    --state "/configs/$src_state_filename"
  *
- * TODO:
- *  - veirfy memeory / cpus / log max size are set correctly
- *  - make sure we want to pipe the stderr directly to the terminal stderr
+ * @argument command - for testing purposes only
  */
-export async function runSrcSync(tmpDir: string, config: FarosConfig): Promise<string> {
+export async function runSrcSync(tmpDir: string, config: FarosConfig, command?: string[]): Promise<string> {
   logger.info('Running source connector...');
 
   if (!config.src?.image) {
@@ -131,6 +132,15 @@ export async function runSrcSync(tmpDir: string, config: FarosConfig): Promise<s
   try {
     const timestamp = Date.now();
     const srcContainerName = `airbyte-local-src-${timestamp}`;
+    const cmd = command ?? [
+      'read',
+      '--config',
+      `/configs/${SRC_CONFIG_FILENAME}`,
+      '--catalog',
+      `/configs/${SRC_CATALOG_FILENAME}`,
+      '--state',
+      `/configs/${DEFAULT_STATE_FILE}`,
+    ];
     const maxNanoCpus =
       config.src?.dockerOptions?.maxCpus !== undefined ? config.src.dockerOptions.maxCpus * 1e9 : undefined;
     const maxMemory =
@@ -138,15 +148,7 @@ export async function runSrcSync(tmpDir: string, config: FarosConfig): Promise<s
     const createOptions: Docker.ContainerCreateOptions = {
       name: srcContainerName,
       Image: config.src.image,
-      Cmd: [
-        'read',
-        '--config',
-        `/configs/${SRC_CONFIG_FILENAME}`,
-        '--catalog',
-        `/configs/${SRC_CATALOG_FILENAME}`,
-        '--state',
-        `/configs/${DEFAULT_STATE_FILE}`,
-      ],
+      Cmd: cmd,
       HostConfig: {
         Binds: [`${tmpDir}:/configs`],
         AutoRemove: true,
@@ -190,7 +192,8 @@ export async function runSrcSync(tmpDir: string, config: FarosConfig): Promise<s
 
     // Wait for the container to finish
     const res = await container.wait();
-    console.log(res);
+    logger.debug(res);
+    logger.debug(data);
 
     if (res.StatusCode === 0) {
       logger.info('Source connector ran successfully.');
