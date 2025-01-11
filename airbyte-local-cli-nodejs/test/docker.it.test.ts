@@ -23,6 +23,7 @@ const defaultConfig: FarosConfig = {
 
 beforeAll(async () => {
   await pullDockerImage('farosai/airbyte-example-source');
+  await pullDockerImage('farosai/airbyte-faros-graphql-source');
 });
 
 describe('checkSrcConnection', () => {
@@ -68,9 +69,7 @@ describe('runSrcSync', () => {
   });
 
   it('should success', async () => {
-    await expect(
-      runSrcSync(`${process.cwd()}/test/resources/dockerIt_runSrcSync_success`, testCfg),
-    ).resolves.not.toThrow();
+    await expect(runSrcSync(`${process.cwd()}/test/resources/dockerIt_runSrcSync`, testCfg)).resolves.not.toThrow();
   });
 
   // Check the error message is correctly redirect to process.stderr
@@ -88,12 +87,15 @@ describe('runSrcSync', () => {
 
     try {
       await expect(
-        runSrcSync(`${process.cwd()}/test/resources/dockerIt_runSrcSync_fail`, testCfg, ['/bin/bash']),
+        runSrcSync(`${process.cwd()}/test/resources/dockerIt_runSrcSync`, {
+          ...testCfg,
+          src: {image: 'farosai/airbyte-faros-graphql-source'},
+        }),
       ).rejects.toThrow();
     } finally {
       process.stderr.write = originalStderrWrite;
     }
 
-    expect(stderrData).toContain(`error: unknown command '/bin/bash'`);
+    expect(stderrData).toContain(`Faros API key was not provided`);
   });
 });

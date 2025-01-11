@@ -109,3 +109,21 @@ Describe 'Check source connection'
     The status should equal 1
   End
 End
+
+Describe 'Run source sync'
+  It 'should fail if source sync fails auth'
+    airbyte_local_test() {
+      ./airbyte-local \
+        --src 'farosai/airbyte-faros-graphql-source' \
+        --src-only
+    }
+    When call airbyte_local_test
+    The stderr should include "Faros API key was not provided"
+    The output should include "Failed to run source connector: Failed to run source connector."
+    The status should equal 1
+  End
+End
+
+# Clean up temeporary test files
+find . -name 'faros_airbyte_cli_config.json' -delete
+find . -name '*-src_cid' -delete

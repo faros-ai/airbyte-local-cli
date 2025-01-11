@@ -204,6 +204,6 @@ export async function runSrcSync(tmpDir: string, config: FarosConfig, command?: 
     // return the stdout data
     return data;
   } catch (error: any) {
-    throw new Error(`Failed to run source connector: ${error.message ?? JSON.stringify(error)}.`);
+    throw new Error(`Failed to run source connector: ${error.message ?? JSON.stringify(error)}`);
   }
 }
