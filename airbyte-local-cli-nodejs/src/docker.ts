@@ -141,10 +141,8 @@ export async function runSrcSync(tmpDir: string, config: FarosConfig): Promise<s
       '--state',
       `/configs/${DEFAULT_STATE_FILE}`,
     ];
-    const maxNanoCpus =
-      config.src?.dockerOptions?.maxCpus !== undefined ? config.src.dockerOptions.maxCpus * 1e9 : undefined;
-    const maxMemory =
-      config.src?.dockerOptions?.maxMemory !== undefined ? config.src.dockerOptions.maxMemory * 1024 * 1024 : undefined;
+    const maxNanoCpus = config.src?.dockerOptions?.maxCpus;
+    const maxMemory = config.src?.dockerOptions?.maxMemory;
     const createOptions: Docker.ContainerCreateOptions = {
       // Default config: can be overridden by the docker options provided by users
       name: srcContainerName,
