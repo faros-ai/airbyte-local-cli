@@ -1,5 +1,5 @@
 import {parseAndValidateInputs} from './command';
-import {checkDockerInstalled, checkSrcConnection, pullDockerImage} from './docker';
+import {checkDockerInstalled, checkSrcConnection, pullDockerImage, runSrcSync} from './docker';
 import {AirbyteCliContext} from './types';
 import {cleanUp, createTmpDir, loadStateFile, logger, writeConfig} from './utils';
 
@@ -22,6 +22,10 @@ async function main(): Promise<void> {
     // Check source connection
     if (cfg.srcCheckConnection && cfg.src?.image) {
       await checkSrcConnection(context.tmpDir, cfg.src.image);
+    }
+    // Run airbyte source connector
+    if (!cfg.srcInputFile) {
+      await runSrcSync(context.tmpDir, cfg);
     }
   } catch (error: any) {
     logger.error(error.message, 'Error');

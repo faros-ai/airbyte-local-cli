@@ -14,6 +14,7 @@ export const SRC_CONFIG_FILENAME = `${FILENAME_PREFIX}_src_config.json`;
 export const DST_CONFIG_FILENAME = `${FILENAME_PREFIX}_dst_config.json`;
 export const SRC_CATALOG_FILENAME = `${FILENAME_PREFIX}_src_catalog.json`;
 export const DST_CATALOG_FILENAME = `${FILENAME_PREFIX}_dst_catalog.json`;
+export const DEFAULT_STATE_FILE = 'state.json';
 
 // Create a pino logger instance
 export const logger = pino(pretty({colorize: true}));
@@ -82,16 +83,15 @@ export function createTmpDir(absTmpDir?: string): string {
 
 // Load the existing state file and write to the temporary folder
 export function loadStateFile(tempDir: string, filePath?: string, connectionName?: string): void {
-  const path = filePath ?? (connectionName ? `${connectionName}__state.json` : 'state.json');
-  const name = 'state.json';
+  const path = filePath ?? (connectionName ? `${connectionName}__state.json` : DEFAULT_STATE_FILE);
 
   // Read the state file and write to temp folder
   // Write an empty state file if the state file hasn't existed yet
   try {
     accessSync(path, constants.R_OK);
     const stateData = readFileSync(path, 'utf8');
-    logger.debug(`Writing state file to temporary directory: '${tempDir}/${name}'...`);
-    writeFileSync(`${tempDir}/${name}`, stateData);
+    logger.debug(`Writing state file to temporary directory: '${tempDir}/${DEFAULT_STATE_FILE}'...`);
+    writeFileSync(`${tempDir}/${DEFAULT_STATE_FILE}`, stateData);
   } catch (error: any) {
     if (error.code !== 'ENOENT') {
       throw new Error(`Failed to read state file '${path}' : ${error.message}`);
@@ -100,8 +100,8 @@ export function loadStateFile(tempDir: string, filePath?: string, connectionName
         `State file '${filePath}' not found. Please make sure the state file exists and have read access.`,
       );
     }
-    writeFileSync(`${tempDir}/${name}`, '{}');
-    logger.debug(`State file '${name}' not found. An empty state file is created.`);
+    writeFileSync(`${tempDir}/${DEFAULT_STATE_FILE}`, '{}');
+    logger.debug(`State file '${DEFAULT_STATE_FILE}' not found. An empty state file is created.`);
   }
 }
 

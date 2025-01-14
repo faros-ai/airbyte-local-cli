@@ -1,9 +1,13 @@
+import {writeFileSync} from 'node:fs';
 import {Writable} from 'node:stream';
 
 import Docker from 'dockerode';
 
-import {AirbyteConnectionStatus, AirbyteConnectionStatusMessage, AirbyteMessageType} from './types';
-import {logger, SRC_CONFIG_FILENAME} from './utils';
+import {AirbyteConnectionStatus, AirbyteConnectionStatusMessage, AirbyteMessageType, FarosConfig} from './types';
+import {DEFAULT_STATE_FILE, logger, SRC_CATALOG_FILENAME, SRC_CONFIG_FILENAME} from './utils';
+
+// Constants
+const DEFAULT_MAX_LOG_SIZE = '10m';
 
 // Create a new Docker instance
 let _docker = new Docker();
@@ -95,5 +99,116 @@ export async function checkSrcConnection(tmpDir: string, image: string, srcConfi
     }
   } catch (error: any) {
     throw new Error(`Failed to validate source connection: ${error.message ?? JSON.stringify(error)}.`);
+  }
+}
+
+/**
+ * Spinning up a docker container to run source airbyte connector.
+ * Platform is set to 'linux/amd64' as we only publish airbyte connectors images for linux/amd64.
+ *
+ * Docker cli command:
+ *  docker run --name $src_container_name --init \
+ *    -v "$tempdir:/configs" \
+ *    $max_memory $max_cpus --log-opt max-size="$max_log_size" \
+ *    --env LOG_LEVEL="$log_level" \
+ *    $src_docker_options
+ *    --cidfile="$tempPrefix-src_cid" \
+ *    -a stdout -a stderr \
+ *    "$src_docker_image" \
+ *    read \
+ *    --config "/configs/$src_config_filename" \
+ *    --catalog "/configs/$src_catalog_filename" \
+ *    --state "/configs/$src_state_filename"
+ *
+ * @argument command - for testing purposes only
+ */
+export async function runSrcSync(tmpDir: string, config: FarosConfig): Promise<string> {
+  logger.info('Running source connector...');
+
+  if (!config.src?.image) {
+    throw new Error('Source image is missing.');
+  }
+
+  try {
+    const timestamp = Date.now();
+    const srcContainerName = `airbyte-local-src-${timestamp}`;
+    const cmd = [
+      'read',
+      '--config',
+      `/configs/${SRC_CONFIG_FILENAME}`,
+      '--catalog',
+      `/configs/${SRC_CATALOG_FILENAME}`,
+      '--state',
+      `/configs/${DEFAULT_STATE_FILE}`,
+    ];
+    const maxNanoCpus = config.src?.dockerOptions?.maxCpus;
+    const maxMemory = config.src?.dockerOptions?.maxMemory;
+    const createOptions: Docker.ContainerCreateOptions = {
+      // Default config: can be overridden by the docker options provided by users
+      name: srcContainerName,
+      Image: config.src.image,
+      ...config.src?.dockerOptions?.additionalOptions,
+
+      // Default options: cannot be overridden by users
+      Cmd: cmd,
+      AttachStdout: true,
+      AttachStderr: true,
+      platform: 'linux/amd64',
+      Env: [`LOG_LEVEL=${config.logLevel}`, ...(config.src?.dockerOptions?.additionalOptions?.Env || [])],
+      HostConfig: {
+        // Defautl host config: can be overridden by users
+        NanoCpus: maxNanoCpus, // 1e9 nano cpus = 1 cpu
+        Memory: maxMemory, // 1024 * 1024 bytes = 1MB
+        LogConfig: {
+          Type: 'json-file',
+          Config: {
+            'max-size': config.src?.dockerOptions?.maxLogSize ?? DEFAULT_MAX_LOG_SIZE,
+          },
+        },
+        ...config.src?.dockerOptions?.additionalOptions?.HostConfig,
+        // Default options: cannot be overridden by users
+        Binds: [`${tmpDir}:/configs`],
+        AutoRemove: true,
+        Init: true,
+      },
+    };
+
+    // Create the Docker container
+    const container = await _docker.createContainer(createOptions);
+
+    // Write the container ID to the cidfile
+    const cidfilePath = `tmp-${timestamp}-src_cid`;
+    writeFileSync(cidfilePath, container.id);
+
+    // create a writable stream to capture the stdout
+    let data = '';
+    const stdoutStream = new Writable({
+      write(chunk, _encoding, callback) {
+        data += chunk.toString();
+        callback();
+      },
+    });
+    // Attach the stderr to termincal stderr, and stdout to the output stream
+    const stream = await container.attach({stream: true, stdout: true, stderr: true});
+    container.modem.demuxStream(stream, stdoutStream, process.stderr);
+
+    // Start the container
+    await container.start();
+
+    // Wait for the container to finish
+    const res = await container.wait();
+    logger.debug(res);
+    logger.debug(data);
+
+    if (res.StatusCode === 0) {
+      logger.info('Source connector ran successfully.');
+    } else {
+      throw new Error('Failed to run source connector.');
+    }
+
+    // return the stdout data
+    return data;
+  } catch (error: any) {
+    throw new Error(`Failed to run source connector: ${error.message ?? JSON.stringify(error)}`);
   }
 }
