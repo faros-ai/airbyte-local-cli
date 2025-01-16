@@ -181,6 +181,7 @@ export async function runSrcSync(tmpDir: string, config: FarosConfig): Promise<s
     writeFileSync(cidfilePath, container.id);
 
     // create a writable stream to capture the stdout
+    // TODO: write to a file instead of memory
     let data = '';
     const stdoutStream = new Writable({
       write(chunk, _encoding, callback) {

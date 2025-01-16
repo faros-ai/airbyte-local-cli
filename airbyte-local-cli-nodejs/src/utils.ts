@@ -1,20 +1,42 @@
 import {spawnSync} from 'node:child_process';
-import {accessSync, constants, mkdtempSync, readFileSync, rmSync, writeFileSync} from 'node:fs';
+import {once} from 'node:events';
+import {
+  accessSync,
+  constants,
+  createReadStream,
+  createWriteStream,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {sep} from 'node:path';
 
 import pino from 'pino';
 import pretty from 'pino-pretty';
+import readline from 'readline';
 
 import {AirbyteCliContext, AirbyteConfig, FarosConfig} from './types';
 
 // constants
+export enum OutputStream {
+  STDERR = 'STDERR',
+  STDOUT = 'STDOUT',
+}
 export const FILENAME_PREFIX = 'faros_airbyte_cli';
 export const SRC_CONFIG_FILENAME = `${FILENAME_PREFIX}_src_config.json`;
 export const DST_CONFIG_FILENAME = `${FILENAME_PREFIX}_dst_config.json`;
 export const SRC_CATALOG_FILENAME = `${FILENAME_PREFIX}_src_catalog.json`;
 export const DST_CATALOG_FILENAME = `${FILENAME_PREFIX}_dst_catalog.json`;
 export const DEFAULT_STATE_FILE = 'state.json';
+export const SRC_INPUT_DATA_FILE = `${FILENAME_PREFIX}_src_data`;
+export const SRC_OUTPUT_DATA_FILE = `${FILENAME_PREFIX}_src_output`;
+
+// Check if the value is an OutputStream
+function isOutputStream(value: any): value is OutputStream {
+  return Object.values(OutputStream).includes(value);
+}
 
 // Create a pino logger instance
 export const logger = pino(pretty({colorize: true}));
@@ -164,4 +186,114 @@ export function writeConfig(tmpDir: string, config: FarosConfig): void {
   writeFileSync(srcCatalogFilePath, JSON.stringify(airbyteConfig.src.catalog ?? {}, null, 2));
   writeFileSync(dstCatalogFilePath, JSON.stringify(airbyteConfig.dst.catalog ?? {}, null, 2));
   logger.debug(`Airbyte catalog files written to: ${srcCatalogFilePath}, ${dstCatalogFilePath}`);
+}
+
+// Read file content
+export function readFile(file: string): any {
+  try {
+    const data = readFileSync(file, 'utf8');
+    return data;
+  } catch (error: any) {
+    throw new Error(`Failed to read '${file}': ${error.message}`);
+  }
+}
+
+// Write file content
+export function writeFile(file: string, data: any): void {
+  try {
+    writeFileSync(file, data);
+  } catch (error: any) {
+    throw new Error(`Failed to write '${file}': ${error.message}`);
+  }
+}
+
+/**
+ * Process the source output.
+ *
+ * Command line:
+ *  tee >(
+ *    jq -cR $jq_color_opt --unbuffered 'fromjson? |
+ *    select(.type != "RECORD" and .type != "STATE")' |
+ *     jq -rR --unbuffered "$jq_src_msg" >&2
+ *   ) |
+ *   jq -cR --unbuffered "fromjson? |
+ *   select(.type == \"RECORD\" or .type == \"STATE\") |
+ *   .record.stream |= \"${dst_stream_prefix}\" + ." |
+ *   tee "$output_filepath" |
+ *
+ * Note: `dst_stream_prefix` command option is dropped
+ */
+export async function processSrcData(cfg: FarosConfig): Promise<void> {
+  // Processing the source line by line
+  function processLine(line: string): void {
+    // skip empty lines
+    if (line.trim() === '') {
+      return;
+    }
+
+    try {
+      const data = JSON.parse(line);
+
+      // non RECORD and STATE type messages: print to stderr
+      if (data.type !== 'RECORD' && data.type !== 'STATE') {
+        logger.info(line); // TODO: should we use logger instead?
+      }
+      // RECORD and STATE type messages: write to output file
+      else {
+        outputStream.write(`${line}\n`);
+      }
+    } catch (error: any) {
+      throw new Error(`Line of data: '${line}'; Error: ${error.message}\n`);
+    }
+  }
+
+  // Close the output stream if it's a file
+  function closeOutputStream(): void {
+    if (!isOutputStream(cfg.srcOutputFile)) {
+      outputStream.end();
+    }
+    logger.debug(`Closing the output stream file '${cfg.srcOutputFile}'.`);
+  }
+
+  // get source data file and output file paths
+  const srcInputFilePath = cfg.srcInputFile ?? SRC_INPUT_DATA_FILE;
+  const srcOutputFilePath = cfg.srcOutputFile ?? SRC_OUTPUT_DATA_FILE;
+
+  // create input and output streams:
+  // - input stream: read from the data file user provided or the one the script created in the temporary directory
+  // - output stream: write to a file or stdout/stderr. Overwrite the file if it exists, otherwise create a new one
+  const inputStream = createReadStream(srcInputFilePath);
+  const outputStream: any =
+    cfg.srcOutputFile === OutputStream.STDOUT
+      ? process.stdout
+      : cfg.srcOutputFile === OutputStream.STDERR
+        ? process.stderr
+        : createWriteStream(srcOutputFilePath, {flags: 'w'});
+
+  // Create readline interface
+  const rl = readline.createInterface({
+    input: inputStream,
+    crlfDelay: Infinity,
+  });
+
+  rl.on('line', (line) => {
+    processLine(line);
+  });
+
+  rl.on('close', () => {
+    closeOutputStream();
+  });
+
+  rl.on('error', (error) => {
+    closeOutputStream();
+    throw new Error(`Failed to process the source output data: ${error.message ?? JSON.stringify(error)}`);
+  });
+
+  outputStream.on('error', (error: any) => {
+    throw new Error(`Failed to write to the output file: ${error.message ?? JSON.stringify(error)}`);
+  });
+
+  // wait for the processing to be done
+  await once(rl, 'close');
+  logger.debug('Finished processing the source output data.');
 }
