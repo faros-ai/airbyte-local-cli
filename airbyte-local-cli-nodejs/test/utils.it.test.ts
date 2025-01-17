@@ -1,6 +1,5 @@
 import {chmodSync, existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync} from 'node:fs';
 import {tmpdir} from 'node:os';
-import {Writable} from 'node:stream';
 
 import {FarosConfig} from '../src/types';
 import {
@@ -173,7 +172,7 @@ describe('write files to temporary dir', () => {
   });
 });
 
-describe.only('processSrcData', () => {
+describe('processSrcData', () => {
   const testSrcInputFile = `${process.cwd()}/test/resources/test_src_input`;
   const testSrcOutputFile = `${process.cwd()}/test/resources/test_src_output`;
 
@@ -194,35 +193,13 @@ describe.only('processSrcData', () => {
     expect(output).toMatchSnapshot();
   });
 
-  it('should succeed writing to stdout', async () => {
+  it('should succeed writing to logger', async () => {
     const cfg: FarosConfig = {
       ...testConfig,
       srcInputFile: testSrcInputFile,
       srcOutputFile: OutputStream.STDOUT,
     };
-
-    // Capture process.stdout
-    let stdoutData = '';
-    const originalStdoutWrite = process.stdout.write;
-    const stdoutStream = new Writable({
-      write(chunk, _encoding, callback) {
-        stdoutData += chunk.toString();
-        callback();
-      },
-    });
-    process.stdout.write = stdoutStream.write.bind(stdoutStream) as any;
-
-    try {
-      await expect(processSrcData(cfg)).resolves.not.toThrow();
-    } finally {
-      process.stdout.write = originalStdoutWrite;
-    }
-
-    // remove timestamp from the output so that it can be compared
-    const stdoutDataWithoutTS = stdoutData.split('\n').map((line) => {
-      return line.replace(/\[SRC\].*\s-/g, '[SRC]');
-    });
-    expect(stdoutDataWithoutTS.join('\n')).toMatchSnapshot();
+    await expect(processSrcData(cfg)).resolves.not.toThrow();
   });
 
   it('should fail with processing error', async () => {

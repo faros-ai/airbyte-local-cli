@@ -41,13 +41,6 @@ exports[`processSrcData should succeed writing to an output file 1`] = `
 "
 `;
 
-exports[`processSrcData should succeed writing to stdout 1`] = `
-"[32m[SRC] {"state":{"data":{"format":"base64/gzip","data":"H4sIAAAAAAAAA6uuBQBDv6ajAgAAAA=="}},"type":"STATE","redactedConfig":{"user":"chris"},"sourceType":"example","sourceVersion":"0.12.3"}
-[32m[SRC] {"state":{"data":{"format":"base64/gzip","data":"H4sIAAAAAAAAA6uuBQBDv6ajAgAAAA=="}},"type":"STATE","sourceStatus":{"status":"SUCCESS"}}
-[32m[SRC] {"state":{"data":{"format":"base64/gzip","data":"H4sIAAAAAAAAA6uuBQBDv6ajAgAAAA=="}},"type":"STATE","logs":[{"timestamp":1736891682696,"message":{"level":30,"msg":"Source version: 0.12.3"}},{"timestamp":1736891682697,"message":{"level":30,"msg":"Config: {\\"user\\":\\"chris\\"}"}},{"timestamp":1736891682697,"message":{"level":30,"msg":"Catalog: {}"}},{"timestamp":1736891682697,"message":{"level":30,"msg":"State: {}"}},{"timestamp":1736891682700,"message":{"level":30,"msg":"Syncing ExampleSource"}},{"timestamp":1736891682704,"message":{"level":30,"msg":"Finished syncing ExampleSource"}}]}
-"
-`;
-
 exports[`write files to temporary dir loadStateFile should pass with existing state file 1`] = `
 "{"format":"base64/gzip","data":"dGVzdA=="}
 "

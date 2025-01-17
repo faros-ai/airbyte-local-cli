@@ -15,7 +15,6 @@ import {sep} from 'node:path';
 import pino from 'pino';
 import pretty from 'pino-pretty';
 import readline from 'readline';
-import colors from 'yoctocolors-cjs';
 
 import {AirbyteCliContext, AirbyteConfig, FarosConfig} from './types';
 
@@ -227,9 +226,9 @@ export function writeFile(file: string, data: any): void {
  */
 export function processSrcData(cfg: FarosConfig): Promise<void> {
   return new Promise((resolve, reject) => {
-    // Colorize the JSON message
-    function formatSrcWithColor(json: any): string {
-      return `${colors.green('[SRC]')} - ${JSON.stringify(json)}`;
+    // Reformat the JSON message
+    function formatSrcMsg(json: any): string {
+      return `[SRC] - ${JSON.stringify(json)}`;
     }
 
     // Processing the source line by line
@@ -244,13 +243,12 @@ export function processSrcData(cfg: FarosConfig): Promise<void> {
 
         // non RECORD and STATE type messages: print as stdout
         if (data.type !== 'RECORD' && data.type !== 'STATE') {
-          const logMsg = cfg.rawMessages ? line : formatSrcWithColor(data);
-          logger.info(logMsg);
+          logger.info(formatSrcMsg(data));
         }
-        // RECORD and STATE type messages: write to output file
+        // RECORD and STATE type messages: logger or write to output file
         else {
           if (cfg.srcOutputFile === OutputStream.STDOUT) {
-            outputStream.write(`${formatSrcWithColor(data)}\n`);
+            logger.info(formatSrcMsg(data));
           } else {
             outputStream.write(`${line}\n`);
           }
