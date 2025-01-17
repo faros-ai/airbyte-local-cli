@@ -16,6 +16,7 @@ import {sep} from 'node:path';
 import pino from 'pino';
 import pretty from 'pino-pretty';
 import readline from 'readline';
+import colors from 'yoctocolors-cjs';
 
 import {AirbyteCliContext, AirbyteConfig, FarosConfig} from './types';
 
@@ -210,6 +211,8 @@ export function writeFile(file: string, data: any): void {
 /**
  * Process the source output.
  *
+ * jq_src_msg="\"${GREEN}[SRC]: \" + ${JQ_TIMESTAMP} + \" - \" + ."
+ *
  * Command line:
  *  tee >(
  *    jq -cR $jq_color_opt --unbuffered 'fromjson? |
@@ -224,6 +227,12 @@ export function writeFile(file: string, data: any): void {
  * Note: `dst_stream_prefix` command option is dropped
  */
 export async function processSrcData(cfg: FarosConfig): Promise<void> {
+  // Colorize the JSON message
+  function formatSrcWithColor(json: any): string {
+    const TIMESTAMP = new Date().toISOString();
+    return `${colors.green('[SRC]')}: ${TIMESTAMP} - ${JSON.stringify(json)}`;
+  }
+
   // Processing the source line by line
   function processLine(line: string): void {
     // skip empty lines
@@ -234,13 +243,18 @@ export async function processSrcData(cfg: FarosConfig): Promise<void> {
     try {
       const data = JSON.parse(line);
 
-      // non RECORD and STATE type messages: print to stderr
+      // non RECORD and STATE type messages: print as debug log
       if (data.type !== 'RECORD' && data.type !== 'STATE') {
-        logger.info(line); // TODO: should we use logger instead?
+        const logMsg = cfg.rawMessages ? line : formatSrcWithColor(data);
+        logger.debug(logMsg);
       }
       // RECORD and STATE type messages: write to output file
       else {
-        outputStream.write(`${line}\n`);
+        if (cfg.srcOutputFile === OutputStream.STDOUT) {
+          outputStream.write(`${formatSrcWithColor(data)}\n`);
+        } else {
+          outputStream.write(`${line}\n`);
+        }
       }
     } catch (error: any) {
       throw new Error(`Line of data: '${line}'; Error: ${error.message}\n`);
@@ -261,14 +275,10 @@ export async function processSrcData(cfg: FarosConfig): Promise<void> {
 
   // create input and output streams:
   // - input stream: read from the data file user provided or the one the script created in the temporary directory
-  // - output stream: write to a file or stdout/stderr. Overwrite the file if it exists, otherwise create a new one
+  // - output stream: write to a file or stdout. Overwrite the file if it exists, otherwise create a new one
   const inputStream = createReadStream(srcInputFilePath);
   const outputStream: any =
-    cfg.srcOutputFile === OutputStream.STDOUT
-      ? process.stdout
-      : cfg.srcOutputFile === OutputStream.STDERR
-        ? process.stderr
-        : createWriteStream(srcOutputFilePath, {flags: 'w'});
+    cfg.srcOutputFile === OutputStream.STDOUT ? process.stdout : createWriteStream(srcOutputFilePath, {flags: 'w'});
 
   // Create readline interface
   const rl = readline.createInterface({

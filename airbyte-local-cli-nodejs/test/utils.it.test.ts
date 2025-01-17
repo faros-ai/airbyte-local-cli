@@ -218,6 +218,10 @@ describe.only('processSrcData', () => {
       process.stdout.write = originalStdoutWrite;
     }
 
-    expect(stdoutData).toMatchSnapshot();
+    // remove timestamp from the output so that it can be compared
+    const stdoutDataWithoutTS = stdoutData.split('\n').map((line) => {
+      return line.replace(/\[SRC\].*\s-/g, '[SRC]');
+    });
+    expect(stdoutDataWithoutTS.join('\n')).toMatchSnapshot();
   });
 });
