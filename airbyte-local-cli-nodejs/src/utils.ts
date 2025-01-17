@@ -1,5 +1,4 @@
 import {spawnSync} from 'node:child_process';
-import {once} from 'node:events';
 import {
   accessSync,
   constants,
@@ -226,84 +225,82 @@ export function writeFile(file: string, data: any): void {
  *
  * Note: `dst_stream_prefix` command option is dropped
  */
-export async function processSrcData(cfg: FarosConfig): Promise<void> {
-  // Colorize the JSON message
-  function formatSrcWithColor(json: any): string {
-    const TIMESTAMP = new Date().toISOString();
-    return `${colors.green('[SRC]')}: ${TIMESTAMP} - ${JSON.stringify(json)}`;
-  }
-
-  // Processing the source line by line
-  function processLine(line: string): void {
-    // skip empty lines
-    if (line.trim() === '') {
-      return;
+export function processSrcData(cfg: FarosConfig): Promise<void> {
+  return new Promise((resolve, reject) => {
+    // Colorize the JSON message
+    function formatSrcWithColor(json: any): string {
+      return `${colors.green('[SRC]')} - ${JSON.stringify(json)}`;
     }
 
-    try {
-      const data = JSON.parse(line);
-
-      // non RECORD and STATE type messages: print as debug log
-      if (data.type !== 'RECORD' && data.type !== 'STATE') {
-        const logMsg = cfg.rawMessages ? line : formatSrcWithColor(data);
-        logger.debug(logMsg);
+    // Processing the source line by line
+    function processLine(line: string): void {
+      // skip empty lines
+      if (line.trim() === '') {
+        return;
       }
-      // RECORD and STATE type messages: write to output file
-      else {
-        if (cfg.srcOutputFile === OutputStream.STDOUT) {
-          outputStream.write(`${formatSrcWithColor(data)}\n`);
-        } else {
-          outputStream.write(`${line}\n`);
+
+      try {
+        const data = JSON.parse(line);
+
+        // non RECORD and STATE type messages: print as stdout
+        if (data.type !== 'RECORD' && data.type !== 'STATE') {
+          const logMsg = cfg.rawMessages ? line : formatSrcWithColor(data);
+          logger.info(logMsg);
         }
+        // RECORD and STATE type messages: write to output file
+        else {
+          if (cfg.srcOutputFile === OutputStream.STDOUT) {
+            outputStream.write(`${formatSrcWithColor(data)}\n`);
+          } else {
+            outputStream.write(`${line}\n`);
+          }
+        }
+      } catch (error: any) {
+        rl.emit('error', new Error(`Line of data: '${line}'; Error: ${error.message}`));
       }
-    } catch (error: any) {
-      throw new Error(`Line of data: '${line}'; Error: ${error.message}\n`);
     }
-  }
 
-  // Close the output stream if it's a file
-  function closeOutputStream(): void {
-    if (!isOutputStream(cfg.srcOutputFile)) {
-      outputStream.end();
+    // Close the output stream if it's a file
+    function closeOutputStream(): void {
+      if (!isOutputStream(cfg.srcOutputFile)) {
+        outputStream.end();
+      }
+      logger.debug(`Closing the output stream file '${cfg.srcOutputFile}'.`);
     }
-    logger.debug(`Closing the output stream file '${cfg.srcOutputFile}'.`);
-  }
 
-  // get source data file and output file paths
-  const srcInputFilePath = cfg.srcInputFile ?? SRC_INPUT_DATA_FILE;
-  const srcOutputFilePath = cfg.srcOutputFile ?? SRC_OUTPUT_DATA_FILE;
+    // get source data file and output file paths
+    const srcInputFilePath = cfg.srcInputFile ?? SRC_INPUT_DATA_FILE;
+    const srcOutputFilePath = cfg.srcOutputFile ?? SRC_OUTPUT_DATA_FILE;
 
-  // create input and output streams:
-  // - input stream: read from the data file user provided or the one the script created in the temporary directory
-  // - output stream: write to a file or stdout. Overwrite the file if it exists, otherwise create a new one
-  const inputStream = createReadStream(srcInputFilePath);
-  const outputStream: any =
-    cfg.srcOutputFile === OutputStream.STDOUT ? process.stdout : createWriteStream(srcOutputFilePath, {flags: 'w'});
+    // create input and output streams:
+    // - input stream: read from the data file user provided or the one the script created in the temporary directory
+    // - output stream: write to a file or stdout. Overwrite the file if it exists, otherwise create a new one
+    const inputStream = createReadStream(srcInputFilePath);
+    const outputStream: any =
+      cfg.srcOutputFile === OutputStream.STDOUT ? process.stdout : createWriteStream(srcOutputFilePath);
 
-  // Create readline interface
-  const rl = readline.createInterface({
-    input: inputStream,
-    crlfDelay: Infinity,
+    // create readline interface
+    const rl = readline.createInterface({
+      input: inputStream,
+      crlfDelay: Infinity,
+    });
+
+    rl.on('line', (line) => {
+      processLine(line);
+    })
+      .on('close', () => {
+        logger.debug('Finished processing the source output data.');
+        closeOutputStream();
+        resolve();
+      })
+      .on('error', (error) => {
+        closeOutputStream();
+        reject(new Error(`Failed to process the source output data: ${error.message ?? JSON.stringify(error)}`));
+      });
+
+    outputStream.on('error', (error: any) => {
+      closeOutputStream();
+      reject(new Error(`Failed to write to the output file: ${error.message ?? JSON.stringify(error)}`));
+    });
   });
-
-  rl.on('line', (line) => {
-    processLine(line);
-  });
-
-  rl.on('close', () => {
-    closeOutputStream();
-  });
-
-  rl.on('error', (error) => {
-    closeOutputStream();
-    throw new Error(`Failed to process the source output data: ${error.message ?? JSON.stringify(error)}`);
-  });
-
-  outputStream.on('error', (error: any) => {
-    throw new Error(`Failed to write to the output file: ${error.message ?? JSON.stringify(error)}`);
-  });
-
-  // wait for the processing to be done
-  await once(rl, 'close');
-  logger.debug('Finished processing the source output data.');
 }

@@ -1,4 +1,4 @@
-import {existsSync, mkdtempSync, readFileSync, rmSync} from 'node:fs';
+import {chmodSync, existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {Writable} from 'node:stream';
 
@@ -223,5 +223,28 @@ describe.only('processSrcData', () => {
       return line.replace(/\[SRC\].*\s-/g, '[SRC]');
     });
     expect(stdoutDataWithoutTS.join('\n')).toMatchSnapshot();
+  });
+
+  it('should fail with processing error', async () => {
+    const cfg: FarosConfig = {
+      ...testConfig,
+      srcInputFile: `${process.cwd()}/test/resources/test_src_input_invalid_json`,
+      srcOutputFile: '/dev/null',
+    };
+    await expect(processSrcData(cfg)).rejects.toThrow(
+      `Failed to process the source output data: Line of data: ` +
+        `'invalid json'; Error: Unexpected token 'i', "invalid json" is not valid JSON`,
+    );
+  });
+
+  it('should fail with outstream error', async () => {
+    writeFileSync(testSrcOutputFile, 'test');
+    chmodSync(testSrcOutputFile, 0o544);
+    const cfg: FarosConfig = {
+      ...testConfig,
+      srcInputFile: testSrcInputFile,
+      srcOutputFile: testSrcOutputFile,
+    };
+    await expect(processSrcData(cfg)).rejects.toThrow('Failed to write to the output file: EACCES: permission denied');
   });
 });
