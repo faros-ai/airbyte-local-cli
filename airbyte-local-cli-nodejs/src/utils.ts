@@ -11,10 +11,11 @@ import {
 } from 'node:fs';
 import {tmpdir} from 'node:os';
 import {sep} from 'node:path';
+import readline from 'node:readline';
+import {Writable} from 'node:stream';
 
 import pino from 'pino';
 import pretty from 'pino-pretty';
-import readline from 'readline';
 
 import {AirbyteCliContext, AirbyteConfig, FarosConfig} from './types';
 
@@ -31,11 +32,6 @@ export const DST_CATALOG_FILENAME = `${FILENAME_PREFIX}_dst_catalog.json`;
 export const DEFAULT_STATE_FILE = 'state.json';
 export const SRC_INPUT_DATA_FILE = `${FILENAME_PREFIX}_src_data`;
 export const SRC_OUTPUT_DATA_FILE = `${FILENAME_PREFIX}_src_output`;
-
-// Check if the value is an OutputStream
-function isOutputStream(value: any): value is OutputStream {
-  return Object.values(OutputStream).includes(value);
-}
 
 // Create a pino logger instance
 export const logger = pino(pretty({colorize: true}));
@@ -209,8 +205,6 @@ export function writeFile(file: string, data: any): void {
 /**
  * Process the source output.
  *
- * jq_src_msg="\"${GREEN}[SRC]: \" + ${JQ_TIMESTAMP} + \" - \" + ."
- *
  * Command line:
  *  tee >(
  *    jq -cR $jq_color_opt --unbuffered 'fromjson? |
@@ -220,62 +214,53 @@ export function writeFile(file: string, data: any): void {
  *   jq -cR --unbuffered "fromjson? |
  *   select(.type == \"RECORD\" or .type == \"STATE\") |
  *   .record.stream |= \"${dst_stream_prefix}\" + ." |
- *   tee "$output_filepath" |
+ *   tee "$output_filepath" | ...
+ *
+ *  jq_src_msg="\"${GREEN}[SRC]: \" + ${JQ_TIMESTAMP} + \" - \" + ."
+ *
  *
  * Note: `dst_stream_prefix` command option is dropped
  */
-export function processSrcData(cfg: FarosConfig): Promise<void> {
+
+// Processing the source line by line
+export function processSrcDataByLine(line: string, outputStream: Writable, cfg: FarosConfig): void {
+  // Reformat the JSON message
+  function formatSrcMsg(json: any): string {
+    return `[SRC] - ${JSON.stringify(json)}`;
+  }
+  // skip empty lines
+  if (line.trim() === '') {
+    return;
+  }
+
+  try {
+    const data = JSON.parse(line);
+
+    // non RECORD and STATE type messages: print as stdout
+    // RECORD and STATE type messages: when the output is set to stdout
+    if ((data.type !== 'RECORD' && data.type !== 'STATE') || cfg.srcOutputFile === OutputStream.STDOUT) {
+      if (cfg.rawMessages) {
+        process.stdout.write(`${line}\n`);
+      } else {
+        logger.info(formatSrcMsg(data));
+      }
+    }
+    // RECORD and STATE type messages: write to output file
+    else {
+      outputStream.write(`${line}\n`);
+    }
+  } catch (error: any) {
+    throw new Error(`Line of data: '${line}'; Error: ${error.message}`);
+  }
+}
+
+export function processSrcInputFile(tmpDir: string, cfg: FarosConfig): Promise<void> {
   return new Promise((resolve, reject) => {
-    // Reformat the JSON message
-    function formatSrcMsg(json: any): string {
-      return `[SRC] - ${JSON.stringify(json)}`;
-    }
-
-    // Processing the source line by line
-    function processLine(line: string): void {
-      // skip empty lines
-      if (line.trim() === '') {
-        return;
-      }
-
-      try {
-        const data = JSON.parse(line);
-
-        // non RECORD and STATE type messages: print as stdout
-        if (data.type !== 'RECORD' && data.type !== 'STATE') {
-          logger.info(formatSrcMsg(data));
-        }
-        // RECORD and STATE type messages: logger or write to output file
-        else {
-          if (cfg.srcOutputFile === OutputStream.STDOUT) {
-            logger.info(formatSrcMsg(data));
-          } else {
-            outputStream.write(`${line}\n`);
-          }
-        }
-      } catch (error: any) {
-        rl.emit('error', new Error(`Line of data: '${line}'; Error: ${error.message}`));
-      }
-    }
-
-    // Close the output stream if it's a file
-    function closeOutputStream(): void {
-      if (!isOutputStream(cfg.srcOutputFile)) {
-        outputStream.end();
-      }
-      logger.debug(`Closing the output stream file '${cfg.srcOutputFile}'.`);
-    }
-
-    // get source data file and output file paths
-    const srcInputFilePath = cfg.srcInputFile ?? SRC_INPUT_DATA_FILE;
-    const srcOutputFilePath = cfg.srcOutputFile ?? SRC_OUTPUT_DATA_FILE;
-
     // create input and output streams:
-    // - input stream: read from the data file user provided or the one the script created in the temporary directory
-    // - output stream: write to a file or stdout. Overwrite the file if it exists, otherwise create a new one
-    const inputStream = createReadStream(srcInputFilePath);
-    const outputStream: any =
-      cfg.srcOutputFile === OutputStream.STDOUT ? process.stdout : createWriteStream(srcOutputFilePath);
+    // - input stream: read from the data file user provided
+    // - output stream: write to an intermediate file. Overwrite the file if it exists, otherwise create a new one
+    const inputStream = createReadStream(cfg.srcInputFile!);
+    const outputStream = createWriteStream(`${tmpDir}/${SRC_OUTPUT_DATA_FILE}`);
 
     // create readline interface
     const rl = readline.createInterface({
@@ -284,20 +269,24 @@ export function processSrcData(cfg: FarosConfig): Promise<void> {
     });
 
     rl.on('line', (line) => {
-      processLine(line);
+      try {
+        processSrcDataByLine(line, outputStream, cfg);
+      } catch (error: any) {
+        rl.emit('error', error);
+      }
     })
       .on('close', () => {
         logger.debug('Finished processing the source output data.');
-        closeOutputStream();
+        outputStream.end();
         resolve();
       })
       .on('error', (error) => {
-        closeOutputStream();
+        outputStream.end();
         reject(new Error(`Failed to process the source output data: ${error.message ?? JSON.stringify(error)}`));
       });
 
     outputStream.on('error', (error: any) => {
-      closeOutputStream();
+      outputStream.end();
       reject(new Error(`Failed to write to the output file: ${error.message ?? JSON.stringify(error)}`));
     });
   });

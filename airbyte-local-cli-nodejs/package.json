@@ -54,8 +54,7 @@
     "dockerode": "^4.0.2",
     "lodash": "^4.17.21",
     "pino": "^9.6.0",
-    "pino-pretty": "^13.0.0",
-    "yoctocolors-cjs": "^2.1.2"
+    "pino-pretty": "^13.0.0"
   },
   "jest": {
     "silent": false,

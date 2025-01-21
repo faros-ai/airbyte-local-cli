@@ -1,9 +1,10 @@
-import {readdirSync, unlinkSync} from 'node:fs';
+import {readdirSync, readFileSync, rmSync, unlinkSync} from 'node:fs';
 import path from 'node:path';
 import {Writable} from 'node:stream';
 
 import {checkSrcConnection, pullDockerImage, runSrcSync} from '../src/docker';
 import {FarosConfig} from '../src/types';
+import {SRC_OUTPUT_DATA_FILE} from '../src/utils';
 
 const defaultConfig: FarosConfig = {
   srcCheckConnection: false,
@@ -48,13 +49,20 @@ describe('checkSrcConnection', () => {
   });
 });
 
-describe('runSrcSync', () => {
+describe.only('runSrcSync', () => {
   const testCfg: FarosConfig = {
     ...defaultConfig,
     src: {
       image: 'farosai/airbyte-example-source',
     },
   };
+
+  const testTmpDir = `${process.cwd()}/test/resources/dockerIt_runSrcSync`;
+
+  // remove the intermediate output file
+  afterEach(() => {
+    rmSync(`${testTmpDir}/${SRC_OUTPUT_DATA_FILE}`, {force: true});
+  });
 
   // Clean up files created by the test
   afterAll(() => {
@@ -69,10 +77,15 @@ describe('runSrcSync', () => {
   });
 
   it('should success', async () => {
-    await expect(runSrcSync(`${process.cwd()}/test/resources/dockerIt_runSrcSync`, testCfg)).resolves.not.toThrow();
+    await expect(runSrcSync(testTmpDir, testCfg)).resolves.not.toThrow();
+
+    // Replace timestamp for comparison
+    const output = readFileSync(`${testTmpDir}/${SRC_OUTPUT_DATA_FILE}`, 'utf8');
+    const outputWithoutTS = output.split('\n').map((line) => line.replace(/"timestamp":\d+/g, '"timestamp":***'));
+    expect(outputWithoutTS.join('\n')).toMatchSnapshot();
   });
 
-  // Check the error message is correctly redirect to process.stderr
+  // Check stderr message is correctly redirect to process.stderr
   it('should fail', async () => {
     // Capture process.stderr
     let stderrData = '';
@@ -87,7 +100,7 @@ describe('runSrcSync', () => {
 
     try {
       await expect(
-        runSrcSync(`${process.cwd()}/test/resources/dockerIt_runSrcSync`, {
+        runSrcSync(testTmpDir, {
           ...testCfg,
           src: {image: 'farosai/airbyte-faros-graphql-source'},
         }),

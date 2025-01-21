@@ -1,10 +1,18 @@
-import {writeFileSync} from 'node:fs';
+import {createWriteStream, writeFileSync} from 'node:fs';
 import {Writable} from 'node:stream';
 
 import Docker from 'dockerode';
 
 import {AirbyteConnectionStatus, AirbyteConnectionStatusMessage, AirbyteMessageType, FarosConfig} from './types';
-import {DEFAULT_STATE_FILE, logger, SRC_CATALOG_FILENAME, SRC_CONFIG_FILENAME} from './utils';
+import {
+  DEFAULT_STATE_FILE,
+  logger,
+  OutputStream,
+  processSrcDataByLine,
+  SRC_CATALOG_FILENAME,
+  SRC_CONFIG_FILENAME,
+  SRC_OUTPUT_DATA_FILE,
+} from './utils';
 
 // Constants
 const DEFAULT_MAX_LOG_SIZE = '10m';
@@ -119,10 +127,8 @@ export async function checkSrcConnection(tmpDir: string, image: string, srcConfi
  *    --config "/configs/$src_config_filename" \
  *    --catalog "/configs/$src_catalog_filename" \
  *    --state "/configs/$src_state_filename"
- *
- * @argument command - for testing purposes only
  */
-export async function runSrcSync(tmpDir: string, config: FarosConfig): Promise<string> {
+export async function runSrcSync(tmpDir: string, config: FarosConfig): Promise<void> {
   logger.info('Running source connector...');
 
   if (!config.src?.image) {
@@ -180,18 +186,28 @@ export async function runSrcSync(tmpDir: string, config: FarosConfig): Promise<s
     const cidfilePath = `tmp-${timestamp}-src_cid`;
     writeFileSync(cidfilePath, container.id);
 
+    // Create a writable stream for the processed output data
+    const srcOutputFilePath = config.srcOutputFile ?? `${tmpDir}/${SRC_OUTPUT_DATA_FILE}`;
+    const srcOutputStream =
+      config.srcOutputFile === OutputStream.STDOUT ? process.stdout : createWriteStream(srcOutputFilePath);
+
     // create a writable stream to capture the stdout
-    // TODO: write to a file instead of memory
-    let data = '';
-    const stdoutStream = new Writable({
+    let buffer = '';
+    const containerOutputStream = new Writable({
       write(chunk, _encoding, callback) {
-        data += chunk.toString();
+        buffer += chunk.toString();
+        const lines = buffer.split('\n');
+        buffer = lines.pop() ?? '';
+        lines.forEach((line: string) => {
+          processSrcDataByLine(line, srcOutputStream, config);
+        });
         callback();
       },
     });
+
     // Attach the stderr to termincal stderr, and stdout to the output stream
     const stream = await container.attach({stream: true, stdout: true, stderr: true});
-    container.modem.demuxStream(stream, stdoutStream, process.stderr);
+    container.modem.demuxStream(stream, containerOutputStream, process.stderr);
 
     // Start the container
     await container.start();
@@ -199,16 +215,12 @@ export async function runSrcSync(tmpDir: string, config: FarosConfig): Promise<s
     // Wait for the container to finish
     const res = await container.wait();
     logger.debug(res);
-    logger.debug(data);
 
     if (res.StatusCode === 0) {
       logger.info('Source connector ran successfully.');
     } else {
       throw new Error('Failed to run source connector.');
     }
-
-    // return the stdout data
-    return data;
   } catch (error: any) {
     throw new Error(`Failed to run source connector: ${error.message ?? JSON.stringify(error)}`);
   }

@@ -8,9 +8,9 @@ import {
   createTmpDir,
   FILENAME_PREFIX,
   loadStateFile,
-  OutputStream,
   parseConfigFile,
-  processSrcData,
+  processSrcInputFile,
+  SRC_OUTPUT_DATA_FILE,
   writeConfig,
 } from '../src/utils';
 
@@ -172,9 +172,10 @@ describe('write files to temporary dir', () => {
   });
 });
 
-describe('processSrcData', () => {
-  const testSrcInputFile = `${process.cwd()}/test/resources/test_src_input`;
-  const testSrcOutputFile = `${process.cwd()}/test/resources/test_src_output`;
+describe('processSrcInputFile', () => {
+  const tmpDir = `${process.cwd()}/test/resources`;
+  const testSrcInputFile = `${tmpDir}/test_src_input`;
+  const testSrcOutputFile = `${tmpDir}/${SRC_OUTPUT_DATA_FILE}`;
 
   afterEach(() => {
     rmSync(testSrcOutputFile, {force: true});
@@ -187,19 +188,10 @@ describe('processSrcData', () => {
       srcOutputFile: testSrcOutputFile,
     };
 
-    await expect(processSrcData(cfg)).resolves.not.toThrow();
+    await expect(processSrcInputFile(tmpDir, cfg)).resolves.not.toThrow();
 
     const output = readFileSync(testSrcOutputFile, 'utf8');
     expect(output).toMatchSnapshot();
-  });
-
-  it('should succeed writing to logger', async () => {
-    const cfg: FarosConfig = {
-      ...testConfig,
-      srcInputFile: testSrcInputFile,
-      srcOutputFile: OutputStream.STDOUT,
-    };
-    await expect(processSrcData(cfg)).resolves.not.toThrow();
   });
 
   it('should fail with processing error', async () => {
@@ -208,7 +200,7 @@ describe('processSrcData', () => {
       srcInputFile: `${process.cwd()}/test/resources/test_src_input_invalid_json`,
       srcOutputFile: '/dev/null',
     };
-    await expect(processSrcData(cfg)).rejects.toThrow(
+    await expect(processSrcInputFile(tmpDir, cfg)).rejects.toThrow(
       `Failed to process the source output data: Line of data: ` +
         `'invalid json'; Error: Unexpected token 'i', "invalid json" is not valid JSON`,
     );
@@ -222,6 +214,8 @@ describe('processSrcData', () => {
       srcInputFile: testSrcInputFile,
       srcOutputFile: testSrcOutputFile,
     };
-    await expect(processSrcData(cfg)).rejects.toThrow('Failed to write to the output file: EACCES: permission denied');
+    await expect(processSrcInputFile(tmpDir, cfg)).rejects.toThrow(
+      'Failed to write to the output file: EACCES: permission denied',
+    );
   });
 });

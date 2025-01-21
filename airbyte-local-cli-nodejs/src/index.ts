@@ -1,7 +1,7 @@
 import {parseAndValidateInputs} from './command';
 import {checkDockerInstalled, checkSrcConnection, pullDockerImage, runSrcSync} from './docker';
 import {AirbyteCliContext} from './types';
-import {cleanUp, createTmpDir, loadStateFile, logger, processSrcData, writeConfig} from './utils';
+import {cleanUp, createTmpDir, loadStateFile, logger, processSrcInputFile, writeConfig} from './utils';
 
 async function main(): Promise<void> {
   const context: AirbyteCliContext = {};
@@ -28,10 +28,9 @@ async function main(): Promise<void> {
     // Run airbyte source connector
     if (!cfg.srcInputFile) {
       await runSrcSync(context.tmpDir, cfg);
+    } else {
+      await processSrcInputFile(context.tmpDir, cfg);
     }
-
-    // Process source data
-    await processSrcData(cfg);
   } catch (error: any) {
     logger.error(error.message, 'Error');
     cleanUp(context);
