@@ -187,6 +187,7 @@ export async function runSrcSync(tmpDir: string, config: FarosConfig): Promise<v
     writeFileSync(cidfilePath, container.id);
 
     // Create a writable stream for the processed output data
+    // If srcOutputFile is not configured, write to the intermediate output file
     const srcOutputFilePath = config.srcOutputFile ?? `${tmpDir}/${SRC_OUTPUT_DATA_FILE}`;
     const srcOutputStream =
       config.srcOutputFile === OutputStream.STDOUT ? process.stdout : createWriteStream(srcOutputFilePath);

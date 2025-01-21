@@ -257,11 +257,13 @@ export function processSrcDataByLine(line: string, outputStream: Writable, cfg: 
   }
 }
 
+/**
+ * Process the source input file. (When `dstOnly` option flag is configured)
+ * Read the source input file line by line and process the data. Write to an intermidiate file.
+ */
 export function processSrcInputFile(tmpDir: string, cfg: FarosConfig): Promise<void> {
   return new Promise((resolve, reject) => {
-    // create input and output streams:
-    // - input stream: read from the data file user provided
-    // - output stream: write to an intermediate file. Overwrite the file if it exists, otherwise create a new one
+    // create input and output streams
     const inputStream = createReadStream(cfg.srcInputFile!);
     const outputStream = createWriteStream(`${tmpDir}/${SRC_OUTPUT_DATA_FILE}`);
 
