@@ -49,7 +49,7 @@ describe('checkSrcConnection', () => {
   });
 });
 
-describe.only('runSrcSync', () => {
+describe('runSrcSync', () => {
   const testCfg: FarosConfig = {
     ...defaultConfig,
     src: {
