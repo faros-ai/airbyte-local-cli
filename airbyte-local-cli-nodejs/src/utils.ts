@@ -51,6 +51,9 @@ export function parseConfigFile(configFilePath: string): {src: AirbyteConfig; ds
     };
 
     const validateConfig = (cfg: AirbyteConfig) => {
+      if (!cfg) {
+        return true;
+      }
       const allowedKeys = ['image', 'config', 'catalog', 'dockerOptions'];
       return Object.keys(cfg).every((key) => allowedKeys.includes(key));
     };
