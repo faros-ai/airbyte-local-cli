@@ -37,7 +37,7 @@ exports[`parseConfigFile should pass 1`] = `
 exports[`processSrcInputFile should succeed writing to an output file 1`] = `
 "{"state":{"data":{"format":"base64/gzip","data":"H4sIAAAAAAAAA6uuBQBDv6ajAgAAAA=="}},"type":"STATE","redactedConfig":{"user":"chris"},"sourceType":"example","sourceVersion":"0.12.3"}
 {"state":{"data":{"format":"base64/gzip","data":"H4sIAAAAAAAAA6uuBQBDv6ajAgAAAA=="}},"type":"STATE","sourceStatus":{"status":"SUCCESS"}}
-{"state":{"data":{"format":"base64/gzip","data":"H4sIAAAAAAAAA6uuBQBDv6ajAgAAAA=="}},"type":"STATE","logs":[{"timestamp":1736891682696,"message":{"level":30,"msg":"Source version: 0.12.3"}},{"timestamp":1736891682697,"message":{"level":30,"msg":"Config: {\\"user\\":\\"chris\\"}"}},{"timestamp":1736891682697,"message":{"level":30,"msg":"Catalog: {}"}},{"timestamp":1736891682697,"message":{"level":30,"msg":"State: {}"}},{"timestamp":1736891682700,"message":{"level":30,"msg":"Syncing ExampleSource"}},{"timestamp":1736891682704,"message":{"level":30,"msg":"Finished syncing ExampleSource"}}]}
+{"state":{"data":{"format":"base64/gzip","data":"H4sIAAAAAAAAA6uuBQBDv6ajAgAAAA=="}},"type":"STATE","logs":[{"timestamp":***,"message":{"level":30,"msg":"Source version: 0.12.3"}},{"timestamp":***,"message":{"level":30,"msg":"Config: {\\"user\\":\\"chris\\"}"}},{"timestamp":***,"message":{"level":30,"msg":"Catalog: {}"}},{"timestamp":***,"message":{"level":30,"msg":"State: {}"}},{"timestamp":***,"message":{"level":30,"msg":"Syncing ExampleSource"}},{"timestamp":***,"message":{"level":30,"msg":"Finished syncing ExampleSource"}}]}
 "
 `;
 

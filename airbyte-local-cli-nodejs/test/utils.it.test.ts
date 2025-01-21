@@ -191,7 +191,8 @@ describe('processSrcInputFile', () => {
     await expect(processSrcInputFile(tmpDir, cfg)).resolves.not.toThrow();
 
     const output = readFileSync(testSrcOutputFile, 'utf8');
-    expect(output).toMatchSnapshot();
+    const outputWithoutTS = output.split('\n').map((line) => line.replace(/"timestamp":\d+/g, '"timestamp":***'));
+    expect(outputWithoutTS.join('\n')).toMatchSnapshot();
   });
 
   it('should fail with processing error', async () => {
