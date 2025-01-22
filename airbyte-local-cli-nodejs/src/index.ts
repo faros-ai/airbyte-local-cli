@@ -22,7 +22,6 @@ async function main(): Promise<void> {
 
     // Create temporary directory, load state file, write config to files
     context.tmpDir = createTmpDir();
-    loadStateFile(context.tmpDir, cfg?.stateFile, cfg?.connectionName);
     writeConfig(context.tmpDir, cfg);
 
     // Pull source docker image
@@ -39,6 +38,7 @@ async function main(): Promise<void> {
     if (!cfg.srcInputFile) {
       await logImageVersion(ImageType.SRC, cfg.src?.image);
       cfg.dstStreamPrefix = generateDstStreamPrefix(cfg);
+      loadStateFile(context.tmpDir, cfg?.stateFile, cfg?.connectionName);
       await runSrcSync(context.tmpDir, cfg);
     } else {
       await processSrcInputFile(context.tmpDir, cfg);

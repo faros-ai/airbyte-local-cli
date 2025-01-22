@@ -119,6 +119,7 @@ export function createTmpDir(absTmpDir?: string): string {
 // Load the existing state file and write to the temporary folder
 export function loadStateFile(tempDir: string, filePath?: string, connectionName?: string): void {
   const path = filePath ?? (connectionName ? `${connectionName}__state.json` : DEFAULT_STATE_FILE);
+  logger.info(`Using state file: '${path}'`);
 
   // Read the state file and write to temp folder
   // Write an empty state file if the state file hasn't existed yet
