@@ -17,12 +17,17 @@ import {Writable} from 'node:stream';
 import pino from 'pino';
 import pretty from 'pino-pretty';
 
+import {inspectDockerImage} from './docker';
 import {AirbyteCliContext, AirbyteConfig, FarosConfig} from './types';
 
 // constants
 export enum OutputStream {
   STDERR = 'STDERR',
   STDOUT = 'STDOUT',
+}
+export enum ImageType {
+  SRC = 'source',
+  DST = 'destination',
 }
 export const FILENAME_PREFIX = 'faros_airbyte_cli';
 export const SRC_CONFIG_FILENAME = `${FILENAME_PREFIX}_src_config.json`;
@@ -38,6 +43,16 @@ export const logger = pino(pretty({colorize: true}));
 
 export function updateLogLevel(debug: boolean | undefined): void {
   logger.level = debug ? 'debug' : 'info';
+}
+
+// Log the docker image digest and version
+export async function logImageVersion(type: ImageType, image: string | undefined): Promise<void> {
+  if (image === undefined) {
+    return;
+  }
+  const {digest, version} = await inspectDockerImage(image);
+  logger.info(`Using ${type} image digest ${digest}`);
+  logger.info(`Using ${type} image version ${version}`);
 }
 
 // Read the config file and covert to AirbyteConfig
@@ -221,8 +236,6 @@ export function writeFile(file: string, data: any): void {
  *
  *  jq_src_msg="\"${GREEN}[SRC]: \" + ${JQ_TIMESTAMP} + \" - \" + ."
  *
- *
- * Note: `dst_stream_prefix` command option is dropped
  */
 
 // Processing the source line by line
@@ -250,7 +263,10 @@ export function processSrcDataByLine(line: string, outputStream: Writable, cfg: 
     }
     // RECORD and STATE type messages: write to output file
     else {
-      outputStream.write(`${line}\n`);
+      if (data?.record?.stream) {
+        data.record.stream = `${cfg.dstStreamPrefix ?? ''}${data.record.stream}`;
+      }
+      outputStream.write(`${JSON.stringify(data)}\n`);
     }
   } catch (error: any) {
     throw new Error(`Line of data: '${line}'; Error: ${error.message}`);
@@ -295,4 +311,28 @@ export function processSrcInputFile(tmpDir: string, cfg: FarosConfig): Promise<v
       reject(new Error(`Failed to write to the output file: ${error.message ?? JSON.stringify(error)}`));
     });
   });
+}
+
+export function generateDstStreamPrefix(cfg: FarosConfig): string {
+  let dst_stream_prefix = '';
+  const srcImage = cfg.src?.image;
+  const dstImage = cfg.dst?.image;
+  if (dstImage?.startsWith('farosai/airbyte-faros-destination')) {
+    // if source image is a faros feed image
+    if (
+      !cfg.connectionName &&
+      srcImage?.startsWith('farosai/airbyte-faros-feeds-source') &&
+      (cfg.src?.config as any)?.feed_cfg?.feed_name
+    ) {
+      cfg.connectionName = `${(cfg.src?.config as any)?.feed_cfg?.feed_name}-feed`;
+    }
+    // if image is an airbyte image
+    if (srcImage?.startsWith('farosai/airbyte')) {
+      const [imageName] = srcImage.split(':');
+      const imageParts = imageName?.split('-').slice(1, -1);
+      cfg.connectionName = `my${imageParts?.join('') ?? ''}src`;
+      dst_stream_prefix = `${cfg.connectionName}_${imageParts?.join('_') ?? ''}__`;
+    }
+  }
+  return dst_stream_prefix;
 }
