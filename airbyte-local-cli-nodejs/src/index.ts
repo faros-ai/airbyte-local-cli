@@ -37,7 +37,7 @@ async function main(): Promise<void> {
     // Run airbyte source connector
     if (!cfg.srcInputFile) {
       await logImageVersion(ImageType.SRC, cfg.src?.image);
-      cfg.dstStreamPrefix = generateDstStreamPrefix(cfg);
+      generateDstStreamPrefix(cfg);
       loadStateFile(context.tmpDir, cfg?.stateFile, cfg?.connectionName);
       await runSrcSync(context.tmpDir, cfg);
     } else {
