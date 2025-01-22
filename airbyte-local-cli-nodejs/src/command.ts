@@ -60,7 +60,11 @@ function command() {
       ).conflicts('srcOutputFile'),
     )
     .option('--src-output-file <path>', 'Write source output as a file (requires a destination)')
-    .option('--dst-only <file>', 'Use a file for destination input instead of a source')
+    .addOption(
+      new Option('--dst-only <file>', 'Use a file for destination input instead of a source')
+        .conflicts('srcOnly')
+        .conflicts('srcOutputFile'),
+    )
     .option('--dst-use-host-network', 'Use the host network when running the Airbyte destination')
     .option('--log-level <level>', 'Set level of source and destination loggers', 'info')
     .option('--raw-messages', 'Output raw Airbyte messages')
