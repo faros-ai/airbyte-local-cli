@@ -122,6 +122,16 @@ Describe 'Run source sync'
     The output should include "Failed to run source connector: Failed to run source connector."
     The status should equal 1
   End
+  It 'should succeed with srcOnly'
+    airbyte_local_test() {
+      ./airbyte-local \
+        --config-file './resources/test_config_file_src_only.json' \
+        --src-only
+    }
+    When call airbyte_local_test
+    The status should equal 0
+    The output should include "Source connector ran successfully."
+  End
 End
 
 # Clean up temeporary test files

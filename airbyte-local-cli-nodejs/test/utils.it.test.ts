@@ -1,4 +1,4 @@
-import {existsSync, mkdtempSync, readFileSync, rmSync} from 'node:fs';
+import {chmodSync, existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 
 import {FarosConfig} from '../src/types';
@@ -9,8 +9,50 @@ import {
   FILENAME_PREFIX,
   loadStateFile,
   parseConfigFile,
+  processSrcInputFile,
+  SRC_OUTPUT_DATA_FILE,
   writeConfig,
 } from '../src/utils';
+
+const testConfig: FarosConfig = {
+  src: {
+    image: 'farosai/airbyte-test-source',
+    config: {
+      username: 'test',
+      password: 'test',
+      url: 'test',
+    },
+    catalog: {
+      tests: {disabled: true},
+      projects: {disabled: true},
+    },
+  },
+  dst: {
+    image: 'farosai/airbyte-test-destination',
+    config: {
+      edition_config: {
+        graph: 'default',
+        edition: 'cloud',
+        api_url: 'https://test.api.faros.ai',
+      },
+    },
+  },
+
+  // default values
+  srcCheckConnection: false,
+  dstUseHostNetwork: false,
+  srcPull: false,
+  dstPull: false,
+  fullRefresh: false,
+  rawMessages: false,
+  keepContainers: false,
+  logLevel: 'info',
+  debug: false,
+  stateFile: undefined,
+  connectionName: undefined,
+  srcOutputFile: undefined,
+  srcInputFile: undefined,
+};
 
 describe('parseConfigFile', () => {
   it('should pass', () => {
@@ -76,46 +118,6 @@ describe('write files to temporary dir', () => {
   });
 
   describe('writeConfig', () => {
-    const testConfig: FarosConfig = {
-      src: {
-        image: 'farosai/airbyte-test-source',
-        config: {
-          username: 'test',
-          password: 'test',
-          url: 'test',
-        },
-        catalog: {
-          tests: {disabled: true},
-          projects: {disabled: true},
-        },
-      },
-      dst: {
-        image: 'farosai/airbyte-test-destination',
-        config: {
-          edition_config: {
-            graph: 'default',
-            edition: 'cloud',
-            api_url: 'https://test.api.faros.ai',
-          },
-        },
-      },
-
-      // default values
-      srcCheckConnection: false,
-      dstUseHostNetwork: false,
-      srcPull: false,
-      dstPull: false,
-      fullRefresh: false,
-      rawMessages: false,
-      keepContainers: false,
-      logLevel: 'info',
-      debug: false,
-      stateFile: undefined,
-      connectionName: undefined,
-      srcOutputFile: undefined,
-      srcInputFile: undefined,
-    };
-
     afterEach(() => {
       rmSync(`${FILENAME_PREFIX}_config.json`, {force: true});
       rmSync(`${tmpDirPath}/${FILENAME_PREFIX}_src_config.json`, {force: true});
@@ -151,7 +153,7 @@ describe('write files to temporary dir', () => {
 
     it('should alter config if debug is enabled', () => {
       const testConfigDebug = {...structuredClone(testConfig), debug: true};
-      (testConfigDebug.src as any).image = 'farosai/airbyte-faros-feeds-source:v1';
+      testConfigDebug.src!.image = 'farosai/airbyte-faros-feeds-source:v1';
       expect(() => writeConfig(tmpDirPath, structuredClone(testConfigDebug))).not.toThrow();
       expect(existsSync(`${FILENAME_PREFIX}_config.json`)).toBe(true);
       expect(existsSync(`${tmpDirPath}/${FILENAME_PREFIX}_src_config.json`)).toBe(true);
@@ -167,5 +169,54 @@ describe('write files to temporary dir', () => {
         JSON.stringify(testConfigDebug.dst?.config, null, 2),
       );
     });
+  });
+});
+
+describe('processSrcInputFile', () => {
+  const tmpDir = `${process.cwd()}/test/resources`;
+  const testSrcInputFile = `${tmpDir}/test_src_input`;
+  const testSrcOutputFile = `${tmpDir}/${SRC_OUTPUT_DATA_FILE}`;
+
+  afterEach(() => {
+    rmSync(testSrcOutputFile, {force: true});
+  });
+
+  it('should succeed writing to an output file', async () => {
+    const cfg: FarosConfig = {
+      ...testConfig,
+      srcInputFile: testSrcInputFile,
+      srcOutputFile: testSrcOutputFile,
+    };
+
+    await expect(processSrcInputFile(tmpDir, cfg)).resolves.not.toThrow();
+
+    const output = readFileSync(testSrcOutputFile, 'utf8');
+    const outputWithoutTS = output.split('\n').map((line) => line.replace(/"timestamp":\d+/g, '"timestamp":***'));
+    expect(outputWithoutTS.join('\n')).toMatchSnapshot();
+  });
+
+  it('should fail with processing error', async () => {
+    const cfg: FarosConfig = {
+      ...testConfig,
+      srcInputFile: `${process.cwd()}/test/resources/test_src_input_invalid_json`,
+      srcOutputFile: '/dev/null',
+    };
+    await expect(processSrcInputFile(tmpDir, cfg)).rejects.toThrow(
+      `Failed to process the source output data: Line of data: ` +
+        `'invalid json'; Error: Unexpected token 'i', "invalid json" is not valid JSON`,
+    );
+  });
+
+  it('should fail with outstream error', async () => {
+    writeFileSync(testSrcOutputFile, 'test');
+    chmodSync(testSrcOutputFile, 0o544);
+    const cfg: FarosConfig = {
+      ...testConfig,
+      srcInputFile: testSrcInputFile,
+      srcOutputFile: testSrcOutputFile,
+    };
+    await expect(processSrcInputFile(tmpDir, cfg)).rejects.toThrow(
+      'Failed to write to the output file: EACCES: permission denied',
+    );
   });
 });

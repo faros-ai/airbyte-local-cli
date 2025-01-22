@@ -1,0 +1,8 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`runSrcSync should success 1`] = `
+"{"state":{"data":{"format":"base64/gzip","data":"H4sIAAAAAAAAA6uuBQBDv6ajAgAAAA=="}},"type":"STATE","redactedConfig":{"user":"chris"},"sourceType":"example","sourceVersion":"0.12.4"}
+{"state":{"data":{"format":"base64/gzip","data":"H4sIAAAAAAAAA6uuBQBDv6ajAgAAAA=="}},"type":"STATE","sourceStatus":{"status":"SUCCESS"}}
+{"state":{"data":{"format":"base64/gzip","data":"H4sIAAAAAAAAA6uuBQBDv6ajAgAAAA=="}},"type":"STATE","logs":[{"timestamp":***,"message":{"level":30,"msg":"Source version: 0.12.4"}},{"timestamp":***,"message":{"level":30,"msg":"Config: {\\"user\\":\\"chris\\"}"}},{"timestamp":***,"message":{"level":30,"msg":"Catalog: {}"}},{"timestamp":***,"message":{"level":30,"msg":"State: {}"}},{"timestamp":***,"message":{"level":30,"msg":"Syncing ExampleSource"}},{"timestamp":***,"message":{"level":30,"msg":"Finished syncing ExampleSource"}}]}
+"
+`;

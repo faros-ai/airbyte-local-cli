@@ -1,7 +1,7 @@
 import {Command, Option} from 'commander';
 
 import {AirbyteConfig, AirbyteConfigInputType, CliOptions, FarosConfig} from './types';
-import {logger, parseConfigFile, updateLogLevel} from './utils';
+import {logger, OutputStream, parseConfigFile, updateLogLevel} from './utils';
 import {CLI_VERSION} from './version';
 
 // Command line program
@@ -187,9 +187,9 @@ export function parseAndValidateInputs(argv: string[]): FarosConfig {
 
   // Convert the cli options to FarosConfig
   const farosConfig: FarosConfig = {
-    // The default source output file is stdout if `srcOnly` is true
+    // The default source output file is stdout(`-`) if `srcOnly` is true
     // Take the non-default value if provided with `srcOutputFile` option
-    srcOutputFile: cliOptions.srcOnly ? '/dev/null' : cliOptions.srcOutputFile,
+    srcOutputFile: cliOptions.srcOnly ? OutputStream.STDOUT : cliOptions.srcOutputFile,
     // Rename the `dstOnly` file path to `srcInputFile`
     srcInputFile: cliOptions.dstOnly,
     connectionName: cliOptions.connectionName,

@@ -1,0 +1,8 @@
+{
+  "src": {
+    "image": "farosai/airbyte-example-source",
+    "config": {
+      "user": "chris"
+    }
+  }
+}
