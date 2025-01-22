@@ -264,7 +264,7 @@ export function processSrcDataByLine(line: string, outputStream: Writable, cfg: 
     }
     // RECORD and STATE type messages: write to output file
     else {
-      if (data?.record?.stream) {
+      if (data?.record?.stream && cfg.dstStreamPrefix) {
         data.record.stream = `${cfg.dstStreamPrefix ?? ''}${data.record.stream}`;
       }
       outputStream.write(`${JSON.stringify(data)}\n`);
