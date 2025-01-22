@@ -220,7 +220,7 @@ describe('Check other options', () => {
       ...defaultConfig,
       src: {image: 'source-image', config: {}},
       dst: {image: undefined, config: {}},
-      srcOutputFile: '/dev/null',
+      srcOutputFile: 'STDOUT',
       dstPull: false,
     });
   });

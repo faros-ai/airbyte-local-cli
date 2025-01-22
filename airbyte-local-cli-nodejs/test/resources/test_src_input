@@ -1,0 +1,9 @@
+{"log":{"level":"INFO","message":"Source version: 0.12.3"},"type":"LOG"}
+{"log":{"level":"INFO","message":"Config: {\"user\":\"chris\"}"},"type":"LOG"}
+{"log":{"level":"INFO","message":"Catalog: {}"},"type":"LOG"}
+{"log":{"level":"INFO","message":"State: {}"},"type":"LOG"}
+{"log":{"level":"INFO","message":"Syncing ExampleSource"},"type":"LOG"}
+{"state":{"data":{"format":"base64/gzip","data":"H4sIAAAAAAAAA6uuBQBDv6ajAgAAAA=="}},"type":"STATE","redactedConfig":{"user":"chris"},"sourceType":"example","sourceVersion":"0.12.3"}
+{"state":{"data":{"format":"base64/gzip","data":"H4sIAAAAAAAAA6uuBQBDv6ajAgAAAA=="}},"type":"STATE","sourceStatus":{"status":"SUCCESS"}}
+{"log":{"level":"INFO","message":"Finished syncing ExampleSource"},"type":"LOG"}
+{"state":{"data":{"format":"base64/gzip","data":"H4sIAAAAAAAAA6uuBQBDv6ajAgAAAA=="}},"type":"STATE","logs":[{"timestamp":1736891682696,"message":{"level":30,"msg":"Source version: 0.12.3"}},{"timestamp":1736891682697,"message":{"level":30,"msg":"Config: {\"user\":\"chris\"}"}},{"timestamp":1736891682697,"message":{"level":30,"msg":"Catalog: {}"}},{"timestamp":1736891682697,"message":{"level":30,"msg":"State: {}"}},{"timestamp":1736891682700,"message":{"level":30,"msg":"Syncing ExampleSource"}},{"timestamp":1736891682704,"message":{"level":30,"msg":"Finished syncing ExampleSource"}}]}
