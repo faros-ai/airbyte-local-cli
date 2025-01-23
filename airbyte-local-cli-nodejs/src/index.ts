@@ -1,7 +1,17 @@
 import {parseAndValidateInputs} from './command';
 import {checkDockerInstalled, checkSrcConnection, pullDockerImage, runSrcSync} from './docker';
 import {AirbyteCliContext} from './types';
-import {cleanUp, createTmpDir, loadStateFile, logger, processSrcInputFile, writeConfig} from './utils';
+import {
+  cleanUp,
+  createTmpDir,
+  generateDstStreamPrefix,
+  ImageType,
+  loadStateFile,
+  logger,
+  logImageVersion,
+  processSrcInputFile,
+  writeConfig,
+} from './utils';
 
 async function main(): Promise<void> {
   const context: AirbyteCliContext = {};
@@ -12,7 +22,6 @@ async function main(): Promise<void> {
 
     // Create temporary directory, load state file, write config to files
     context.tmpDir = createTmpDir();
-    loadStateFile(context.tmpDir, cfg?.stateFile, cfg?.connectionName);
     writeConfig(context.tmpDir, cfg);
 
     // Pull source docker image
@@ -27,6 +36,9 @@ async function main(): Promise<void> {
 
     // Run airbyte source connector
     if (!cfg.srcInputFile) {
+      await logImageVersion(ImageType.SRC, cfg.src?.image);
+      generateDstStreamPrefix(cfg);
+      loadStateFile(context.tmpDir, cfg?.stateFile, cfg?.connectionName);
       await runSrcSync(context.tmpDir, cfg);
     } else {
       await processSrcInputFile(context.tmpDir, cfg);

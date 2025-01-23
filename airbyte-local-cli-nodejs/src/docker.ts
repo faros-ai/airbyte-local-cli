@@ -50,6 +50,26 @@ export async function pullDockerImage(image: string): Promise<void> {
   }
 }
 
+export async function inspectDockerImage(image: string): Promise<{digest: string; version: string}> {
+  logger.debug(`Inspecting docker image: ${image}`);
+
+  try {
+    const imageInfo = await _docker.getImage(image).inspect();
+    logger.debug(`Docker image inspected: ${image}`);
+
+    const digest = imageInfo.RepoDigests[0];
+    const version = imageInfo.Config.Labels['io.airbyte.version'];
+
+    if (!digest || !version) {
+      throw new Error('RepoDigests or airbyte version label is missing.');
+    }
+    return {digest, version};
+  } catch (error: any) {
+    logger.error(`Failed to inspect docker image: ${image}`);
+    throw error;
+  }
+}
+
 /**
  * Spinning up a docker container to check the source connection.
  * `docker run --rm -v "$tempdir:/configs" $src_docker_options "$src_docker_image"

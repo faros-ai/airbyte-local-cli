@@ -70,6 +70,9 @@ export interface FarosConfig {
   keepContainers: boolean;
   logLevel: string;
   debug: boolean;
+
+  // internal use
+  dstStreamPrefix?: string;
 }
 
 /**
