@@ -169,31 +169,32 @@ export function overrideCatalog(
   defaultCatalog: AirbyteCatalog,
   fullRefresh = false,
 ): AirbyteConfiguredCatalog {
-  const streams = (catalog as AirbyteConfiguredCatalog).streams ?? [];
+  const streams = (catalog as AirbyteConfiguredCatalog)?.streams ?? [];
   const streamsMap = new Map(streams.map((stream) => [stream.stream.name, stream]));
 
   // overwrite the default catalog with user provided catalog
   const processedCatalog: AirbyteConfiguredCatalog = {
-    streams: defaultCatalog.streams
-      .filter((stream: AirbyteStream) => !streamsMap.get(stream.name)?.disabled)
-      .map((stream: AirbyteStream) => {
-        const incremental =
-          stream.supported_sync_modes?.includes(SyncMode.INCREMENTAL) &&
-          streamsMap.get(stream.name)?.sync_mode !== SyncMode.FULL_REFRESH &&
-          fullRefresh !== true;
+    streams:
+      defaultCatalog.streams
+        ?.filter((stream: AirbyteStream) => !streamsMap.get(stream.name)?.disabled)
+        ?.map((stream: AirbyteStream) => {
+          const incremental =
+            stream.supported_sync_modes?.includes(SyncMode.INCREMENTAL) &&
+            streamsMap.get(stream.name)?.sync_mode !== SyncMode.FULL_REFRESH &&
+            fullRefresh !== true;
 
-        return {
-          stream: {
-            name: stream.name,
-            json_schema: {},
-            ...(stream.supported_sync_modes && {supported_sync_modes: stream.supported_sync_modes}),
-          },
-          sync_mode: incremental ? SyncMode.INCREMENTAL : SyncMode.FULL_REFRESH,
-          destination_sync_mode:
-            streamsMap.get(stream.name)?.destination_sync_mode ??
-            (incremental ? DestinationSyncMode.APPEND : DestinationSyncMode.OVERWRITE),
-        };
-      }),
+          return {
+            stream: {
+              name: stream.name,
+              json_schema: {},
+              ...(stream.supported_sync_modes && {supported_sync_modes: stream.supported_sync_modes}),
+            },
+            sync_mode: incremental ? SyncMode.INCREMENTAL : SyncMode.FULL_REFRESH,
+            destination_sync_mode:
+              streamsMap.get(stream.name)?.destination_sync_mode ??
+              (incremental ? DestinationSyncMode.APPEND : DestinationSyncMode.OVERWRITE),
+          };
+        }) ?? [],
   };
 
   return processedCatalog;
@@ -231,8 +232,8 @@ export function writeConfig(tmpDir: string, config: FarosConfig): void {
   writeFileSync(srcConfigFilePath, JSON.stringify(airbyteConfig.src.config ?? {}, null, 2));
   writeFileSync(dstConfigFilePath, JSON.stringify(airbyteConfig.dst.config ?? {}, null, 2));
   logger.debug(`Airbyte config files written to: ${srcConfigFilePath}, ${dstConfigFilePath}`);
-  logger.debug(airbyteConfig.src.config, `Source config: `);
-  logger.debug(airbyteConfig.dst.config, `Destination config: `);
+  logger.debug(airbyteConfig.src.config ?? {}, `Source config: `);
+  logger.debug(airbyteConfig.dst.config ?? {}, `Destination config: `);
 }
 
 /**
@@ -267,8 +268,8 @@ export async function writeCatalog(tmpDir: string, config: FarosConfig): Promise
   writeFileSync(srcCatalogFilePath, JSON.stringify(srcCatalog ?? {}, null, 2));
   writeFileSync(dstCatalogFilePath, JSON.stringify(dstCatalog ?? {}, null, 2));
   logger.debug(`Airbyte catalog files written to: ${srcCatalogFilePath}, ${dstCatalogFilePath}`);
-  logger.debug(srcCatalog, `Source catalog: `);
-  logger.debug(dstCatalog, `Destination catalog: `);
+  logger.debug(srcCatalog ?? {}, `Source catalog: `);
+  logger.debug(dstCatalog ?? {}, `Destination catalog: `);
 }
 
 // Read file content

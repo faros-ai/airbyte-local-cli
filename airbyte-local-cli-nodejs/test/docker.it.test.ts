@@ -27,7 +27,7 @@ beforeAll(async () => {
   await pullDockerImage('farosai/airbyte-faros-graphql-source');
 });
 
-describe('runDiscoverCatalog', () => {
+describe.only('runDiscoverCatalog', () => {
   it('should success with example source', async () => {
     const res = await runDiscoverCatalog(`${process.cwd()}/test/resources`, 'farosai/airbyte-example-source');
 

@@ -119,7 +119,7 @@ Describe 'Run source sync'
     }
     When call airbyte_local_test
     The stderr should include "Faros API key was not provided"
-    The output should include "Failed to run source connector: Failed to run source connector."
+    The output should include "Failed to discover catalog"
     The status should equal 1
   End
   It 'should succeed with srcOnly'

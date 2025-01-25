@@ -179,15 +179,17 @@ export async function runDiscoverCatalog(tmpDir: string, image: string | undefin
       if (line.includes(AirbyteMessageType.CATALOG)) {
         rawCatalog = JSON.parse(line) as AirbyteCatalogMessage;
       } else {
-        process.stderr.write(`${line}\n`);
+        if (line) {
+          process.stderr.write(`${line}\n`);
+        }
       }
     });
 
     if (rawCatalog?.type === AirbyteMessageType.CATALOG && res[0].StatusCode === 0) {
       logger.info('Catalog discovered successfully.');
-      return rawCatalog.catalog;
+      return rawCatalog.catalog ?? {};
     }
-    throw new Error('Catalog not found or container ends with non-zero status code.');
+    throw new Error('Catalog not found or container ends with non-zero status code');
   } catch (error: any) {
     throw new Error(`Failed to discover catalog: ${error.message ?? JSON.stringify(error)}.`);
   }
