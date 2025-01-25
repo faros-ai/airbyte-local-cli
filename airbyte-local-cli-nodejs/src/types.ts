@@ -1,3 +1,5 @@
+import {Dictionary} from 'ts-essentials';
+
 export interface AirbyteCliContext {
   tmpDir?: string;
 }
@@ -102,4 +104,41 @@ export declare class AirbyteConnectionStatusMessage implements AirbyteMessage {
   };
   readonly type: AirbyteMessageType;
   constructor(connectionStatus: {status: AirbyteConnectionStatus; message?: string});
+}
+export enum SyncMode {
+  FULL_REFRESH = 'full_refresh',
+  INCREMENTAL = 'incremental',
+}
+export enum DestinationSyncMode {
+  APPEND = 'append',
+  OVERWRITE = 'overwrite',
+  APPEND_DEDUP = 'append_dedup',
+}
+export interface AirbyteStream {
+  name: string;
+  json_schema: Dictionary<any>;
+  supported_sync_modes?: SyncMode[];
+  source_defined_cursor?: boolean;
+  default_cursor_field?: string[];
+  source_defined_primary_key?: string[][];
+  namespace?: string;
+}
+export interface AirbyteCatalog {
+  streams: AirbyteStream[];
+}
+export declare class AirbyteCatalogMessage implements AirbyteMessage {
+  readonly catalog: AirbyteCatalog;
+  readonly type: AirbyteMessageType;
+  constructor(catalog: AirbyteCatalog);
+}
+export interface AirbyteConfiguredStream {
+  stream: AirbyteStream;
+  sync_mode: SyncMode;
+  cursor_field?: string[];
+  destination_sync_mode?: DestinationSyncMode;
+  primary_key?: string[][];
+  disabled?: boolean;
+}
+export interface AirbyteConfiguredCatalog {
+  streams: AirbyteConfiguredStream[];
 }

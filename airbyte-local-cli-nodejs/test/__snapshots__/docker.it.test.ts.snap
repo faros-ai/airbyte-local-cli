@@ -1,8 +1,113 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
+exports[`runDiscoverCatalog should success with example source 1`] = `
+{
+  "streams": [
+    {
+      "default_cursor_field": [
+        "updated_at",
+      ],
+      "json_schema": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "properties": {
+          "fields": {
+            "properties": {
+              "command": {
+                "type": "string",
+              },
+              "number": {
+                "type": "integer",
+              },
+            },
+            "type": "object",
+          },
+          "more_fields": {
+            "items": {
+              "properties": {
+                "name": {
+                  "type": "string",
+                },
+                "nested": {
+                  "properties": {
+                    "value": {
+                      "type": "string",
+                    },
+                  },
+                  "type": "object",
+                },
+                "value": {
+                  "type": [
+                    "string",
+                    "integer",
+                  ],
+                },
+              },
+              "type": "object",
+            },
+            "type": [
+              "null",
+              "array",
+            ],
+          },
+          "source": {
+            "type": "string",
+          },
+          "uid": {
+            "type": "string",
+          },
+          "updated_at": {
+            "type": "integer",
+          },
+        },
+        "type": "object",
+      },
+      "name": "builds",
+      "source_defined_cursor": true,
+      "source_defined_primary_key": [
+        [
+          "uid",
+        ],
+        [
+          "source",
+        ],
+      ],
+      "supported_sync_modes": [
+        "full_refresh",
+        "incremental",
+      ],
+    },
+  ],
+}
+`;
+
+exports[`runDiscoverCatalog should success with graphql source 1`] = `
+{
+  "streams": [
+    {
+      "default_cursor_field": [],
+      "json_schema": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "properties": {
+          "message": {
+            "type": "string",
+          },
+        },
+        "type": "object",
+      },
+      "name": "faros_graph",
+      "source_defined_cursor": true,
+      "supported_sync_modes": [
+        "full_refresh",
+        "incremental",
+      ],
+    },
+  ],
+}
+`;
+
 exports[`runSrcSync should success 1`] = `
-"{"state":{"data":{"format":"base64/gzip","data":"H4sIAAAAAAAAA6uuBQBDv6ajAgAAAA=="}},"type":"STATE","redactedConfig":{"user":"chris"},"sourceType":"example","sourceVersion":"0.12.4"}
+"{"state":{"data":{"format":"base64/gzip","data":"H4sIAAAAAAAAA6uuBQBDv6ajAgAAAA=="}},"type":"STATE","redactedConfig":{"user":"chris"},"sourceType":"example","sourceVersion":***}
 {"state":{"data":{"format":"base64/gzip","data":"H4sIAAAAAAAAA6uuBQBDv6ajAgAAAA=="}},"type":"STATE","sourceStatus":{"status":"SUCCESS"}}
-{"state":{"data":{"format":"base64/gzip","data":"H4sIAAAAAAAAA6uuBQBDv6ajAgAAAA=="}},"type":"STATE","logs":[{"timestamp":***,"message":{"level":30,"msg":"Source version: 0.12.4"}},{"timestamp":***,"message":{"level":30,"msg":"Config: {\\"user\\":\\"chris\\"}"}},{"timestamp":***,"message":{"level":30,"msg":"Catalog: {}"}},{"timestamp":***,"message":{"level":30,"msg":"State: {}"}},{"timestamp":***,"message":{"level":30,"msg":"Syncing ExampleSource"}},{"timestamp":***,"message":{"level":30,"msg":"Finished syncing ExampleSource"}}]}
+{"state":{"data":{"format":"base64/gzip","data":"H4sIAAAAAAAAA6uuBQBDv6ajAgAAAA=="}},"type":"STATE","logs":[{"timestamp":***,"message":{"level":30,"msg":"Source version: ***"}},{"timestamp":***,"message":{"level":30,"msg":"Config: {\\"user\\":\\"chris\\"}"}},{"timestamp":***,"message":{"level":30,"msg":"Catalog: {}"}},{"timestamp":***,"message":{"level":30,"msg":"State: {}"}},{"timestamp":***,"message":{"level":30,"msg":"Syncing ExampleSource"}},{"timestamp":***,"message":{"level":30,"msg":"Finished syncing ExampleSource"}}]}
 "
 `;

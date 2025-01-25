@@ -3,7 +3,14 @@ import {Writable} from 'node:stream';
 
 import Docker from 'dockerode';
 
-import {AirbyteConnectionStatus, AirbyteConnectionStatusMessage, AirbyteMessageType, FarosConfig} from './types';
+import {
+  AirbyteCatalog,
+  AirbyteCatalogMessage,
+  AirbyteConnectionStatus,
+  AirbyteConnectionStatusMessage,
+  AirbyteMessageType,
+  FarosConfig,
+} from './types';
 import {
   DEFAULT_STATE_FILE,
   logger,
@@ -127,6 +134,62 @@ export async function checkSrcConnection(tmpDir: string, image: string, srcConfi
     }
   } catch (error: any) {
     throw new Error(`Failed to validate source connection: ${error.message ?? JSON.stringify(error)}.`);
+  }
+}
+
+/**
+ * Get catalog configuration
+ *
+ * Docker cli command:
+ * docker run --rm -v "$tempdir:/configs" "$src_docker_image" discover \
+ *      --config "/configs/$src_config_filename"
+ */
+export async function runDiscoverCatalog(tmpDir: string, image: string | undefined): Promise<AirbyteCatalog> {
+  logger.info('Discovering catalog...');
+
+  if (!image) {
+    throw new Error('Source image is missing.');
+  }
+
+  try {
+    const command = ['discover', '--config', `/configs/${SRC_CONFIG_FILENAME}`];
+    const createOptions: Docker.ContainerCreateOptions = {
+      HostConfig: {
+        Binds: [`${tmpDir}:/configs`],
+        AutoRemove: true,
+      },
+      platform: 'linux/amd64',
+    };
+
+    // create a writable stream to capture the output
+    let data = '';
+    const outputStream = new Writable({
+      write(chunk, _encoding, callback) {
+        data += chunk.toString();
+        callback();
+      },
+    });
+
+    // docker run
+    const res = await _docker.run(image, command, outputStream, createOptions);
+
+    // capture catalog output
+    let rawCatalog: AirbyteCatalogMessage | undefined;
+    data.split('\n').forEach((line) => {
+      if (line.includes(AirbyteMessageType.CATALOG)) {
+        rawCatalog = JSON.parse(line) as AirbyteCatalogMessage;
+      } else {
+        process.stderr.write(`${line}\n`);
+      }
+    });
+
+    if (rawCatalog?.type === AirbyteMessageType.CATALOG && res[0].StatusCode === 0) {
+      logger.info('Catalog discovered successfully.');
+      return rawCatalog.catalog;
+    }
+    throw new Error('Catalog not found or container ends with non-zero status code.');
+  } catch (error: any) {
+    throw new Error(`Failed to discover catalog: ${error.message ?? JSON.stringify(error)}.`);
   }
 }
 

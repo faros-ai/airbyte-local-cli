@@ -1,7 +1,8 @@
 import {spawnSync} from 'node:child_process';
 import {readFileSync} from 'node:fs';
 
-import {checkDockerInstalled, parseConfigFile} from '../src/utils';
+import {AirbyteCatalog} from '../src/types';
+import {checkDockerInstalled, overrideCatalog, parseConfigFile} from '../src/utils';
 
 jest.mock('node:fs');
 jest.mock('node:child_process');
@@ -55,5 +56,76 @@ describe('checkDockerInstalled', () => {
   it('should fail if docker is not installed', () => {
     (spawnSync as jest.Mock).mockReturnValue({status: 1, error: {message: 'command not found'}});
     expect(() => checkDockerInstalled()).toThrow('Docker is not installed: command not found');
+  });
+});
+
+describe('overrideCatalog', () => {
+  const testDefaultCatalog = {
+    streams: [
+      {
+        default_cursor_field: ['updated_at'],
+        json_schema: {},
+        name: 'builds',
+        source_defined_cursor: true,
+        source_defined_primary_key: [['uid'], ['source']],
+        supported_sync_modes: ['full_refresh', 'incremental'],
+      },
+    ],
+  };
+  it('should succeed with empty catalog', () => {
+    expect(overrideCatalog({}, testDefaultCatalog as AirbyteCatalog)).toEqual({
+      streams: [
+        {
+          stream: {name: 'builds', supported_sync_modes: ['full_refresh', 'incremental'], json_schema: {}},
+          sync_mode: 'incremental',
+          destination_sync_mode: 'append',
+        },
+      ],
+    });
+  });
+
+  it('should succeed with full refresh command option', () => {
+    expect(overrideCatalog({}, testDefaultCatalog as AirbyteCatalog, true)).toEqual({
+      streams: [
+        {
+          stream: {name: 'builds', supported_sync_modes: ['full_refresh', 'incremental'], json_schema: {}},
+          sync_mode: 'full_refresh',
+          destination_sync_mode: 'overwrite',
+        },
+      ],
+    });
+  });
+
+  it('should succeed with full refresh catalog', () => {
+    const testCatalog = {
+      streams: [
+        {
+          stream: {name: 'builds'},
+          sync_mode: 'full_refresh',
+        },
+      ],
+    };
+    expect(overrideCatalog(testCatalog, testDefaultCatalog as AirbyteCatalog)).toEqual({
+      streams: [
+        {
+          stream: {name: 'builds', supported_sync_modes: ['full_refresh', 'incremental'], json_schema: {}},
+          sync_mode: 'full_refresh',
+          destination_sync_mode: 'overwrite',
+        },
+      ],
+    });
+  });
+
+  it('should succeed with disabled', () => {
+    const testCatalog = {
+      streams: [
+        {
+          stream: {name: 'builds'},
+          sync_mode: 'full_refresh',
+          disabled: true,
+        },
+      ],
+    };
+    expect(overrideCatalog(testCatalog, testDefaultCatalog as AirbyteCatalog)).toEqual({streams: []});
   });
 });
