@@ -2,7 +2,7 @@ import {readdirSync, readFileSync, rmSync, unlinkSync} from 'node:fs';
 import path from 'node:path';
 import {Writable} from 'node:stream';
 
-import {checkSrcConnection, pullDockerImage, runSrcSync} from '../src/docker';
+import {checkSrcConnection, pullDockerImage, runDiscoverCatalog, runSrcSync} from '../src/docker';
 import {FarosConfig} from '../src/types';
 import {SRC_OUTPUT_DATA_FILE} from '../src/utils';
 
@@ -25,6 +25,20 @@ const defaultConfig: FarosConfig = {
 beforeAll(async () => {
   await pullDockerImage('farosai/airbyte-example-source');
   await pullDockerImage('farosai/airbyte-faros-graphql-source');
+});
+
+describe('runDiscoverCatalog', () => {
+  it('should success with example source', async () => {
+    const res = await runDiscoverCatalog(`${process.cwd()}/test/resources`, 'farosai/airbyte-example-source');
+
+    expect(res).toMatchSnapshot();
+  });
+
+  it('should success with graphql source', async () => {
+    const res = await runDiscoverCatalog(`${process.cwd()}/test/resources`, 'farosai/airbyte-faros-graphql-source');
+
+    expect(res).toMatchSnapshot();
+  });
 });
 
 describe('checkSrcConnection', () => {
@@ -79,9 +93,14 @@ describe('runSrcSync', () => {
   it('should success', async () => {
     await expect(runSrcSync(testTmpDir, testCfg)).resolves.not.toThrow();
 
-    // Replace timestamp for comparison
+    // Replace timestamp and version for snapshot comparison
     const output = readFileSync(`${testTmpDir}/${SRC_OUTPUT_DATA_FILE}`, 'utf8');
-    const outputWithoutTS = output.split('\n').map((line) => line.replace(/"timestamp":\d+/g, '"timestamp":***'));
+    const outputWithoutTS = output.split('\n').map((line) => {
+      return line
+        .replace(/"timestamp":\d+/g, '"timestamp":***')
+        .replace(/"sourceVersion":"[\d.]+"/g, '"sourceVersion":***')
+        .replace(/Source version: [\d.]+/g, 'Source version: ***');
+    });
     expect(outputWithoutTS.join('\n')).toMatchSnapshot();
   });
 

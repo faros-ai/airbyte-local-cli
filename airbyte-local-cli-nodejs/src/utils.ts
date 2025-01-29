@@ -17,8 +17,17 @@ import {Writable} from 'node:stream';
 import pino from 'pino';
 import pretty from 'pino-pretty';
 
-import {inspectDockerImage} from './docker';
-import {AirbyteCliContext, AirbyteConfig, FarosConfig} from './types';
+import {inspectDockerImage, runDiscoverCatalog} from './docker';
+import {
+  AirbyteCatalog,
+  AirbyteCliContext,
+  AirbyteConfig,
+  AirbyteConfiguredCatalog,
+  AirbyteStream,
+  DestinationSyncMode,
+  FarosConfig,
+  SyncMode,
+} from './types';
 
 // constants
 export enum OutputStream {
@@ -30,6 +39,7 @@ export enum ImageType {
   DST = 'destination',
 }
 export const FILENAME_PREFIX = 'faros_airbyte_cli';
+export const CONFIG_FILE = `${FILENAME_PREFIX}_config.json`;
 export const SRC_CONFIG_FILENAME = `${FILENAME_PREFIX}_src_config.json`;
 export const DST_CONFIG_FILENAME = `${FILENAME_PREFIX}_dst_config.json`;
 export const SRC_CATALOG_FILENAME = `${FILENAME_PREFIX}_src_catalog.json`;
@@ -154,7 +164,45 @@ export function cleanUp(context: AirbyteCliContext): void {
   logger.info('Clean up completed.');
 }
 
-// Write Airbyte config and catalog to temporary dir and a json file
+export function overrideCatalog(
+  catalog: object,
+  defaultCatalog: AirbyteCatalog,
+  fullRefresh = false,
+): AirbyteConfiguredCatalog {
+  const streams = (catalog as AirbyteConfiguredCatalog)?.streams ?? [];
+  const streamsMap = new Map(streams.map((stream) => [stream.stream.name, stream]));
+
+  // overwrite the default catalog with user provided catalog
+  const processedCatalog: AirbyteConfiguredCatalog = {
+    streams:
+      defaultCatalog.streams
+        ?.filter((stream: AirbyteStream) => !streamsMap.get(stream.name)?.disabled)
+        ?.map((stream: AirbyteStream) => {
+          const incremental =
+            stream.supported_sync_modes?.includes(SyncMode.INCREMENTAL) &&
+            streamsMap.get(stream.name)?.sync_mode !== SyncMode.FULL_REFRESH &&
+            fullRefresh !== true;
+
+          return {
+            stream: {
+              name: stream.name,
+              json_schema: {},
+              ...(stream.supported_sync_modes && {supported_sync_modes: stream.supported_sync_modes}),
+            },
+            sync_mode: incremental ? SyncMode.INCREMENTAL : SyncMode.FULL_REFRESH,
+            destination_sync_mode:
+              streamsMap.get(stream.name)?.destination_sync_mode ??
+              (incremental ? DestinationSyncMode.APPEND : DestinationSyncMode.OVERWRITE),
+          };
+        }) ?? [],
+  };
+
+  return processedCatalog;
+}
+
+/**
+ * Write Airbyte config to temporary dir and a json file
+ */
 export function writeConfig(tmpDir: string, config: FarosConfig): void {
   const airbyteConfig = {
     src: config.src ?? ({} as AirbyteConfig),
@@ -164,9 +212,9 @@ export function writeConfig(tmpDir: string, config: FarosConfig): void {
   // write Airbyte config for user's reference
   // TODO: @FAI-14122 React secrets
   logger.debug(`Writing Airbyte config for user reference...`);
-  writeFileSync(`${FILENAME_PREFIX}_config.json`, JSON.stringify(airbyteConfig, null, 2));
+  writeFileSync(`${CONFIG_FILE}`, JSON.stringify(airbyteConfig, null, 2));
   logger.debug(airbyteConfig, `Airbyte config: `);
-  logger.debug(`Airbyte config written to: ${FILENAME_PREFIX}_config.json`);
+  logger.debug(`Airbyte config written to: ${CONFIG_FILE}`);
 
   // add config `feed_cfg.debug` if debug is enabled
   const regex = /^farosai\/airbyte-faros-feeds-source.*/;
@@ -184,22 +232,42 @@ export function writeConfig(tmpDir: string, config: FarosConfig): void {
   writeFileSync(srcConfigFilePath, JSON.stringify(airbyteConfig.src.config ?? {}, null, 2));
   writeFileSync(dstConfigFilePath, JSON.stringify(airbyteConfig.dst.config ?? {}, null, 2));
   logger.debug(`Airbyte config files written to: ${srcConfigFilePath}, ${dstConfigFilePath}`);
+  logger.debug(airbyteConfig.src.config ?? {}, `Source config: `);
+  logger.debug(airbyteConfig.dst.config ?? {}, `Destination config: `);
+}
 
-  // write catalog to temporary directory catalog files
-  // TODO: @FAI-14134 Discover catalog
+/**
+ * Write Airbyte catalog to temporary directory catalog files
+ */
+export async function writeCatalog(tmpDir: string, config: FarosConfig): Promise<void> {
   logger.debug(`Writing Airbyte catalog to files...`);
   const srcCatalogFilePath = `${tmpDir}${sep}${FILENAME_PREFIX}_src_catalog.json`;
   const dstCatalogFilePath = `${tmpDir}${sep}${FILENAME_PREFIX}_dst_catalog.json`;
-  if (
-    (!airbyteConfig.dst.catalog || Object.keys(airbyteConfig.dst.catalog).length === 0) &&
-    airbyteConfig.src.catalog &&
-    Object.keys(airbyteConfig.src.catalog).length > 0
-  ) {
-    airbyteConfig.dst.catalog = airbyteConfig.src.catalog;
+
+  // run discover catalog to get default catalog
+  const defaultCatalog = await runDiscoverCatalog(tmpDir, config.src?.image);
+
+  // src catalog: override the default with user provided catalog
+  const srcCatalog = overrideCatalog(config.src?.catalog ?? {}, defaultCatalog, config.fullRefresh);
+
+  // dst catalog: use src catalog or override default with user provided dst catalog
+  // append dst stream prefix to the stream name
+  let dstCatalog;
+  if (Object.keys((config.dst?.catalog as AirbyteCatalog)?.streams ?? []).length === 0) {
+    dstCatalog = structuredClone(srcCatalog);
+  } else {
+    dstCatalog = overrideCatalog(config.dst?.catalog ?? {}, defaultCatalog, config.fullRefresh);
   }
-  writeFileSync(srcCatalogFilePath, JSON.stringify(airbyteConfig.src.catalog ?? {}, null, 2));
-  writeFileSync(dstCatalogFilePath, JSON.stringify(airbyteConfig.dst.catalog ?? {}, null, 2));
+  dstCatalog.streams.forEach((stream) => {
+    stream.stream.name = `${config.dstStreamPrefix ?? ''}${stream.stream.name}`;
+  });
+
+  logger.debug(`Writing Airbyte catalog to files...`);
+  writeFileSync(srcCatalogFilePath, JSON.stringify(srcCatalog, null, 2));
+  writeFileSync(dstCatalogFilePath, JSON.stringify(dstCatalog, null, 2));
   logger.debug(`Airbyte catalog files written to: ${srcCatalogFilePath}, ${dstCatalogFilePath}`);
+  logger.debug(srcCatalog, `Source catalog: `);
+  logger.debug(dstCatalog, `Destination catalog: `);
 }
 
 // Read file content
@@ -314,6 +382,9 @@ export function processSrcInputFile(tmpDir: string, cfg: FarosConfig): Promise<v
   });
 }
 
+/**
+ * Update `dstStreamPrefix` and `connectionName` in the config based on the source image.
+ */
 export function generateDstStreamPrefix(cfg: FarosConfig): void {
   const srcImage = cfg.src?.image;
   const dstImage = cfg.dst?.image;

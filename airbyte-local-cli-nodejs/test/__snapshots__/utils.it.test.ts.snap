@@ -45,3 +45,117 @@ exports[`write files to temporary dir loadStateFile should pass with existing st
 "{"format":"base64/gzip","data":"dGVzdA=="}
 "
 `;
+
+exports[`write files to temporary dir writeCatalog should succeed with default only 1`] = `
+{
+  "streams": [
+    {
+      "destination_sync_mode": "append",
+      "stream": {
+        "json_schema": {},
+        "name": "builds",
+        "supported_sync_modes": [
+          "full_refresh",
+          "incremental",
+        ],
+      },
+      "sync_mode": "incremental",
+    },
+  ],
+}
+`;
+
+exports[`write files to temporary dir writeCatalog should succeed with default only 2`] = `
+{
+  "streams": [
+    {
+      "destination_sync_mode": "append",
+      "stream": {
+        "json_schema": {},
+        "name": "testPrefix__builds",
+        "supported_sync_modes": [
+          "full_refresh",
+          "incremental",
+        ],
+      },
+      "sync_mode": "incremental",
+    },
+  ],
+}
+`;
+
+exports[`write files to temporary dir writeCatalog should succeed with dst override 1`] = `
+{
+  "streams": [
+    {
+      "destination_sync_mode": "append",
+      "stream": {
+        "json_schema": {},
+        "name": "builds",
+        "supported_sync_modes": [
+          "full_refresh",
+          "incremental",
+        ],
+      },
+      "sync_mode": "incremental",
+    },
+  ],
+}
+`;
+
+exports[`write files to temporary dir writeCatalog should succeed with dst override 2`] = `
+{
+  "streams": [
+    {
+      "destination_sync_mode": "overwrite",
+      "stream": {
+        "json_schema": {},
+        "name": "testPrefix__builds",
+        "supported_sync_modes": [
+          "full_refresh",
+          "incremental",
+        ],
+      },
+      "sync_mode": "full_refresh",
+    },
+  ],
+}
+`;
+
+exports[`write files to temporary dir writeCatalog should succeed with src override 1`] = `
+{
+  "streams": [
+    {
+      "destination_sync_mode": "overwrite",
+      "stream": {
+        "json_schema": {},
+        "name": "builds",
+        "supported_sync_modes": [
+          "full_refresh",
+          "incremental",
+        ],
+      },
+      "sync_mode": "full_refresh",
+    },
+  ],
+}
+`;
+
+exports[`write files to temporary dir writeCatalog should succeed with src override 2`] = `
+{
+  "streams": [
+    {
+      "destination_sync_mode": "overwrite",
+      "stream": {
+        "json_schema": {},
+        "name": "testOverridePrefix__builds",
+        "supported_sync_modes": [
+          "full_refresh",
+          "incremental",
+        ],
+      },
+      "sync_mode": "full_refresh",
+    },
+  ],
+}
+`;

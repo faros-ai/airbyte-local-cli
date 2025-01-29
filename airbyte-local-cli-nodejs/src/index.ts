@@ -10,6 +10,7 @@ import {
   logger,
   logImageVersion,
   processSrcInputFile,
+  writeCatalog,
   writeConfig,
 } from './utils';
 
@@ -20,9 +21,12 @@ async function main(): Promise<void> {
     const cfg = parseAndValidateInputs(process.argv);
     await checkDockerInstalled();
 
-    // Create temporary directory, load state file, write config to files
+    // Create temporary directory, load state file, write config and catalog to files
     context.tmpDir = createTmpDir();
+    generateDstStreamPrefix(cfg);
+    loadStateFile(context.tmpDir, cfg?.stateFile, cfg?.connectionName);
     writeConfig(context.tmpDir, cfg);
+    await writeCatalog(context.tmpDir, cfg);
 
     // Pull source docker image
     if (cfg.srcPull && cfg.src?.image) {
@@ -37,8 +41,6 @@ async function main(): Promise<void> {
     // Run airbyte source connector
     if (!cfg.srcInputFile) {
       await logImageVersion(ImageType.SRC, cfg.src?.image);
-      generateDstStreamPrefix(cfg);
-      loadStateFile(context.tmpDir, cfg?.stateFile, cfg?.connectionName);
       await runSrcSync(context.tmpDir, cfg);
     } else {
       await processSrcInputFile(context.tmpDir, cfg);
