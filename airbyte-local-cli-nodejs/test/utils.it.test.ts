@@ -217,7 +217,7 @@ describe('write files to temporary dir', () => {
       expect(dstCatalog).toMatchSnapshot();
     });
 
-    it('should succeed with override', async () => {
+    it('should succeed with src override', async () => {
       const overrideCatalog = {
         streams: [
           {
@@ -242,6 +242,36 @@ describe('write files to temporary dir', () => {
       expect(dstCatalog.streams[0].sync_mode).toBe('full_refresh');
       expect(dstCatalog.streams[0].destination_sync_mode).toBe('overwrite');
       expect(dstCatalog.streams[0].stream.name).toBe('testOverridePrefix__builds');
+      expect(srcCatalog).toMatchSnapshot();
+      expect(dstCatalog).toMatchSnapshot();
+    });
+
+    it('should succeed with dst override', async () => {
+      const overrideSrcCatalog = {
+        streams: [
+          {
+            stream: {name: 'builds'},
+            sync_mode: 'incremental',
+          },
+        ],
+      };
+      const overrideDstCatalog = {streams: [{...overrideSrcCatalog.streams[0], sync_mode: 'full_refresh'}]};
+      const catalogTestConfig = {
+        ...structuredClone(testConfig),
+        src: {...testConfig.src, catalog: overrideSrcCatalog},
+        dst: {...testConfig.dst, catalog: overrideDstCatalog},
+        dstStreamPrefix: 'testPrefix__',
+      } as FarosConfig;
+      await writeCatalog(tmpDirPath, catalogTestConfig);
+
+      expect(existsSync(srcCatalogPath)).toBe(true);
+      expect(existsSync(dstCatalogPath)).toBe(true);
+      const srcCatalog = JSON.parse(readFileSync(srcCatalogPath, 'utf8'));
+      const dstCatalog = JSON.parse(readFileSync(dstCatalogPath, 'utf8'));
+      expect(srcCatalog.streams[0].sync_mode).toBe('incremental');
+      expect(srcCatalog.streams[0].destination_sync_mode).toBe('append');
+      expect(dstCatalog.streams[0].sync_mode).toBe('full_refresh');
+      expect(dstCatalog.streams[0].destination_sync_mode).toBe('overwrite');
       expect(srcCatalog).toMatchSnapshot();
       expect(dstCatalog).toMatchSnapshot();
     });
