@@ -176,13 +176,7 @@ describe('write files to temporary dir', () => {
     beforeAll(() => {
       writeFileSync(srcConfigPath, '{}');
     });
-    afterEach(() => {
-      rmSync(srcConfigPath, {force: true});
-      rmSync(srcCatalogPath, {force: true});
-      rmSync(dstCatalogPath, {force: true});
-    });
-
-    it('should write files', async () => {
+    beforeEach(() => {
       (runDiscoverCatalog as jest.Mock).mockResolvedValue({
         streams: [
           {
@@ -195,17 +189,61 @@ describe('write files to temporary dir', () => {
           },
         ],
       });
-      const testConfigWithCatalog = {
+    });
+    afterEach(() => {
+      rmSync(srcConfigPath, {force: true});
+      rmSync(srcCatalogPath, {force: true});
+      rmSync(dstCatalogPath, {force: true});
+    });
+
+    it('should succeed with default only', async () => {
+      const emptyCatalogTestConfig = {
         ...structuredClone(testConfig),
         src: {...testConfig.src, catalog: {}},
         dstStreamPrefix: 'testPrefix__',
       } as FarosConfig;
-      await writeCatalog(tmpDirPath, testConfigWithCatalog);
+      await writeCatalog(tmpDirPath, emptyCatalogTestConfig);
 
       expect(existsSync(srcCatalogPath)).toBe(true);
       expect(existsSync(dstCatalogPath)).toBe(true);
-      expect(readFileSync(srcCatalogPath, 'utf8')).toMatchSnapshot();
-      expect(readFileSync(dstCatalogPath, 'utf8')).toMatchSnapshot();
+      const srcCatalog = JSON.parse(readFileSync(srcCatalogPath, 'utf8'));
+      const dstCatalog = JSON.parse(readFileSync(dstCatalogPath, 'utf8'));
+      expect(srcCatalog.streams[0].sync_mode).toBe('incremental');
+      expect(srcCatalog.streams[0].destination_sync_mode).toBe('append');
+      expect(dstCatalog.streams[0].sync_mode).toBe('incremental');
+      expect(dstCatalog.streams[0].destination_sync_mode).toBe('append');
+      expect(dstCatalog.streams[0].stream.name).toBe('testPrefix__builds');
+      expect(srcCatalog).toMatchSnapshot();
+      expect(dstCatalog).toMatchSnapshot();
+    });
+
+    it('should succeed with override', async () => {
+      const overrideCatalog = {
+        streams: [
+          {
+            stream: {name: 'builds'},
+            sync_mode: 'full_refresh',
+          },
+        ],
+      };
+      const catalogTestConfig = {
+        ...structuredClone(testConfig),
+        src: {...testConfig.src, catalog: overrideCatalog},
+        dstStreamPrefix: 'testOverridePrefix__',
+      } as FarosConfig;
+      await writeCatalog(tmpDirPath, catalogTestConfig);
+
+      expect(existsSync(srcCatalogPath)).toBe(true);
+      expect(existsSync(dstCatalogPath)).toBe(true);
+      const srcCatalog = JSON.parse(readFileSync(srcCatalogPath, 'utf8'));
+      const dstCatalog = JSON.parse(readFileSync(dstCatalogPath, 'utf8'));
+      expect(srcCatalog.streams[0].sync_mode).toBe('full_refresh');
+      expect(srcCatalog.streams[0].destination_sync_mode).toBe('overwrite');
+      expect(dstCatalog.streams[0].sync_mode).toBe('full_refresh');
+      expect(dstCatalog.streams[0].destination_sync_mode).toBe('overwrite');
+      expect(dstCatalog.streams[0].stream.name).toBe('testOverridePrefix__builds');
+      expect(srcCatalog).toMatchSnapshot();
+      expect(dstCatalog).toMatchSnapshot();
     });
   });
 });
@@ -240,8 +278,7 @@ describe('processSrcInputFile', () => {
       srcOutputFile: '/dev/null',
     };
     await expect(processSrcInputFile(tmpDir, cfg)).rejects.toThrow(
-      `Failed to process the source output data: Line of data: ` +
-        `'invalid json'; Error: Unexpected token 'i', "invalid json" is not valid JSON`,
+      `Failed to process the source output data: Line of data: 'invalid json'`,
     );
   });
 

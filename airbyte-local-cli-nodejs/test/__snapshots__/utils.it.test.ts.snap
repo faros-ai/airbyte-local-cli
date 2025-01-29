@@ -46,40 +46,78 @@ exports[`write files to temporary dir loadStateFile should pass with existing st
 "
 `;
 
-exports[`write files to temporary dir writeCatalog should write files 1`] = `
-"{
+exports[`write files to temporary dir writeCatalog should succeed with default only 1`] = `
+{
   "streams": [
     {
+      "destination_sync_mode": "append",
       "stream": {
-        "name": "builds",
         "json_schema": {},
+        "name": "builds",
         "supported_sync_modes": [
           "full_refresh",
-          "incremental"
-        ]
+          "incremental",
+        ],
       },
       "sync_mode": "incremental",
-      "destination_sync_mode": "append"
-    }
-  ]
-}"
+    },
+  ],
+}
 `;
 
-exports[`write files to temporary dir writeCatalog should write files 2`] = `
-"{
+exports[`write files to temporary dir writeCatalog should succeed with default only 2`] = `
+{
   "streams": [
     {
+      "destination_sync_mode": "append",
       "stream": {
-        "name": "testPrefix__builds",
         "json_schema": {},
+        "name": "testPrefix__builds",
         "supported_sync_modes": [
           "full_refresh",
-          "incremental"
-        ]
+          "incremental",
+        ],
       },
       "sync_mode": "incremental",
-      "destination_sync_mode": "append"
-    }
-  ]
-}"
+    },
+  ],
+}
+`;
+
+exports[`write files to temporary dir writeCatalog should succeed with override 1`] = `
+{
+  "streams": [
+    {
+      "destination_sync_mode": "overwrite",
+      "stream": {
+        "json_schema": {},
+        "name": "builds",
+        "supported_sync_modes": [
+          "full_refresh",
+          "incremental",
+        ],
+      },
+      "sync_mode": "full_refresh",
+    },
+  ],
+}
+`;
+
+exports[`write files to temporary dir writeCatalog should succeed with override 2`] = `
+{
+  "streams": [
+    {
+      "destination_sync_mode": "overwrite",
+      "stream": {
+        "json_schema": {},
+        "name": "testOverridePrefix__builds",
+        "supported_sync_modes": [
+          "full_refresh",
+          "incremental",
+        ],
+      },
+      "sync_mode": "full_refresh",
+    },
+  ],
+}
 `;

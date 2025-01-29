@@ -165,7 +165,7 @@ export function cleanUp(context: AirbyteCliContext): void {
 }
 
 export function overrideCatalog(
-  catalog: object | undefined,
+  catalog: object,
   defaultCatalog: AirbyteCatalog,
   fullRefresh = false,
 ): AirbyteConfiguredCatalog {
@@ -244,32 +244,30 @@ export async function writeCatalog(tmpDir: string, config: FarosConfig): Promise
   const srcCatalogFilePath = `${tmpDir}${sep}${FILENAME_PREFIX}_src_catalog.json`;
   const dstCatalogFilePath = `${tmpDir}${sep}${FILENAME_PREFIX}_dst_catalog.json`;
 
-  // run discover catalog
+  // run discover catalog to get default catalog
   const defaultCatalog = await runDiscoverCatalog(tmpDir, config.src?.image);
 
-  // src catalog: override the default catalog with user provided catalog
-  const srcCatalog = overrideCatalog(config.src?.catalog, defaultCatalog, config.fullRefresh);
-  let dstCatalog;
+  // src catalog: override the default with user provided catalog
+  const srcCatalog = overrideCatalog(config.src?.catalog ?? {}, defaultCatalog, config.fullRefresh);
 
-  // dst catalog:
-  // if dst catalog is not provided, use the src catalog and append the prefix to the stream name
-  if (!config.dst?.catalog || Object.keys(config.dst.catalog).length === 0) {
+  // dst catalog: use src catalog or override default with user provided dst catalog
+  // append dst stream prefix to the stream name
+  let dstCatalog;
+  if (Object.keys((config.dst?.catalog as AirbyteCatalog)?.streams ?? []).length === 0) {
     dstCatalog = structuredClone(srcCatalog);
-    dstCatalog.streams.forEach((stream) => {
-      stream.stream.name = `${config.dstStreamPrefix ?? ''}${stream.stream.name}`;
-    });
+  } else {
+    dstCatalog = overrideCatalog(config.dst?.catalog ?? {}, defaultCatalog, config.fullRefresh);
   }
-  // if dst catalog is provided, override the default catalog with user provided catalog
-  else {
-    dstCatalog = overrideCatalog(config.dst?.catalog, defaultCatalog, config.fullRefresh);
-  }
+  dstCatalog.streams.forEach((stream) => {
+    stream.stream.name = `${config.dstStreamPrefix ?? ''}${stream.stream.name}`;
+  });
 
   logger.debug(`Writing Airbyte catalog to files...`);
-  writeFileSync(srcCatalogFilePath, JSON.stringify(srcCatalog ?? {}, null, 2));
-  writeFileSync(dstCatalogFilePath, JSON.stringify(dstCatalog ?? {}, null, 2));
+  writeFileSync(srcCatalogFilePath, JSON.stringify(srcCatalog, null, 2));
+  writeFileSync(dstCatalogFilePath, JSON.stringify(dstCatalog, null, 2));
   logger.debug(`Airbyte catalog files written to: ${srcCatalogFilePath}, ${dstCatalogFilePath}`);
-  logger.debug(srcCatalog ?? {}, `Source catalog: `);
-  logger.debug(dstCatalog ?? {}, `Destination catalog: `);
+  logger.debug(srcCatalog, `Source catalog: `);
+  logger.debug(dstCatalog, `Destination catalog: `);
 }
 
 // Read file content
