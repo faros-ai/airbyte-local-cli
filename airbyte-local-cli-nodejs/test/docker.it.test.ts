@@ -133,7 +133,7 @@ describe('runSrcSync', () => {
   });
 });
 
-describe.only('runDstSync', () => {
+describe('runDstSync', () => {
   const testCfg: FarosConfig = {
     ...defaultConfig,
     dst: {

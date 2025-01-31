@@ -382,7 +382,7 @@ export async function runDstSync(tmpDir: string, config: FarosConfig): Promise<v
         ...config.dst?.dockerOptions?.additionalOptions?.HostConfig,
         // Default options: cannot be overridden by users
         Binds: [`${tmpDir}:/configs`],
-        // AutoRemove: true,
+        AutoRemove: true,
         Init: true,
       },
     };

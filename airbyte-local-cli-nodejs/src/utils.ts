@@ -429,7 +429,7 @@ export function processDstDataByLine(line: string, cfg: FarosConfig): string {
 
     if (data?.type === 'STATE' && data?.state?.data) {
       state = JSON.stringify(data.state.data);
-      process.stdout.write(`State: ${state}`);
+      logger.debug(`State: ${state}`);
     }
     if (cfg.rawMessages) {
       process.stdout.write(`${line}\n`);
