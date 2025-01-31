@@ -127,7 +127,7 @@ export function createTmpDir(absTmpDir?: string): string {
 }
 
 // Load the existing state file and write to the temporary folder
-export function loadStateFile(tempDir: string, filePath?: string, connectionName?: string): void {
+export function loadStateFile(tempDir: string, filePath?: string, connectionName?: string): string {
   const path = filePath ?? (connectionName ? `${connectionName}__state.json` : DEFAULT_STATE_FILE);
   logger.info(`Using state file: '${path}'`);
 
@@ -149,6 +149,7 @@ export function loadStateFile(tempDir: string, filePath?: string, connectionName
     writeFileSync(`${tempDir}/${DEFAULT_STATE_FILE}`, '{}');
     logger.debug(`State file '${path}' not found. An empty state file will be created.`);
   }
+  return path;
 }
 
 export function cleanUp(context: AirbyteCliContext): void {
@@ -408,4 +409,36 @@ export function generateDstStreamPrefix(cfg: FarosConfig): void {
       logger.debug(`Using destination stream prefix: ${cfg.dstStreamPrefix}`);
     }
   }
+}
+
+export function processDstDataByLine(line: string, cfg: FarosConfig): string {
+  // reformat the JSON message
+  function formatDstMsg(json: any): string {
+    return `[DST] - ${JSON.stringify(json)}`;
+  }
+
+  let state = '';
+
+  // skip empty lines
+  if (line.trim() === '') {
+    return state;
+  }
+
+  try {
+    const data = JSON.parse(line);
+
+    if (data?.type === 'STATE' && data?.state?.data) {
+      state = JSON.stringify(data.state.data);
+      process.stdout.write(`State: ${state}`);
+    }
+    if (cfg.rawMessages) {
+      process.stdout.write(`${line}\n`);
+    } else {
+      logger.info(formatDstMsg(data));
+    }
+  } catch (error: any) {
+    // log as errors but not throw it
+    logger.error(`Line of data: '${line}'; Error: ${error.message}`);
+  }
+  return state;
 }

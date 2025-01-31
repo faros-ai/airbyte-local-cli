@@ -2,7 +2,7 @@ import {readdirSync, readFileSync, rmSync, unlinkSync} from 'node:fs';
 import path from 'node:path';
 import {Writable} from 'node:stream';
 
-import {checkSrcConnection, pullDockerImage, runDiscoverCatalog, runSrcSync} from '../src/docker';
+import {checkSrcConnection, pullDockerImage, runDiscoverCatalog, runDstSync, runSrcSync} from '../src/docker';
 import {FarosConfig} from '../src/types';
 import {SRC_OUTPUT_DATA_FILE} from '../src/utils';
 
@@ -25,6 +25,7 @@ const defaultConfig: FarosConfig = {
 beforeAll(async () => {
   await pullDockerImage('farosai/airbyte-example-source');
   await pullDockerImage('farosai/airbyte-faros-graphql-source');
+  await pullDockerImage('farosai/airbyte-faros-destination');
 });
 
 describe('runDiscoverCatalog', () => {
@@ -130,4 +131,48 @@ describe('runSrcSync', () => {
 
     expect(stderrData).toContain(`Faros API key was not provided`);
   });
+});
+
+describe.only('runDstSync', () => {
+  const testCfg: FarosConfig = {
+    ...defaultConfig,
+    dst: {
+      image: 'farosai/airbyte-faros-destination:0.12.5',
+    },
+    logLevel: 'debug',
+    debug: true,
+    stateFile: 'testConnectionName__state.json',
+  };
+  const testTmpDir = `${process.cwd()}/test/resources/dockerIt_runDstSync`;
+  const testStateFile = `testConnectionName__state.json`;
+
+  // Clean up files created by the test
+  afterAll(() => {
+    const pattern = /.*-dst_cid$/;
+    const files = readdirSync(process.cwd());
+    const matchingFiles = files.filter((file) => pattern.test(file));
+
+    matchingFiles.forEach((file) => {
+      const filePath = path.join(process.cwd(), file);
+      unlinkSync(filePath);
+    });
+
+    try {
+      unlinkSync(`${testStateFile}`);
+    } catch (_error) {
+      // ignore
+    }
+  });
+
+  it('should success', async () => {
+    await expect(runDstSync(testTmpDir, testCfg)).resolves.not.toThrow();
+
+    const stateData = readFileSync(testStateFile, 'utf8');
+    expect(JSON.parse(stateData).data).toBeTruthy();
+    expect(stateData).toMatchSnapshot();
+  }, 60000); // set a longer timeout for this test
+
+  it('should fail', async () => {
+    await expect(runDstSync(testTmpDir, testCfg)).rejects.toThrow('Failed to run destination connector');
+  }, 60000); // set a longer timeout for this test
 });

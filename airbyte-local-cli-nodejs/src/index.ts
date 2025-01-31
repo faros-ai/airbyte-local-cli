@@ -1,5 +1,5 @@
 import {parseAndValidateInputs} from './command';
-import {checkDockerInstalled, checkSrcConnection, pullDockerImage, runSrcSync} from './docker';
+import {checkDockerInstalled, checkSrcConnection, pullDockerImage, runDstSync, runSrcSync} from './docker';
 import {AirbyteCliContext} from './types';
 import {
   cleanUp,
@@ -24,7 +24,7 @@ async function main(): Promise<void> {
     // Create temporary directory, load state file, write config and catalog to files
     context.tmpDir = createTmpDir();
     generateDstStreamPrefix(cfg);
-    loadStateFile(context.tmpDir, cfg?.stateFile, cfg?.connectionName);
+    cfg.stateFile = loadStateFile(context.tmpDir, cfg?.stateFile, cfg?.connectionName);
     writeConfig(context.tmpDir, cfg);
     await writeCatalog(context.tmpDir, cfg);
 
@@ -45,6 +45,14 @@ async function main(): Promise<void> {
     } else {
       await processSrcInputFile(context.tmpDir, cfg);
     }
+
+    // Run airbyte destination connector
+    if (!cfg.srcOutputFile) {
+      await logImageVersion(ImageType.DST, cfg.dst?.image);
+      await runDstSync(context.tmpDir, cfg);
+    }
+
+    logger.info('Airbyte CLI completed successfully.');
   } catch (error: any) {
     logger.error(error.message, 'Error');
     cleanUp(context);

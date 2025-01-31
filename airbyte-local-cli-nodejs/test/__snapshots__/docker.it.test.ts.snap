@@ -105,6 +105,8 @@ exports[`runDiscoverCatalog should success with graphql source 1`] = `
 }
 `;
 
+exports[`runDstSync should success 1`] = `"{"format":"base64/gzip","data":"H4sIAAAAAAAAA6tWSkssyi+OTy9KLMhQsqpWyi9Kjw9JTcwFsYtS04pSizNSUxxLfDNzcjKLlawMzY0NzczNLI1NTC3NamtrAc6d5gdAAAAA"}"`;
+
 exports[`runSrcSync should success 1`] = `
 "{"state":{"data":{"format":"base64/gzip","data":"H4sIAAAAAAAAA6uuBQBDv6ajAgAAAA=="}},"type":"STATE","redactedConfig":{"user":"chris"},"sourceType":"example","sourceVersion":***}
 {"state":{"data":{"format":"base64/gzip","data":"H4sIAAAAAAAAA6uuBQBDv6ajAgAAAA=="}},"type":"STATE","sourceStatus":{"status":"SUCCESS"}}
