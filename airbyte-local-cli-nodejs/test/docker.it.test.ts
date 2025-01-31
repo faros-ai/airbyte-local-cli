@@ -137,7 +137,7 @@ describe('runDstSync', () => {
   const testCfg: FarosConfig = {
     ...defaultConfig,
     dst: {
-      image: 'farosai/airbyte-faros-destination:0.12.5',
+      image: 'farosai/airbyte-faros-destination',
     },
     logLevel: 'debug',
     debug: true,
