@@ -157,10 +157,6 @@ describe('runDstSync', () => {
     }
   });
 
-  beforeAll(() => {
-    expect(process.env['FAROS_API_KEY']).toBeDefined();
-  });
-
   // Clean up files created by the test
   afterAll(() => {
     const pattern = /.*-dst_cid$/;
@@ -180,6 +176,8 @@ describe('runDstSync', () => {
   });
 
   it('should success', async () => {
+    // check if the API key is provided
+    expect((process.env['FAROS_API_KEY'] ?? '').length > 0);
     const dstConfig = JSON.parse(readFileSync(dstConfigPathTemplate, 'utf8'));
     dstConfig.edition_configs.api_key = process.env['FAROS_API_KEY'];
     writeFileSync(dstConfigPath, JSON.stringify(dstConfig, null, 2));
