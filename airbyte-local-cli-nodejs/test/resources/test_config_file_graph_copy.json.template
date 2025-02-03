@@ -1,0 +1,25 @@
+{
+  "src": {
+    "image": "farosai/airbyte-faros-graphql-source",
+    "config": {
+      "api_url": "https://dev.api.faros.ai",
+      "api_key": "",
+      "graph": "faros",
+      "graphql_api": "v2",
+      "result_model": "Flat",
+      "models_filter": ["org_Team"]
+    }    
+  },
+  "dst": {
+    "image": "farosai/airbyte-faros-destination",
+    "config": {
+      "edition_configs": {
+        "edition": "cloud",
+        "graph": "jennie-test",
+        "graphql_api": "v2",
+        "api_url": "https://dev.api.faros.ai",
+        "api_key": ""
+      }
+    }
+  }
+}

@@ -134,6 +134,32 @@ Describe 'Run source sync'
   End
 End
 
+Describe 'Run source and destination sync'
+  It 'should succeed with src and dst'
+    airbyte_local_test() {
+
+      jq --arg api_key "$FAROS_API_KEY" '
+        .src.config.api_key = $api_key |
+        .dst.config.edition_configs.api_key = $api_key
+      ' ./resources/test_config_file_graph_copy.json.template > ./resources/test_config_file_graph_copy.json
+
+      ./airbyte-local \
+        --config-file './resources/test_config_file_graph_copy.json'
+    }
+    When call airbyte_local_test
+    The status should equal 0
+    The output should include "Source connector ran successfully."
+    The output should include '[DST] - {"log":{"level":"INFO","message":"Errored 0 records"},"type":"LOG"}'
+    The output should include "Destination connector ran successfully."
+    The output should include "Airbyte CLI completed successfully."
+  End
+End
+
 # Clean up temeporary test files
-find . -name 'faros_airbyte_cli_config.json' -delete
-find . -name '*-src_cid' -delete
+cleanup() {
+  find . -name 'faros_airbyte_cli_config.json' -delete
+  find . -name '*_cid' -delete
+  find . -name '*state.json' -delete
+  find ./resources/ -name 'test_config_file_graph_copy.json' -delete
+}
+AfterAll 'cleanup'
