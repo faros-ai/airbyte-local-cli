@@ -358,8 +358,6 @@ export async function processSrcInputFile(tmpDir: string, cfg: FarosConfig): Pro
   });
 
   const transform = new Transform({
-    readableObjectMode: true,
-    writableObjectMode: true,
     transform(chunk, _encoding, callback) {
       const line = chunk.toString();
       try {
