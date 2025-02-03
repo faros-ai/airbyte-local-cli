@@ -12,7 +12,8 @@ import {
 import {tmpdir} from 'node:os';
 import {sep} from 'node:path';
 import readline from 'node:readline';
-import {Writable} from 'node:stream';
+import {pipeline, Transform, Writable} from 'node:stream';
+import {promisify} from 'node:util';
 
 import pino from 'pino';
 import pretty from 'pino-pretty';
@@ -307,8 +308,6 @@ export function writeFile(file: string, data: any): void {
  *  jq_src_msg="\"${GREEN}[SRC]: \" + ${JQ_TIMESTAMP} + \" - \" + ."
  *
  */
-
-// Processing the source line by line
 export function processSrcDataByLine(line: string, outputStream: Writable, cfg: FarosConfig): void {
   // Reformat the JSON message
   function formatSrcMsg(json: any): string {
@@ -347,40 +346,36 @@ export function processSrcDataByLine(line: string, outputStream: Writable, cfg: 
  * Process the source input file. (When `dstOnly` option flag is configured)
  * Read the source input file line by line and process the data. Write to an intermidiate file.
  */
-export function processSrcInputFile(tmpDir: string, cfg: FarosConfig): Promise<void> {
-  return new Promise((resolve, reject) => {
-    // create input and output streams
-    const inputStream = createReadStream(cfg.srcInputFile!);
-    const outputStream = createWriteStream(`${tmpDir}/${SRC_OUTPUT_DATA_FILE}`);
+const pipelineAsync = promisify(pipeline);
+export async function processSrcInputFile(tmpDir: string, cfg: FarosConfig): Promise<void> {
+  // create input and output streams
+  const inputStream = createReadStream(cfg.srcInputFile!);
+  const outputStream = createWriteStream(`${tmpDir}/${SRC_OUTPUT_DATA_FILE}`);
 
-    // create readline interface
-    const rl = readline.createInterface({
-      input: inputStream,
-      crlfDelay: Infinity,
-    });
+  const rl = readline.createInterface({
+    input: inputStream,
+    crlfDelay: Infinity,
+  });
 
-    rl.on('line', (line) => {
+  const transform = new Transform({
+    readableObjectMode: true,
+    writableObjectMode: true,
+    transform(chunk, _encoding, callback) {
+      const line = chunk.toString();
       try {
         processSrcDataByLine(line, outputStream, cfg);
+        callback();
       } catch (error: any) {
-        rl.emit('error', error);
+        callback(error);
       }
-    })
-      .on('close', () => {
-        logger.debug('Finished processing the source output data.');
-        outputStream.end();
-        resolve();
-      })
-      .on('error', (error) => {
-        outputStream.end();
-        reject(new Error(`Failed to process the source output data: ${error.message ?? JSON.stringify(error)}`));
-      });
-
-    outputStream.on('error', (error: any) => {
-      outputStream.end();
-      reject(new Error(`Failed to write to the output file: ${error.message ?? JSON.stringify(error)}`));
-    });
+    },
   });
+
+  try {
+    await pipelineAsync(rl, transform, outputStream);
+  } catch (error: any) {
+    throw new Error(`Failed to process the source input file: ${error.message}`);
+  }
 }
 
 /**
