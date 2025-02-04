@@ -38,6 +38,8 @@ jobs:
 
       - name: Test
         working-directory: airbyte-local-cli-nodejs
+        env:
+          FAROS_API_KEY: ${{ secrets.FAROS_API_KEY }}
         run: npm run test -- --coverage --color
 
       - name: Package
@@ -64,6 +66,8 @@ jobs:
       # Run shellspec tests againgst airbyte-local nodejs
       - name: Run ShellSpec tests
         working-directory: airbyte-local-cli-nodejs
+        env:
+          FAROS_API_KEY: ${{ secrets.FAROS_API_KEY }}
         run: |
           cp ./out/pkg/airbyte-local ./test/exec/airbyte-local
           cp -rf ./test/resources ./test/exec/resources

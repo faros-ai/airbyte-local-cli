@@ -308,7 +308,7 @@ describe('processSrcInputFile', () => {
       srcOutputFile: '/dev/null',
     };
     await expect(processSrcInputFile(tmpDir, cfg)).rejects.toThrow(
-      `Failed to process the source output data: Line of data: 'invalid json'`,
+      `Failed to process the source input file: Line of data: 'invalid json'`,
     );
   });
 
@@ -321,7 +321,7 @@ describe('processSrcInputFile', () => {
       srcOutputFile: testSrcOutputFile,
     };
     await expect(processSrcInputFile(tmpDir, cfg)).rejects.toThrow(
-      'Failed to write to the output file: EACCES: permission denied',
+      'Failed to process the source input file: EACCES: permission denied,',
     );
   });
 });

@@ -1,4 +1,4 @@
-import {createWriteStream, writeFileSync} from 'node:fs';
+import {createReadStream, createWriteStream, writeFileSync} from 'node:fs';
 import {Writable} from 'node:stream';
 
 import Docker from 'dockerode';
@@ -13,8 +13,11 @@ import {
 } from './types';
 import {
   DEFAULT_STATE_FILE,
+  DST_CATALOG_FILENAME,
+  DST_CONFIG_FILENAME,
   logger,
   OutputStream,
+  processDstDataByLine,
   processSrcDataByLine,
   SRC_CATALOG_FILENAME,
   SRC_CONFIG_FILENAME,
@@ -309,5 +312,137 @@ export async function runSrcSync(tmpDir: string, config: FarosConfig): Promise<v
     }
   } catch (error: any) {
     throw new Error(`Failed to run source connector: ${error.message ?? JSON.stringify(error)}`);
+  }
+}
+
+/**
+ * Spinning up a docker container to run destination airbyte connector.
+ *
+ * Docker cli command:
+ * docker run \
+ *   --name $dst_container_name \
+ *   $dst_use_host_network \
+ *   $max_memory $max_cpus \
+ *   --cidfile="$tempPrefix-dst_cid" \
+ *   -i --init \
+ *   -v "$tempdir:/configs" \
+ *   --log-opt max-size="$max_log_size" -a stdout -a stderr -a stdin \
+ *   --env LOG_LEVEL="$log_level" \
+ *   $dst_docker_options \
+ *   "$dst_docker_image" \
+ *   write \
+ *   --config "/configs/$dst_config_filename" \
+ *   --catalog "/configs/$dst_catalog_filename"
+ *
+ */
+export async function runDstSync(tmpDir: string, config: FarosConfig): Promise<void> {
+  logger.info('Running destination connector...');
+
+  if (!config.dst?.image) {
+    throw new Error('Destination image is missing.');
+  }
+
+  try {
+    const timestamp = Date.now();
+    const dstContainerName = `airbyte-local-dst-${timestamp}`;
+    const cmd = [
+      'write',
+      '--config',
+      `/configs/${DST_CONFIG_FILENAME}`,
+      '--catalog',
+      `/configs/${DST_CATALOG_FILENAME}`,
+    ];
+    const maxNanoCpus = config.dst?.dockerOptions?.maxCpus;
+    const maxMemory = config.dst?.dockerOptions?.maxMemory;
+    const createOptions: Docker.ContainerCreateOptions = {
+      // Default config: can be overridden by the docker options provided by users
+      name: dstContainerName,
+      Image: config.dst.image,
+      ...config.dst?.dockerOptions?.additionalOptions,
+
+      // Default options: cannot be overridden by users
+      Cmd: cmd,
+      AttachStdout: true,
+      AttachStderr: true,
+      AttachStdin: true,
+      OpenStdin: true,
+      StdinOnce: true,
+      platform: 'linux/amd64',
+      Env: [`LOG_LEVEL=${config.logLevel}`, ...(config.dst?.dockerOptions?.additionalOptions?.Env || [])],
+      HostConfig: {
+        // Defautl host config: can be overridden by users
+        NanoCpus: maxNanoCpus, // 1e9 nano cpus = 1 cpu
+        Memory: maxMemory, // 1024 * 1024 bytes = 1MB
+        LogConfig: {
+          Type: 'json-file',
+          Config: {
+            'max-size': config.dst?.dockerOptions?.maxLogSize ?? DEFAULT_MAX_LOG_SIZE,
+          },
+        },
+        ...config.dst?.dockerOptions?.additionalOptions?.HostConfig,
+        // Default options: cannot be overridden by users
+        Binds: [`${tmpDir}:/configs`],
+        AutoRemove: true,
+        Init: true,
+      },
+    };
+
+    // Create the Docker container
+    const container = await _docker.createContainer(createOptions);
+
+    // Write the container ID to the cidfile
+    const cidfilePath = `tmp-${timestamp}-dst_cid`;
+    writeFileSync(cidfilePath, container.id);
+
+    // create a writable stream to capture the stdout
+    let buffer = '';
+    const states: string[] = [];
+    const containerOutputStream = new Writable({
+      write(chunk, _encoding, callback) {
+        buffer += chunk.toString();
+        const lines = buffer.split('\n');
+        buffer = lines.pop() ?? '';
+        lines.forEach((line: string) => {
+          const maybeState = processDstDataByLine(line, config);
+          if (maybeState) {
+            states.push(maybeState);
+          }
+        });
+        callback();
+      },
+    });
+
+    // Attach stdout to the output stream, stderr to terminal stderr
+    const outputStream = await container.attach({stream: true, stdout: true, stderr: true});
+    container.modem.demuxStream(outputStream, containerOutputStream, process.stderr);
+
+    // Create a readable stream from the src output file and pipe it to the container stdin
+    const inputStream = createReadStream(`${tmpDir}/${SRC_OUTPUT_DATA_FILE}`);
+    const stdinStream = await container.attach({stream: true, hijack: true, stdin: true});
+    inputStream.pipe(stdinStream);
+
+    // Start the container
+    await container.start();
+
+    // Wait for the container to finish
+    const res = await container.wait();
+    logger.debug(res);
+
+    if (res.StatusCode === 0) {
+      logger.info('Destination connector ran successfully.');
+
+      // Write the state file
+      const lastState = states.pop();
+      if (lastState) {
+        writeFileSync(`${config.stateFile}`, lastState);
+        logger.debug(`New state is udpated in '${config.stateFile}'.`);
+      } else {
+        logger.warn('No new state is generated.');
+      }
+    } else {
+      throw new Error(`Exit with ${JSON.stringify(res)}`);
+    }
+  } catch (error: any) {
+    throw new Error(`Failed to run destination connector: ${error.message ?? JSON.stringify(error)}`);
   }
 }

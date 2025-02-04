@@ -1,10 +1,10 @@
-import {readdirSync, readFileSync, rmSync, unlinkSync} from 'node:fs';
+import {copyFileSync, readdirSync, readFileSync, rmSync, unlinkSync, writeFileSync} from 'node:fs';
 import path from 'node:path';
 import {Writable} from 'node:stream';
 
-import {checkSrcConnection, pullDockerImage, runDiscoverCatalog, runSrcSync} from '../src/docker';
+import {checkSrcConnection, pullDockerImage, runDiscoverCatalog, runDstSync, runSrcSync} from '../src/docker';
 import {FarosConfig} from '../src/types';
-import {SRC_OUTPUT_DATA_FILE} from '../src/utils';
+import {DST_CONFIG_FILENAME, SRC_OUTPUT_DATA_FILE} from '../src/utils';
 
 const defaultConfig: FarosConfig = {
   srcCheckConnection: false,
@@ -25,6 +25,7 @@ const defaultConfig: FarosConfig = {
 beforeAll(async () => {
   await pullDockerImage('farosai/airbyte-example-source');
   await pullDockerImage('farosai/airbyte-faros-graphql-source');
+  await pullDockerImage('farosai/airbyte-faros-destination');
 });
 
 describe('runDiscoverCatalog', () => {
@@ -130,4 +131,67 @@ describe('runSrcSync', () => {
 
     expect(stderrData).toContain(`Faros API key was not provided`);
   });
+});
+
+describe('runDstSync', () => {
+  const testCfg: FarosConfig = {
+    ...defaultConfig,
+    dst: {
+      image: 'farosai/airbyte-faros-destination',
+    },
+    logLevel: 'debug',
+    debug: true,
+    stateFile: 'testConnectionName__state.json',
+  };
+  const testTmpDir = `${process.cwd()}/test/resources/dockerIt_runDstSync`;
+  const testStateFile = `testConnectionName__state.json`;
+  const dstConfigPath = `${testTmpDir}/${DST_CONFIG_FILENAME}`;
+  const dstConfigPathTemplate = `${testTmpDir}/${DST_CONFIG_FILENAME}.template`;
+
+  // remove config file that might contain credentials
+  afterEach(() => {
+    try {
+      unlinkSync(dstConfigPath);
+    } catch (_error) {
+      // ignore
+    }
+  });
+
+  // Clean up files created by the test
+  afterAll(() => {
+    const pattern = /.*-dst_cid$/;
+    const files = readdirSync(process.cwd());
+    const matchingFiles = files.filter((file) => pattern.test(file));
+
+    matchingFiles.forEach((file) => {
+      const filePath = path.join(process.cwd(), file);
+      unlinkSync(filePath);
+    });
+
+    try {
+      unlinkSync(testStateFile);
+    } catch (_error) {
+      // ignore
+    }
+  });
+
+  it('should success', async () => {
+    // check if the API key is provided
+    expect((process.env['FAROS_API_KEY'] ?? '').length > 0);
+    const dstConfig = JSON.parse(readFileSync(dstConfigPathTemplate, 'utf8'));
+    dstConfig.edition_configs.api_key = process.env['FAROS_API_KEY'];
+    writeFileSync(dstConfigPath, JSON.stringify(dstConfig, null, 2));
+
+    await expect(runDstSync(testTmpDir, testCfg)).resolves.not.toThrow();
+
+    const stateData = readFileSync(testStateFile, 'utf8');
+    expect(JSON.parse(stateData).data).toBeTruthy();
+    expect(stateData).toMatchSnapshot();
+  }, 60000);
+
+  it('should fail', async () => {
+    copyFileSync(dstConfigPathTemplate, dstConfigPath);
+
+    await expect(runDstSync(testTmpDir, testCfg)).rejects.toThrow('Failed to run destination connector');
+  }, 60000);
 });
