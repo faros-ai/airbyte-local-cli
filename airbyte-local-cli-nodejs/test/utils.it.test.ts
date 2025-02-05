@@ -38,7 +38,7 @@ const testConfig: FarosConfig = {
   dst: {
     image: 'farosai/airbyte-test-destination',
     config: {
-      edition_config: {
+      edition_configs: {
         graph: 'default',
         edition: 'cloud',
         api_url: 'https://test.api.faros.ai',
@@ -150,8 +150,8 @@ describe('write files to temporary dir', () => {
       expect(readFileSync(CONFIG_FILE, 'utf8')).toEqual(
         JSON.stringify({src: testConfig.src, dst: testConfig.dst}, null, 2),
       );
-      expect(readFileSync(srcConfigPath, 'utf8')).toEqual(JSON.stringify(testConfig.src?.config, null, 2));
-      expect(readFileSync(dstConfigPath, 'utf8')).toEqual(JSON.stringify(testConfig.dst?.config, null, 2));
+      expect(readFileSync(srcConfigPath, 'utf8')).toEqual(JSON.stringify(testConfig.src?.config));
+      expect(readFileSync(dstConfigPath, 'utf8')).toEqual(JSON.stringify(testConfig.dst?.config));
     });
 
     it('should alter config if debug is enabled', () => {
@@ -166,9 +166,41 @@ describe('write files to temporary dir', () => {
         JSON.stringify({src: testConfigDebug.src, dst: testConfigDebug.dst}, null, 2),
       );
       expect(readFileSync(srcConfigPath, 'utf8')).toEqual(
-        JSON.stringify({...testConfigDebug.src?.config, feed_cfg: {debug: true}}, null, 2),
+        JSON.stringify({...testConfigDebug.src?.config, feed_cfg: {debug: true}}),
       );
-      expect(readFileSync(dstConfigPath, 'utf8')).toEqual(JSON.stringify(testConfigDebug.dst?.config, null, 2));
+      expect(readFileSync(dstConfigPath, 'utf8')).toEqual(JSON.stringify(testConfigDebug.dst?.config));
+    });
+
+    it('should alter config with feeds source image', () => {
+      const testConfigFeeds = structuredClone(testConfig);
+      testConfigFeeds.src!.image = 'farosai/airbyte-faros-feeds-source';
+      testConfigFeeds.dst!.image = 'farosai/airbyte-faros-destination';
+
+      expect(() => writeConfig(tmpDirPath, structuredClone(testConfigFeeds))).not.toThrow();
+      expect(existsSync(CONFIG_FILE)).toBe(true);
+      expect(existsSync(srcConfigPath)).toBe(true);
+      expect(existsSync(dstConfigPath)).toBe(true);
+
+      expect(JSON.parse(readFileSync(srcConfigPath, 'utf8'))).toEqual({
+        ...testConfigFeeds.src?.config,
+        faros: {graph: 'default', api_url: 'https://test.api.faros.ai'},
+      });
+      expect(readFileSync(dstConfigPath, 'utf8')).toEqual(JSON.stringify(testConfigFeeds.dst?.config));
+    });
+
+    it('should succeed with empty dst config', () => {
+      const testConfigFeeds = structuredClone(testConfig);
+      testConfigFeeds.src!.image = 'farosai/airbyte-faros-feeds-source';
+      testConfigFeeds.dst!.image = 'farosai/airbyte-faros-destination';
+      testConfigFeeds.dst!.config = {};
+
+      expect(() => writeConfig(tmpDirPath, structuredClone(testConfigFeeds))).not.toThrow();
+      expect(existsSync(CONFIG_FILE)).toBe(true);
+      expect(existsSync(srcConfigPath)).toBe(true);
+      expect(existsSync(dstConfigPath)).toBe(true);
+
+      expect(readFileSync(srcConfigPath, 'utf8')).toEqual(JSON.stringify(testConfigFeeds.src?.config));
+      expect(readFileSync(dstConfigPath, 'utf8')).toEqual(JSON.stringify(testConfigFeeds.dst?.config));
     });
   });
 
