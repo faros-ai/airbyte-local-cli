@@ -257,7 +257,7 @@ export function writeConfig(tmpDir: string, config: FarosConfig): void {
   // TODO: @FAI-14122 React secrets
   logger.debug(`Writing Airbyte config for user reference...`);
   writeFileSync(`${CONFIG_FILE}`, JSON.stringify(airbyteConfig, null, 2));
-  logger.debug(airbyteConfig, `Airbyte config: `);
+  logger.debug(`Airbyte config: ${JSON.stringify(airbyteConfig)}`);
   logger.debug(`Airbyte config written to: ${CONFIG_FILE}`);
 
   // add config `feed_cfg.debug` if debug is enabled
@@ -280,9 +280,9 @@ export function writeConfig(tmpDir: string, config: FarosConfig): void {
   const dstConfigFilePath = `${tmpDir}${sep}${FILENAME_PREFIX}_dst_config.json`;
   writeFileSync(srcConfigFilePath, JSON.stringify(airbyteConfig.src.config ?? {}));
   writeFileSync(dstConfigFilePath, JSON.stringify(airbyteConfig.dst.config ?? {}));
+  logger.debug(`Source config: ${JSON.stringify(airbyteConfig.src.config ?? {})}`);
+  logger.debug(`Destination config: ${JSON.stringify(airbyteConfig.dst.config ?? {})}`);
   logger.debug(`Airbyte config files written to: ${srcConfigFilePath}, ${dstConfigFilePath}`);
-  logger.debug(airbyteConfig.src.config ?? {}, `Source config: `);
-  logger.debug(airbyteConfig.dst.config ?? {}, `Destination config: `);
 }
 
 /**
@@ -322,9 +322,9 @@ export async function writeCatalog(tmpDir: string, config: FarosConfig): Promise
   logger.debug(`Writing Airbyte catalog to files...`);
   writeFileSync(srcCatalogFilePath, JSON.stringify(srcCatalog));
   writeFileSync(dstCatalogFilePath, JSON.stringify(dstCatalog));
+  logger.debug(`Source catalog: ${JSON.stringify(srcCatalog)}`);
+  logger.debug(`Destination catalog: ${JSON.stringify(dstCatalog)}`);
   logger.debug(`Airbyte catalog files written to: ${srcCatalogFilePath}, ${dstCatalogFilePath}`);
-  logger.debug(srcCatalog, `Source catalog: `);
-  logger.debug(dstCatalog, `Destination catalog: `);
 }
 
 // Read file content
@@ -477,7 +477,7 @@ export function processDstDataByLine(line: string, cfg: FarosConfig): string {
 
     if (data?.type === 'STATE' && data?.state?.data) {
       state = JSON.stringify(data.state.data);
-      logger.debug(`State: ${state}`);
+      logger.debug(formatDstMsg(data));
     }
     if (cfg.rawMessages) {
       process.stdout.write(`${line}\n`);

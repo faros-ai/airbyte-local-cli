@@ -126,8 +126,6 @@ function parseSrcAndDstConfig(argv: string[]) {
       }
     }
   });
-  logger.debug('Source Config:', srcConfig);
-  logger.debug('Destination Config:', dstConfig);
   return {srcConfig, dstConfig};
 }
 
@@ -181,9 +179,9 @@ export function parseAndValidateInputs(argv: string[]): FarosConfig {
 
   // Get the options
   const options = program.opts();
-  logger.debug({options}, 'Options');
+  logger.debug(`Options: ${JSON.stringify(options)}`);
   const cliOptions = convertToCliOptions(options);
-  logger.debug({cliOptions}, 'Cli options');
+  logger.debug(`Cli options: ${JSON.stringify(cliOptions)}`);
 
   // Convert the cli options to FarosConfig
   const farosConfig: FarosConfig = {

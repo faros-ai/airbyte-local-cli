@@ -38,7 +38,7 @@ export function setDocker(docker: Docker): void {
 export async function checkDockerInstalled(): Promise<void> {
   try {
     await _docker.version();
-    logger.debug('Docker is installed and running.');
+    logger.info('Docker is installed and running.');
   } catch (error: any) {
     logger.error('Docker is not installed or running.');
     throw error;
@@ -303,7 +303,7 @@ export async function runSrcSync(tmpDir: string, config: FarosConfig): Promise<v
 
     // Wait for the container to finish
     const res = await container.wait();
-    logger.debug(res);
+    logger.debug(`Source connector exit code: ${res}`);
 
     if (res.StatusCode === 0) {
       logger.info('Source connector ran successfully.');
@@ -426,7 +426,7 @@ export async function runDstSync(tmpDir: string, config: FarosConfig): Promise<v
 
     // Wait for the container to finish
     const res = await container.wait();
-    logger.debug(res);
+    logger.debug(`Destination connector exit code: ${res}`);
 
     if (res.StatusCode === 0) {
       logger.info('Destination connector ran successfully.');
