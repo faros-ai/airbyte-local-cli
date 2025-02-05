@@ -2,7 +2,7 @@ import {spawnSync} from 'node:child_process';
 import {readFileSync} from 'node:fs';
 
 import {AirbyteCatalog} from '../src/types';
-import {checkDockerInstalled, overrideCatalog, parseConfigFile} from '../src/utils';
+import {checkDockerInstalled, overrideCatalog, parseConfigFile, updateSrcConfigWithFarosConfig} from '../src/utils';
 
 jest.mock('node:fs');
 jest.mock('node:child_process');
@@ -56,6 +56,81 @@ describe('checkDockerInstalled', () => {
   it('should fail if docker is not installed', () => {
     (spawnSync as jest.Mock).mockReturnValue({status: 1, error: {message: 'command not found'}});
     expect(() => checkDockerInstalled()).toThrow('Docker is not installed: command not found');
+  });
+});
+
+describe('updateSrcConfigWithFarosConfig', () => {
+  it('should succeed', () => {
+    const testAirbyteConfig = {
+      src: {
+        image: 'farosai/airbyte-faros-feeds-source',
+        config: {
+          testKey: 'testValue',
+        },
+      },
+      dst: {
+        image: 'farosai/airbyte-faros-destination',
+        config: {
+          edition_configs: {
+            api_url: 'api-url',
+            api_key: 'api-key',
+          },
+        },
+      },
+    };
+    updateSrcConfigWithFarosConfig(testAirbyteConfig);
+    expect(testAirbyteConfig.src.config).toEqual({
+      testKey: 'testValue',
+      faros: {
+        api_url: 'api-url',
+        api_key: 'api-key',
+      },
+    });
+  });
+
+  it('should succeed with no dst faros api settings', () => {
+    const testAirbyteConfig = {
+      src: {
+        image: 'farosai/airbyte-faros-feeds-source',
+        config: {
+          testKey: 'testValue',
+        },
+      },
+      dst: {
+        image: 'farosai/airbyte-faros-destination',
+        config: {
+          testKey: {},
+        },
+      },
+    };
+    updateSrcConfigWithFarosConfig(testAirbyteConfig);
+    expect(testAirbyteConfig.src.config).toEqual({
+      testKey: 'testValue',
+    });
+  });
+
+  it('should skip with non feed src image', () => {
+    const testAirbyteConfig = {
+      src: {
+        image: 'farosai/airbyte-example-source',
+        config: {
+          testKey: 'testValue',
+        },
+      },
+      dst: {
+        image: 'farosai/airbyte-faros-destination',
+        config: {
+          edition_configs: {
+            api_url: 'api-url',
+            api_key: 'api-key',
+          },
+        },
+      },
+    };
+    updateSrcConfigWithFarosConfig(testAirbyteConfig);
+    expect(testAirbyteConfig.src.config).toEqual({
+      testKey: 'testValue',
+    });
   });
 });
 

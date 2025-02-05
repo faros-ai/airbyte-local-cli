@@ -15,6 +15,7 @@ import readline from 'node:readline';
 import {pipeline, Transform, Writable} from 'node:stream';
 import {promisify} from 'node:util';
 
+import {isNil, omitBy} from 'lodash';
 import pino from 'pino';
 import pretty from 'pino-pretty';
 
@@ -203,6 +204,46 @@ export function overrideCatalog(
 }
 
 /**
+ * Copy Faros API settings from destination config to source config.
+ * This is for users' convenience so that they don't have to provide the same settings
+ * in both source and destination configs.
+ */
+export function updateSrcConfigWithFarosConfig(airbyteConfig: {src: AirbyteConfig; dst: AirbyteConfig}): void {
+  const srcDockerImage = airbyteConfig.src?.image;
+  const dstDockerImage = airbyteConfig.dst?.image;
+  const dstConfig = airbyteConfig.dst?.config as any;
+
+  if (
+    srcDockerImage?.startsWith('farosai/airbyte-faros-feeds-source') &&
+    dstDockerImage?.startsWith('farosai/airbyte-faros-destination')
+  ) {
+    // take Faros API settings from destination config
+    const farosApiConfig: any = {
+      api_key: dstConfig?.edition_configs?.api_key,
+      api_url: dstConfig?.edition_configs?.api_url,
+      graph: dstConfig?.edition_configs?.graph,
+      graph_api: dstConfig?.edition_configs?.graph_api,
+    };
+    const compactFarosApiConfig = omitBy(farosApiConfig, isNil);
+    if (Object.entries(compactFarosApiConfig).length === 0) {
+      return;
+    }
+
+    const debugLog = JSON.stringify({faros: compactFarosApiConfig}).replace(
+      compactFarosApiConfig?.['api_key'],
+      'REDACTED',
+    );
+    logger.debug(`Updating source config with Faros API settings from destination config: ${debugLog}`);
+
+    // merge Faros API config into source config
+    airbyteConfig.src.config = {
+      ...airbyteConfig.src.config,
+      faros: compactFarosApiConfig,
+    };
+  }
+}
+
+/**
  * Write Airbyte config to temporary dir and a json file
  */
 export function writeConfig(tmpDir: string, config: FarosConfig): void {
@@ -227,12 +268,17 @@ export function writeConfig(tmpDir: string, config: FarosConfig): void {
     };
   }
 
+  // if not running source only, copy faros api settings from destination config to source config
+  if (!config.srcOutputFile) {
+    updateSrcConfigWithFarosConfig(airbyteConfig);
+  }
+
   // write config to temporary directory config files
   logger.debug(`Writing Airbyte config to files...`);
   const srcConfigFilePath = `${tmpDir}${sep}${SRC_CONFIG_FILENAME}`;
   const dstConfigFilePath = `${tmpDir}${sep}${FILENAME_PREFIX}_dst_config.json`;
-  writeFileSync(srcConfigFilePath, JSON.stringify(airbyteConfig.src.config ?? {}, null, 2));
-  writeFileSync(dstConfigFilePath, JSON.stringify(airbyteConfig.dst.config ?? {}, null, 2));
+  writeFileSync(srcConfigFilePath, JSON.stringify(airbyteConfig.src.config ?? {}));
+  writeFileSync(dstConfigFilePath, JSON.stringify(airbyteConfig.dst.config ?? {}));
   logger.debug(`Airbyte config files written to: ${srcConfigFilePath}, ${dstConfigFilePath}`);
   logger.debug(airbyteConfig.src.config ?? {}, `Source config: `);
   logger.debug(airbyteConfig.dst.config ?? {}, `Destination config: `);
@@ -273,8 +319,8 @@ export async function writeCatalog(tmpDir: string, config: FarosConfig): Promise
   });
 
   logger.debug(`Writing Airbyte catalog to files...`);
-  writeFileSync(srcCatalogFilePath, JSON.stringify(srcCatalog, null, 2));
-  writeFileSync(dstCatalogFilePath, JSON.stringify(dstCatalog, null, 2));
+  writeFileSync(srcCatalogFilePath, JSON.stringify(srcCatalog));
+  writeFileSync(dstCatalogFilePath, JSON.stringify(dstCatalog));
   logger.debug(`Airbyte catalog files written to: ${srcCatalogFilePath}, ${dstCatalogFilePath}`);
   logger.debug(srcCatalog, `Source catalog: `);
   logger.debug(dstCatalog, `Destination catalog: `);
