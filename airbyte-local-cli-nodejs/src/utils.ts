@@ -131,13 +131,14 @@ export function createTmpDir(absTmpDir?: string): string {
 // Load the existing state file and write to the temporary folder
 export function loadStateFile(tempDir: string, filePath?: string, connectionName?: string): string {
   const path = filePath ?? (connectionName ? `${connectionName}__state.json` : DEFAULT_STATE_FILE);
-  logger.info(`Using state file: '${path}'`);
 
   // Read the state file and write to temp folder
   // Write an empty state file if the state file hasn't existed yet
   try {
     accessSync(path, constants.R_OK);
     const stateData = readFileSync(path, 'utf8');
+    logger.info(`Using state file: '${path}'`);
+
     logger.debug(`Writing state file to temporary directory: '${tempDir}/${DEFAULT_STATE_FILE}'...`);
     writeFileSync(`${tempDir}/${DEFAULT_STATE_FILE}`, stateData);
   } catch (error: any) {
@@ -155,7 +156,7 @@ export function loadStateFile(tempDir: string, filePath?: string, connectionName
 }
 
 export function cleanUp(context: AirbyteCliContext): void {
-  logger.info('Cleaning up...');
+  logger.debug('Cleaning up...');
   if (context.tmpDir !== undefined) {
     try {
       rmSync(context.tmpDir, {recursive: true, force: true});
@@ -164,7 +165,7 @@ export function cleanUp(context: AirbyteCliContext): void {
       logger.error(`Failed to remove temporary directory ${context.tmpDir}: ${error.message}`);
     }
   }
-  logger.info('Clean up completed.');
+  logger.debug('Clean up completed.');
 }
 
 export function overrideCatalog(

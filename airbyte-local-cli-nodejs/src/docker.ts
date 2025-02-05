@@ -262,7 +262,7 @@ export async function runSrcSync(tmpDir: string, config: FarosConfig): Promise<v
         ...config.src?.dockerOptions?.additionalOptions?.HostConfig,
         // Default options: cannot be overridden by users
         Binds: [`${tmpDir}:/configs`],
-        AutoRemove: config.keepContainers ?? true,
+        AutoRemove: !config.keepContainers,
         Init: true,
       },
     };
@@ -382,7 +382,7 @@ export async function runDstSync(tmpDir: string, config: FarosConfig): Promise<v
         ...config.dst?.dockerOptions?.additionalOptions?.HostConfig,
         // Default options: cannot be overridden by users
         Binds: [`${tmpDir}:/configs`],
-        AutoRemove: config.keepContainers ?? true,
+        AutoRemove: !config.keepContainers,
         Init: true,
       },
     };
@@ -435,7 +435,7 @@ export async function runDstSync(tmpDir: string, config: FarosConfig): Promise<v
       const lastState = states.pop();
       if (lastState) {
         writeFileSync(`${config.stateFile}`, lastState);
-        logger.debug(`New state is udpated in '${config.stateFile}'.`);
+        logger.info(`New state is updated in '${config.stateFile}'.`);
       } else {
         logger.warn('No new state is generated.');
       }

@@ -25,13 +25,15 @@ async function main(): Promise<void> {
     context.tmpDir = createTmpDir();
     generateDstStreamPrefix(cfg);
     cfg.stateFile = loadStateFile(context.tmpDir, cfg?.stateFile, cfg?.connectionName);
-    writeConfig(context.tmpDir, cfg);
-    await writeCatalog(context.tmpDir, cfg);
 
     // Pull source docker image
     if (cfg.srcPull && cfg.src?.image) {
       await pullDockerImage(cfg.src.image);
     }
+
+    // Write config and catalog to files
+    writeConfig(context.tmpDir, cfg);
+    await writeCatalog(context.tmpDir, cfg);
 
     // Check source connection
     if (cfg.srcCheckConnection && cfg.src?.image) {
@@ -47,7 +49,8 @@ async function main(): Promise<void> {
     }
 
     // Run airbyte destination connector
-    if (!cfg.srcOutputFile) {
+    if (!cfg.srcOutputFile && cfg.dst?.image) {
+      await pullDockerImage(cfg.dst.image);
       await logImageVersion(ImageType.DST, cfg.dst?.image);
       await runDstSync(context.tmpDir, cfg);
     }
