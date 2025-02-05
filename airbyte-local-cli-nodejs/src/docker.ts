@@ -190,7 +190,7 @@ export async function runDiscoverCatalog(tmpDir: string, image: string | undefin
 
     if (rawCatalog?.type === AirbyteMessageType.CATALOG && res[0].StatusCode === 0) {
       logger.info('Catalog discovered successfully.');
-      return rawCatalog.catalog ?? {};
+      return rawCatalog.catalog ?? {streams: []};
     }
     throw new Error('Catalog not found or container ends with non-zero status code');
   } catch (error: any) {

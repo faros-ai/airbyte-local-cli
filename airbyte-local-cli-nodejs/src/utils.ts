@@ -245,21 +245,29 @@ export async function writeCatalog(tmpDir: string, config: FarosConfig): Promise
   logger.debug(`Writing Airbyte catalog to files...`);
   const srcCatalogFilePath = `${tmpDir}${sep}${FILENAME_PREFIX}_src_catalog.json`;
   const dstCatalogFilePath = `${tmpDir}${sep}${FILENAME_PREFIX}_dst_catalog.json`;
+  let srcCatalog: AirbyteConfiguredCatalog;
+  let dstCatalog: AirbyteConfiguredCatalog;
 
-  // run discover catalog to get default catalog
-  const defaultCatalog = await runDiscoverCatalog(tmpDir, config.src?.image);
-
-  // src catalog: override the default with user provided catalog
-  const srcCatalog = overrideCatalog(config.src?.catalog ?? {}, defaultCatalog, config.fullRefresh);
-
-  // dst catalog: use src catalog or override default with user provided dst catalog
-  // append dst stream prefix to the stream name
-  let dstCatalog;
-  if (Object.keys((config.dst?.catalog as AirbyteCatalog)?.streams ?? []).length === 0) {
-    dstCatalog = structuredClone(srcCatalog);
+  if (config.srcInputFile) {
+    // run dst only
+    srcCatalog = {streams: []};
+    dstCatalog = config.dst?.catalog ?? {streams: []};
   } else {
-    dstCatalog = overrideCatalog(config.dst?.catalog ?? {}, defaultCatalog, config.fullRefresh);
+    // run discover catalog to get default catalog
+    const defaultCatalog = await runDiscoverCatalog(tmpDir, config.src?.image);
+
+    // src catalog: override the default with user provided catalog
+    srcCatalog = overrideCatalog(config.src?.catalog ?? {}, defaultCatalog, config.fullRefresh);
+
+    // dst catalog: use src catalog or override default with user provided dst catalog
+    // append dst stream prefix to the stream name
+    if (Object.keys(config.dst?.catalog?.streams ?? []).length === 0) {
+      dstCatalog = structuredClone(srcCatalog);
+    } else {
+      dstCatalog = overrideCatalog(config.dst?.catalog ?? {}, defaultCatalog, config.fullRefresh);
+    }
   }
+
   dstCatalog.streams.forEach((stream) => {
     stream.stream.name = `${config.dstStreamPrefix ?? ''}${stream.stream.name}`;
   });

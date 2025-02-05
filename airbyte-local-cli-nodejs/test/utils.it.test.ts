@@ -2,7 +2,7 @@ import {chmodSync, existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync}
 import {tmpdir} from 'node:os';
 
 import {runDiscoverCatalog} from '../src/docker';
-import {FarosConfig} from '../src/types';
+import {FarosConfig, SyncMode} from '../src/types';
 import {
   checkDockerInstalled,
   cleanUp,
@@ -31,8 +31,10 @@ const testConfig: FarosConfig = {
       url: 'test',
     },
     catalog: {
-      tests: {disabled: true},
-      projects: {disabled: true},
+      streams: [
+        {stream: {name: 'tests'}, sync_mode: SyncMode.INCREMENTAL, disabled: true},
+        {stream: {name: 'projects'}, sync_mode: SyncMode.FULL_REFRESH, disabled: true},
+      ],
     },
   },
   dst: {
@@ -274,6 +276,32 @@ describe('write files to temporary dir', () => {
       expect(dstCatalog.streams[0].destination_sync_mode).toBe('overwrite');
       expect(srcCatalog).toMatchSnapshot();
       expect(dstCatalog).toMatchSnapshot();
+    });
+
+    it('should succeed with dst only', async () => {
+      const dstOnlyCatalog = {
+        streams: [
+          {
+            stream: {name: 'builds'},
+            sync_mode: 'incremental',
+          },
+        ],
+      };
+      const catalogTestConfig = {
+        ...structuredClone(testConfig),
+        src: undefined as unknown,
+        dst: {...testConfig.dst, catalog: dstOnlyCatalog},
+        dstStreamPrefix: 'testPrefix__',
+        srcInputFile: 'testSrcInputFile',
+      } as FarosConfig;
+      await writeCatalog(tmpDirPath, catalogTestConfig);
+
+      expect(existsSync(srcCatalogPath)).toBe(true);
+      expect(existsSync(dstCatalogPath)).toBe(true);
+      const srcCatalog = JSON.parse(readFileSync(srcCatalogPath, 'utf8'));
+      const dstCatalog = JSON.parse(readFileSync(dstCatalogPath, 'utf8'));
+      expect(srcCatalog).toEqual({streams: []});
+      expect(dstCatalog).toEqual(dstOnlyCatalog);
     });
   });
 });
