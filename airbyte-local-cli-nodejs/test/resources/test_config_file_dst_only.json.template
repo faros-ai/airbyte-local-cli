@@ -1,0 +1,25 @@
+{
+  "dst": {
+    "image": "farosai/airbyte-faros-destination",
+    "config": {
+      "edition_configs": {
+        "edition": "cloud",
+        "graph": "jennie-test",
+        "graphql_api": "v2",
+        "api_url": "https://dev.api.faros.ai",
+        "api_key": ""
+      }
+    },
+    "catalog": {
+      "streams":[
+         {
+            "stream":{
+               "name":"myfarosgraphqlsrc__faros_graphql__faros_graph"
+            },
+            "sync_mode":"incremental",
+            "destination_sync_mode":"append"
+         }
+      ]
+   }
+  }
+}
