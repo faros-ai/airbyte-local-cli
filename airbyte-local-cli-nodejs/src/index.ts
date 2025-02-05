@@ -30,6 +30,10 @@ async function main(): Promise<void> {
     if (cfg.srcPull && cfg.src?.image) {
       await pullDockerImage(cfg.src.image);
     }
+    // Pull destination docker image
+    if (cfg.dstPull && cfg.dst?.image) {
+      await pullDockerImage(cfg.dst.image);
+    }
 
     // Write config and catalog to files
     writeConfig(context.tmpDir, cfg);
@@ -49,8 +53,7 @@ async function main(): Promise<void> {
     }
 
     // Run airbyte destination connector
-    if (!cfg.srcOutputFile && cfg.dst?.image) {
-      await pullDockerImage(cfg.dst.image);
+    if (!cfg.srcOutputFile) {
       await logImageVersion(ImageType.DST, cfg.dst?.image);
       await runDstSync(context.tmpDir, cfg);
     }
