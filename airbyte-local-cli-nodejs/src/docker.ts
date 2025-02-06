@@ -1,4 +1,4 @@
-import {createReadStream, createWriteStream, writeFileSync} from 'node:fs';
+import {createReadStream, createWriteStream, unlinkSync, writeFileSync} from 'node:fs';
 import {Writable} from 'node:stream';
 
 import Docker from 'dockerode';
@@ -303,7 +303,8 @@ export async function runSrcSync(tmpDir: string, config: FarosConfig): Promise<v
 
     // Wait for the container to finish
     const res = await container.wait();
-    logger.debug(`Source connector exit code: ${res}`);
+    logger.debug(`Source connector exit code: ${JSON.stringify(res)}`);
+    unlinkSync(cidfilePath);
 
     if (res.StatusCode === 0) {
       logger.info('Source connector ran successfully.');
@@ -426,7 +427,8 @@ export async function runDstSync(tmpDir: string, config: FarosConfig): Promise<v
 
     // Wait for the container to finish
     const res = await container.wait();
-    logger.debug(`Destination connector exit code: ${res}`);
+    logger.debug(`Destination connector exit code: ${JSON.stringify(res)}`);
+    unlinkSync(cidfilePath);
 
     if (res.StatusCode === 0) {
       logger.info('Destination connector ran successfully.');

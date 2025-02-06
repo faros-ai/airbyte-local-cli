@@ -40,10 +40,10 @@ function command() {
         'dst',
       ]),
     )
-    .option('--src <image>', 'Airbyte source Docker image')
-    .option('--dst <image>', 'Airbyte destination Docker image')
-    .option('--src.<key> <value>', 'Add "key": "value" into the source config')
-    .option('--dst.<key> <value>', 'Add "key": "value" into the destination config')
+    .option('--src <image>', '[Deprecated] Airbyte source Docker image')
+    .option('--dst <image>', '[Deprecated] Airbyte destination Docker image')
+    .option('--src.<key> <value>', '[Deprecated] Add "key": "value" into the source config')
+    .option('--dst.<key> <value>', '[Deprecated] Add "key": "value" into the destination config')
     .option('--full-refresh', 'Force full_refresh and overwrite mode. This overrides the mode in provided config file.')
     .option('--state-file <path>', 'Override state file path for incremental sync')
 

@@ -403,6 +403,8 @@ export function processSrcDataByLine(line: string, outputStream: Writable, cfg: 
  */
 const pipelineAsync = promisify(pipeline);
 export async function processSrcInputFile(tmpDir: string, cfg: FarosConfig): Promise<void> {
+  logger.info(`Using source input file: '${cfg.srcInputFile}'.`);
+
   // create input and output streams
   const inputStream = createReadStream(cfg.srcInputFile!);
   const outputStream = createWriteStream(`${tmpDir}/${SRC_OUTPUT_DATA_FILE}`);

@@ -64,7 +64,7 @@ describe('Check options conflict', () => {
     jest.spyOn(process, 'exit').mockImplementation(() => {
       throw new Error('process.exit() was called by commander js');
     });
-    const argv = ['./airbyte-local-cli', 'index.js', '--src-only', '--dst-only'];
+    const argv = ['./airbyte-local-cli', 'index.js', '--src-only', '--dst-only', 'some_test_path'];
     expect(() => parseAndValidateInputs(argv)).toThrow();
   });
 
@@ -72,7 +72,14 @@ describe('Check options conflict', () => {
     jest.spyOn(process, 'exit').mockImplementation(() => {
       throw new Error('process.exit() was called by commander js');
     });
-    const argv = ['./airbyte-local-cli', 'index.js', '--dst-only', '--src-output-file', 'some_test_path'];
+    const argv = [
+      './airbyte-local-cli',
+      'index.js',
+      '--dst-only',
+      'some_test_path',
+      '--src-output-file',
+      'some_test_path',
+    ];
     expect(() => parseAndValidateInputs(argv)).toThrow();
   });
 
@@ -80,7 +87,7 @@ describe('Check options conflict', () => {
     jest.spyOn(process, 'exit').mockImplementation(() => {
       throw new Error('process.exit() was called by commander js');
     });
-    const argv = ['./airbyte-local-cli', 'index.js', '--src-check-connection', '--dst-only'];
+    const argv = ['./airbyte-local-cli', 'index.js', '--src-check-connection', '--dst-only', 'some_test_path'];
     expect(() => parseAndValidateInputs(argv)).toThrow();
   });
 });

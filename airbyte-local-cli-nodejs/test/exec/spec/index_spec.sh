@@ -51,6 +51,36 @@ Describe 'Cli options validation'
     The output should include "option '--src-only' cannot be used with option '--src-output-file <path>'"
     The status should equal 1
   End
+  It 'fails if using both --src-only and --dst-only'
+    airbyte_local_test() {
+      ./airbyte-local \
+        --src-only \
+        --dst-only 'some_test_path'
+    }
+    When call airbyte_local_test
+    The output should include "option '--dst-only <file>' cannot be used with option '--src-only'"
+    The status should equal 1
+  End
+  It 'fails if using both --src-output-file and --dst-only'
+    airbyte_local_test() {
+      ./airbyte-local \
+        --src-output-file 'some_test_path' \
+        --dst-only 'some_test_path'
+    }
+    When call airbyte_local_test
+    The output should include "option '--dst-only <file>' cannot be used with option '--src-output-file <path>'"
+    The status should equal 1
+  End
+  It 'fails if using both --src-check-connetion and --dst-only'
+    airbyte_local_test() {
+      ./airbyte-local \
+        --src-check-connection \
+        --dst-only 'some_test_path'
+    }
+    When call airbyte_local_test
+    The output should include "option '--dst-only <file>' cannot be used with option '--src-check-connection'"
+    The status should equal 1
+  End
 
   # Check for unknown options
   It 'fails if using unknown options'
