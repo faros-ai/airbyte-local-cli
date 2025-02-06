@@ -59,6 +59,30 @@ describe('Check options conflict', () => {
     const argv = ['./airbyte-local-cli', 'index.js', '--src-only', '--src-output-file', 'some_test_path'];
     expect(() => parseAndValidateInputs(argv)).toThrow();
   });
+
+  it('should fail if using both --dst-only and --src-only', () => {
+    jest.spyOn(process, 'exit').mockImplementation(() => {
+      throw new Error('process.exit() was called by commander js');
+    });
+    const argv = ['./airbyte-local-cli', 'index.js', '--src-only', '--dst-only'];
+    expect(() => parseAndValidateInputs(argv)).toThrow();
+  });
+
+  it('should fail if using both --dst-only and --src-output-file', () => {
+    jest.spyOn(process, 'exit').mockImplementation(() => {
+      throw new Error('process.exit() was called by commander js');
+    });
+    const argv = ['./airbyte-local-cli', 'index.js', '--dst-only', '--src-output-file', 'some_test_path'];
+    expect(() => parseAndValidateInputs(argv)).toThrow();
+  });
+
+  it('should fail if using both --dst-only and --src-check-connection', () => {
+    jest.spyOn(process, 'exit').mockImplementation(() => {
+      throw new Error('process.exit() was called by commander js');
+    });
+    const argv = ['./airbyte-local-cli', 'index.js', '--src-check-connection', '--dst-only'];
+    expect(() => parseAndValidateInputs(argv)).toThrow();
+  });
 });
 
 describe('Check src and dst config parsing', () => {

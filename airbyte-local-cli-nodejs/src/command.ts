@@ -51,19 +51,18 @@ function command() {
     .option('--no-src-pull', 'Skip pulling Airbyte source image')
     .option('--no-dst-pull', 'Skip pulling Airbyte destination image')
     .addOption(
-      new Option('--src-check-connection', `Validate the Airbyte source connection`).conflicts('srcOutputFile'),
-    )
-    .addOption(
       new Option(
         '--src-only',
         `Only run the Airbyte source and write output in stdout. Use '--src-output-file' instead to write to a file`,
       ).conflicts('srcOutputFile'),
     )
     .option('--src-output-file <path>', 'Write source output as a file (requires a destination)')
+    .option('--src-check-connection', `Validate the Airbyte source connection`)
     .addOption(
       new Option('--dst-only <file>', 'Use a file for destination input instead of a source')
         .conflicts('srcOnly')
-        .conflicts('srcOutputFile'),
+        .conflicts('srcOutputFile')
+        .conflicts('srcCheckConnection'),
     )
     .option('--dst-use-host-network', 'Use the host network when running the Airbyte destination')
     .option('--log-level <level>', 'Set level of source and destination loggers', 'info')
