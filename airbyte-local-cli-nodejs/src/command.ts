@@ -1,7 +1,7 @@
 import {Command, Option} from 'commander';
 
 import {AirbyteConfig, AirbyteConfigInputType, CliOptions, FarosConfig} from './types';
-import {logger, OutputStream, parseConfigFile, updateLogLevel} from './utils';
+import {CONFIG_FILE, logger, OutputStream, parseConfigFile, updateLogLevel} from './utils';
 import {CLI_VERSION} from './version';
 
 // Command line program
@@ -100,7 +100,14 @@ function parseSrcAndDstConfig(argv: string[]) {
     let current = obj;
     keys.forEach((key, index) => {
       if (index === keys.length - 1) {
-        current[key] = value;
+        // parse the string as an json object. if fails, treeat it as a string
+        let parsedValue;
+        try {
+          parsedValue = JSON.parse(value);
+        } catch (_error) {
+          parsedValue = value;
+        }
+        current[key] = parsedValue;
       } else {
         if (!current[key]) {
           current[key] = {};
@@ -125,6 +132,17 @@ function parseSrcAndDstConfig(argv: string[]) {
       }
     }
   });
+
+  // log warnings when src.* and dst.* options are used
+  if (Object.keys(srcConfig).length > 0 || Object.keys(dstConfig).length > 0) {
+    logger.warn(
+      `Option '--src.<key> <value>' and '--dst.<key> <value>' are deprecated. Please use '--config-file' instead.`,
+    );
+    logger.warn(
+      `Equivalent configuration file is generated at '${CONFIG_FILE}'.` +
+        `Please replace the command with '--config-file ${CONFIG_FILE}'`,
+    );
+  }
   return {srcConfig, dstConfig};
 }
 

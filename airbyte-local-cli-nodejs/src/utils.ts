@@ -256,7 +256,7 @@ export function writeConfig(tmpDir: string, config: FarosConfig): void {
   // write Airbyte config for user's reference
   // TODO: @FAI-14122 React secrets
   logger.debug(`Writing Airbyte config for user reference...`);
-  writeFileSync(`${CONFIG_FILE}`, JSON.stringify(airbyteConfig, null, 2));
+  writeFileSync(CONFIG_FILE, JSON.stringify(airbyteConfig, null, 2));
   logger.debug(`Airbyte config: ${JSON.stringify(airbyteConfig)}`);
   logger.debug(`Airbyte config written to: ${CONFIG_FILE}`);
 
@@ -453,7 +453,7 @@ export function generateDstStreamPrefix(cfg: FarosConfig): void {
     if (srcImage?.startsWith('farosai/airbyte')) {
       const [imageName] = srcImage.split(':');
       const imageParts = imageName?.split('-').slice(1, -1);
-      cfg.connectionName = `my${imageParts?.join('') ?? ''}src`;
+      cfg.connectionName = cfg.connectionName ?? `my${imageParts?.join('') ?? ''}src`;
       cfg.dstStreamPrefix = `${cfg.connectionName}_${imageParts?.join('_') ?? ''}__`;
       logger.debug(`Using connection name: ${cfg.connectionName}`);
       logger.debug(`Using destination stream prefix: ${cfg.dstStreamPrefix}`);

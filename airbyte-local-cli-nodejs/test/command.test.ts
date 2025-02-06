@@ -92,7 +92,7 @@ describe('Check options conflict', () => {
   });
 });
 
-describe('Check src and dst config parsing', () => {
+describe.only('Check src and dst config parsing', () => {
   it('should parse and validate options: src and dst', () => {
     const argv = ['./airbyte-local-cli', 'index.js', '--src', 'source-image', '--dst', 'destination-image'];
     const result = parseAndValidateInputs(argv);
@@ -165,6 +165,34 @@ describe('Check src and dst config parsing', () => {
         image: 'destination-image',
         config: {
           edition_config: {graph: 'default', edition: 'cloud'},
+        },
+      },
+    });
+  });
+
+  it('should parse and validate options: json object as string', () => {
+    const argv = [
+      './airbyte-local-cli',
+      'index.js',
+      '--src',
+      'source-image',
+      '--dst',
+      'destination-image',
+      '--dst.edition_config',
+      '{"edition":"cloud", "graphql_api": "v2"}',
+      '--dst.edition_config.graph',
+      'default',
+      '--dst.edition_config.edition',
+      'cloud',
+    ];
+    const result = parseAndValidateInputs(argv);
+    expect(result).toEqual({
+      ...defaultConfig,
+      src: {image: 'source-image', config: {}},
+      dst: {
+        image: 'destination-image',
+        config: {
+          edition_config: {graph: 'default', edition: 'cloud', graphql_api: 'v2'},
         },
       },
     });
