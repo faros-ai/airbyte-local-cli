@@ -41,7 +41,7 @@ export interface CliOptions {
 export interface AirbyteConfig {
   image: string;
   config?: object;
-  catalog?: object;
+  catalog?: AirbyteConfiguredCatalog;
   dockerOptions?: AirbyteConfigDockerOptions;
 }
 export interface AirbyteConfigDockerOptions {
@@ -116,7 +116,7 @@ export enum DestinationSyncMode {
 }
 export interface AirbyteStream {
   name: string;
-  json_schema: Dictionary<any>;
+  json_schema?: Dictionary<any>;
   supported_sync_modes?: SyncMode[];
   source_defined_cursor?: boolean;
   default_cursor_field?: string[];

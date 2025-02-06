@@ -134,6 +134,26 @@ Describe 'Run source sync'
   End
 End
 
+Describe 'Run destination sync'
+  It 'should succeed with dstOnly'
+    airbyte_local_test() {
+
+      jq --arg api_key "$FAROS_API_KEY" '
+        .dst.config.edition_configs.api_key = $api_key
+      ' ./resources/test_config_file_dst_only.json.template > ./resources/test_config_file_dst_only.json
+
+      ./airbyte-local \
+        --config-file './resources/test_config_file_dst_only.json' \
+        --dst-only './resources/dockerIt_runDstSync/faros_airbyte_cli_src_output'
+    }
+    When call airbyte_local_test
+    The output should include '[DST] - {"log":{"level":"INFO","message":"Errored 0 records"},"type":"LOG"}'
+    The output should include "Destination connector ran successfully."
+    The output should include "Airbyte CLI completed successfully."
+    The status should equal 0
+  End
+End
+
 Describe 'Run source and destination sync'
   It 'should succeed with src and dst'
     airbyte_local_test() {
@@ -147,11 +167,11 @@ Describe 'Run source and destination sync'
         --config-file './resources/test_config_file_graph_copy.json'
     }
     When call airbyte_local_test
-    The status should equal 0
     The output should include "Source connector ran successfully."
     The output should include '[DST] - {"log":{"level":"INFO","message":"Errored 0 records"},"type":"LOG"}'
     The output should include "Destination connector ran successfully."
     The output should include "Airbyte CLI completed successfully."
+    The status should equal 0
   End
 End
 
@@ -160,6 +180,7 @@ cleanup() {
   find . -name 'faros_airbyte_cli_config.json' -delete
   find . -name '*_cid' -delete
   find . -name '*state.json' -delete
+  find ./resources/ -name 'test_config_file_dst_only.json' -delete
   find ./resources/ -name 'test_config_file_graph_copy.json' -delete
 }
 AfterAll 'cleanup'
