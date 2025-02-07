@@ -97,7 +97,7 @@ jobs:
       - name: Check out
         uses: actions/checkout@v4
         with:
-          fetch-depth: 10
+          fetch-depth: 0
 
       - name: Create tag
         id: create-tag
