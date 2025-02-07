@@ -1,8 +1,14 @@
 import {spawnSync} from 'node:child_process';
 import {readFileSync} from 'node:fs';
 
-import {AirbyteCatalog} from '../src/types';
-import {checkDockerInstalled, overrideCatalog, parseConfigFile, updateSrcConfigWithFarosConfig} from '../src/utils';
+import {AirbyteCatalog, FarosConfig} from '../src/types';
+import {
+  checkDockerInstalled,
+  generateDstStreamPrefix,
+  overrideCatalog,
+  parseConfigFile,
+  updateSrcConfigWithFarosConfig,
+} from '../src/utils';
 
 jest.mock('node:fs');
 jest.mock('node:child_process');
@@ -202,5 +208,65 @@ describe('overrideCatalog', () => {
       ],
     };
     expect(overrideCatalog(testCatalog, testDefaultCatalog as AirbyteCatalog)).toEqual({streams: []});
+  });
+});
+
+describe('generateDstStreamPrefix', () => {
+  it('should succeed', () => {
+    const testAirbyteConfig = {
+      src: {
+        image: 'farosai/airbyte-example-source',
+      },
+      dst: {
+        image: 'farosai/airbyte-faros-destination',
+      },
+    } as FarosConfig;
+    generateDstStreamPrefix(testAirbyteConfig);
+    expect(testAirbyteConfig.connectionName).toEqual('myexamplesrc');
+    expect(testAirbyteConfig.dstStreamPrefix).toEqual('myexamplesrc_example__');
+  });
+
+  it('should succeed with connection name flag', () => {
+    const testAirbyteConfig = {
+      src: {
+        image: 'farosai/airbyte-example-source',
+      },
+      dst: {
+        image: 'farosai/airbyte-faros-destination',
+      },
+      connectionName: 'testConnectionName',
+    } as FarosConfig;
+    generateDstStreamPrefix(testAirbyteConfig);
+    expect(testAirbyteConfig.connectionName).toEqual('testConnectionName');
+    expect(testAirbyteConfig.dstStreamPrefix).toEqual('testConnectionName_example__');
+  });
+
+  it('should succeed with feeds source', () => {
+    const testAirbyteConfig = {
+      src: {
+        image: 'farosai/airbyte-faros-feeds-source',
+      },
+      dst: {
+        image: 'farosai/airbyte-faros-destination',
+      },
+    } as FarosConfig;
+    generateDstStreamPrefix(testAirbyteConfig);
+    expect(testAirbyteConfig.connectionName).toEqual('myfarosfeedssrc');
+    expect(testAirbyteConfig.dstStreamPrefix).toEqual('myfarosfeedssrc_faros_feeds__');
+  });
+
+  it('should succeed with feeds source and connection name flag', () => {
+    const testAirbyteConfig = {
+      src: {
+        image: 'farosai/airbyte-faros-feeds-source',
+      },
+      dst: {
+        image: 'farosai/airbyte-faros-destination',
+      },
+      connectionName: 'testConnectionName',
+    } as FarosConfig;
+    generateDstStreamPrefix(testAirbyteConfig);
+    expect(testAirbyteConfig.connectionName).toEqual('testConnectionName');
+    expect(testAirbyteConfig.dstStreamPrefix).toEqual('testConnectionName_faros_feeds__');
   });
 });

@@ -38,7 +38,7 @@ export function setDocker(docker: Docker): void {
 export async function checkDockerInstalled(): Promise<void> {
   try {
     await _docker.version();
-    logger.debug('Docker is installed and running.');
+    logger.info('Docker is installed and running.');
   } catch (error: any) {
     logger.error('Docker is not installed or running.');
     throw error;
@@ -262,17 +262,13 @@ export async function runSrcSync(tmpDir: string, config: FarosConfig): Promise<v
         ...config.src?.dockerOptions?.additionalOptions?.HostConfig,
         // Default options: cannot be overridden by users
         Binds: [`${tmpDir}:/configs`],
-        AutoRemove: true,
+        AutoRemove: !config.keepContainers,
         Init: true,
       },
     };
 
     // Create the Docker container
     const container = await _docker.createContainer(createOptions);
-
-    // Write the container ID to the cidfile
-    const cidfilePath = `tmp-${timestamp}-src_cid`;
-    writeFileSync(cidfilePath, container.id);
 
     // Create a writable stream for the processed output data
     // If srcOutputFile is not configured, write to the intermediate output file
@@ -303,7 +299,7 @@ export async function runSrcSync(tmpDir: string, config: FarosConfig): Promise<v
 
     // Wait for the container to finish
     const res = await container.wait();
-    logger.debug(res);
+    logger.debug(`Source connector exit code: ${JSON.stringify(res)}`);
 
     if (res.StatusCode === 0) {
       logger.info('Source connector ran successfully.');
@@ -382,17 +378,13 @@ export async function runDstSync(tmpDir: string, config: FarosConfig): Promise<v
         ...config.dst?.dockerOptions?.additionalOptions?.HostConfig,
         // Default options: cannot be overridden by users
         Binds: [`${tmpDir}:/configs`],
-        AutoRemove: true,
+        AutoRemove: !config.keepContainers,
         Init: true,
       },
     };
 
     // Create the Docker container
     const container = await _docker.createContainer(createOptions);
-
-    // Write the container ID to the cidfile
-    const cidfilePath = `tmp-${timestamp}-dst_cid`;
-    writeFileSync(cidfilePath, container.id);
 
     // create a writable stream to capture the stdout
     let buffer = '';
@@ -426,7 +418,7 @@ export async function runDstSync(tmpDir: string, config: FarosConfig): Promise<v
 
     // Wait for the container to finish
     const res = await container.wait();
-    logger.debug(res);
+    logger.debug(`Destination connector exit code: ${JSON.stringify(res)}`);
 
     if (res.StatusCode === 0) {
       logger.info('Destination connector ran successfully.');
@@ -435,7 +427,7 @@ export async function runDstSync(tmpDir: string, config: FarosConfig): Promise<v
       const lastState = states.pop();
       if (lastState) {
         writeFileSync(`${config.stateFile}`, lastState);
-        logger.debug(`New state is udpated in '${config.stateFile}'.`);
+        logger.info(`New state is updated in '${config.stateFile}'.`);
       } else {
         logger.warn('No new state is generated.');
       }

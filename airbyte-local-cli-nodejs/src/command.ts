@@ -1,7 +1,7 @@
 import {Command, Option} from 'commander';
 
 import {AirbyteConfig, AirbyteConfigInputType, CliOptions, FarosConfig} from './types';
-import {logger, OutputStream, parseConfigFile, updateLogLevel} from './utils';
+import {CONFIG_FILE, logger, OutputStream, parseConfigFile, updateLogLevel} from './utils';
 import {CLI_VERSION} from './version';
 
 // Command line program
@@ -40,10 +40,10 @@ function command() {
         'dst',
       ]),
     )
-    .option('--src <image>', 'Airbyte source Docker image')
-    .option('--dst <image>', 'Airbyte destination Docker image')
-    .option('--src.<key> <value>', 'Add "key": "value" into the source config')
-    .option('--dst.<key> <value>', 'Add "key": "value" into the destination config')
+    .option('--src <image>', '[Deprecated] Airbyte source Docker image')
+    .option('--dst <image>', '[Deprecated] Airbyte destination Docker image')
+    .option('--src.<key> <value>', '[Deprecated] Add "key": "value" into the source config')
+    .option('--dst.<key> <value>', '[Deprecated] Add "key": "value" into the destination config')
     .option('--full-refresh', 'Force full_refresh and overwrite mode. This overrides the mode in provided config file.')
     .option('--state-file <path>', 'Override state file path for incremental sync')
 
@@ -51,19 +51,18 @@ function command() {
     .option('--no-src-pull', 'Skip pulling Airbyte source image')
     .option('--no-dst-pull', 'Skip pulling Airbyte destination image')
     .addOption(
-      new Option('--src-check-connection', `Validate the Airbyte source connection`).conflicts('srcOutputFile'),
-    )
-    .addOption(
       new Option(
         '--src-only',
         `Only run the Airbyte source and write output in stdout. Use '--src-output-file' instead to write to a file`,
       ).conflicts('srcOutputFile'),
     )
     .option('--src-output-file <path>', 'Write source output as a file (requires a destination)')
+    .option('--src-check-connection', `Validate the Airbyte source connection`)
     .addOption(
       new Option('--dst-only <file>', 'Use a file for destination input instead of a source')
         .conflicts('srcOnly')
-        .conflicts('srcOutputFile'),
+        .conflicts('srcOutputFile')
+        .conflicts('srcCheckConnection'),
     )
     .option('--dst-use-host-network', 'Use the host network when running the Airbyte destination')
     .option('--log-level <level>', 'Set level of source and destination loggers', 'info')
@@ -101,7 +100,14 @@ function parseSrcAndDstConfig(argv: string[]) {
     let current = obj;
     keys.forEach((key, index) => {
       if (index === keys.length - 1) {
-        current[key] = value;
+        // parse the string as an json object. if fails, treeat it as a string
+        let parsedValue;
+        try {
+          parsedValue = JSON.parse(value);
+        } catch (_error) {
+          parsedValue = value;
+        }
+        current[key] = parsedValue;
       } else {
         if (!current[key]) {
           current[key] = {};
@@ -126,8 +132,17 @@ function parseSrcAndDstConfig(argv: string[]) {
       }
     }
   });
-  logger.debug('Source Config:', srcConfig);
-  logger.debug('Destination Config:', dstConfig);
+
+  // log warnings when src.* and dst.* options are used
+  if (Object.keys(srcConfig).length > 0 || Object.keys(dstConfig).length > 0) {
+    logger.warn(
+      `Option '--src.<key> <value>' and '--dst.<key> <value>' are deprecated. Please use '--config-file' instead.`,
+    );
+    logger.warn(
+      `Equivalent configuration file is generated at '${CONFIG_FILE}'.` +
+        `Please replace the command with '--config-file ${CONFIG_FILE}'`,
+    );
+  }
   return {srcConfig, dstConfig};
 }
 
@@ -181,9 +196,9 @@ export function parseAndValidateInputs(argv: string[]): FarosConfig {
 
   // Get the options
   const options = program.opts();
-  logger.debug({options}, 'Options');
+  logger.debug(`Options: ${JSON.stringify(options)}`);
   const cliOptions = convertToCliOptions(options);
-  logger.debug({cliOptions}, 'Cli options');
+  logger.debug(`Cli options: ${JSON.stringify(cliOptions)}`);
 
   // Convert the cli options to FarosConfig
   const farosConfig: FarosConfig = {

@@ -131,13 +131,14 @@ export function createTmpDir(absTmpDir?: string): string {
 // Load the existing state file and write to the temporary folder
 export function loadStateFile(tempDir: string, filePath?: string, connectionName?: string): string {
   const path = filePath ?? (connectionName ? `${connectionName}__state.json` : DEFAULT_STATE_FILE);
-  logger.info(`Using state file: '${path}'`);
 
   // Read the state file and write to temp folder
   // Write an empty state file if the state file hasn't existed yet
   try {
     accessSync(path, constants.R_OK);
     const stateData = readFileSync(path, 'utf8');
+    logger.info(`Using state file: '${path}'`);
+
     logger.debug(`Writing state file to temporary directory: '${tempDir}/${DEFAULT_STATE_FILE}'...`);
     writeFileSync(`${tempDir}/${DEFAULT_STATE_FILE}`, stateData);
   } catch (error: any) {
@@ -155,7 +156,7 @@ export function loadStateFile(tempDir: string, filePath?: string, connectionName
 }
 
 export function cleanUp(context: AirbyteCliContext): void {
-  logger.info('Cleaning up...');
+  logger.debug('Cleaning up...');
   if (context.tmpDir !== undefined) {
     try {
       rmSync(context.tmpDir, {recursive: true, force: true});
@@ -164,7 +165,7 @@ export function cleanUp(context: AirbyteCliContext): void {
       logger.error(`Failed to remove temporary directory ${context.tmpDir}: ${error.message}`);
     }
   }
-  logger.info('Clean up completed.');
+  logger.debug('Clean up completed.');
 }
 
 export function overrideCatalog(
@@ -255,8 +256,8 @@ export function writeConfig(tmpDir: string, config: FarosConfig): void {
   // write Airbyte config for user's reference
   // TODO: @FAI-14122 React secrets
   logger.debug(`Writing Airbyte config for user reference...`);
-  writeFileSync(`${CONFIG_FILE}`, JSON.stringify(airbyteConfig, null, 2));
-  logger.debug(airbyteConfig, `Airbyte config: `);
+  writeFileSync(CONFIG_FILE, JSON.stringify(airbyteConfig, null, 2));
+  logger.debug(`Airbyte config: ${JSON.stringify(airbyteConfig)}`);
   logger.debug(`Airbyte config written to: ${CONFIG_FILE}`);
 
   // add config `feed_cfg.debug` if debug is enabled
@@ -279,9 +280,9 @@ export function writeConfig(tmpDir: string, config: FarosConfig): void {
   const dstConfigFilePath = `${tmpDir}${sep}${FILENAME_PREFIX}_dst_config.json`;
   writeFileSync(srcConfigFilePath, JSON.stringify(airbyteConfig.src.config ?? {}));
   writeFileSync(dstConfigFilePath, JSON.stringify(airbyteConfig.dst.config ?? {}));
+  logger.debug(`Source config: ${JSON.stringify(airbyteConfig.src.config ?? {})}`);
+  logger.debug(`Destination config: ${JSON.stringify(airbyteConfig.dst.config ?? {})}`);
   logger.debug(`Airbyte config files written to: ${srcConfigFilePath}, ${dstConfigFilePath}`);
-  logger.debug(airbyteConfig.src.config ?? {}, `Source config: `);
-  logger.debug(airbyteConfig.dst.config ?? {}, `Destination config: `);
 }
 
 /**
@@ -321,28 +322,9 @@ export async function writeCatalog(tmpDir: string, config: FarosConfig): Promise
   logger.debug(`Writing Airbyte catalog to files...`);
   writeFileSync(srcCatalogFilePath, JSON.stringify(srcCatalog));
   writeFileSync(dstCatalogFilePath, JSON.stringify(dstCatalog));
+  logger.debug(`Source catalog: ${JSON.stringify(srcCatalog)}`);
+  logger.debug(`Destination catalog: ${JSON.stringify(dstCatalog)}`);
   logger.debug(`Airbyte catalog files written to: ${srcCatalogFilePath}, ${dstCatalogFilePath}`);
-  logger.debug(srcCatalog, `Source catalog: `);
-  logger.debug(dstCatalog, `Destination catalog: `);
-}
-
-// Read file content
-export function readFile(file: string): any {
-  try {
-    const data = readFileSync(file, 'utf8');
-    return data;
-  } catch (error: any) {
-    throw new Error(`Failed to read '${file}': ${error.message}`);
-  }
-}
-
-// Write file content
-export function writeFile(file: string, data: any): void {
-  try {
-    writeFileSync(file, data);
-  } catch (error: any) {
-    throw new Error(`Failed to write '${file}': ${error.message}`);
-  }
 }
 
 /**
@@ -402,6 +384,8 @@ export function processSrcDataByLine(line: string, outputStream: Writable, cfg: 
  */
 const pipelineAsync = promisify(pipeline);
 export async function processSrcInputFile(tmpDir: string, cfg: FarosConfig): Promise<void> {
+  logger.info(`Using source input file: '${cfg.srcInputFile}'.`);
+
   // create input and output streams
   const inputStream = createReadStream(cfg.srcInputFile!);
   const outputStream = createWriteStream(`${tmpDir}/${SRC_OUTPUT_DATA_FILE}`);
@@ -432,6 +416,7 @@ export async function processSrcInputFile(tmpDir: string, cfg: FarosConfig): Pro
 
 /**
  * Update `dstStreamPrefix` and `connectionName` in the config based on the source image.
+ * Only update if the destination image is a Faros destination image.
  */
 export function generateDstStreamPrefix(cfg: FarosConfig): void {
   const srcImage = cfg.src?.image;
@@ -450,7 +435,7 @@ export function generateDstStreamPrefix(cfg: FarosConfig): void {
     if (srcImage?.startsWith('farosai/airbyte')) {
       const [imageName] = srcImage.split(':');
       const imageParts = imageName?.split('-').slice(1, -1);
-      cfg.connectionName = `my${imageParts?.join('') ?? ''}src`;
+      cfg.connectionName = cfg.connectionName ?? `my${imageParts?.join('') ?? ''}src`;
       cfg.dstStreamPrefix = `${cfg.connectionName}_${imageParts?.join('_') ?? ''}__`;
       logger.debug(`Using connection name: ${cfg.connectionName}`);
       logger.debug(`Using destination stream prefix: ${cfg.dstStreamPrefix}`);
@@ -476,7 +461,7 @@ export function processDstDataByLine(line: string, cfg: FarosConfig): string {
 
     if (data?.type === 'STATE' && data?.state?.data) {
       state = JSON.stringify(data.state.data);
-      logger.debug(`State: ${state}`);
+      logger.debug(formatDstMsg(data));
     }
     if (cfg.rawMessages) {
       process.stdout.write(`${line}\n`);

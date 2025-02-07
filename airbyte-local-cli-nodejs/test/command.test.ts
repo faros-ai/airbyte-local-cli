@@ -59,6 +59,37 @@ describe('Check options conflict', () => {
     const argv = ['./airbyte-local-cli', 'index.js', '--src-only', '--src-output-file', 'some_test_path'];
     expect(() => parseAndValidateInputs(argv)).toThrow();
   });
+
+  it('should fail if using both --dst-only and --src-only', () => {
+    jest.spyOn(process, 'exit').mockImplementation(() => {
+      throw new Error('process.exit() was called by commander js');
+    });
+    const argv = ['./airbyte-local-cli', 'index.js', '--src-only', '--dst-only', 'some_test_path'];
+    expect(() => parseAndValidateInputs(argv)).toThrow();
+  });
+
+  it('should fail if using both --dst-only and --src-output-file', () => {
+    jest.spyOn(process, 'exit').mockImplementation(() => {
+      throw new Error('process.exit() was called by commander js');
+    });
+    const argv = [
+      './airbyte-local-cli',
+      'index.js',
+      '--dst-only',
+      'some_test_path',
+      '--src-output-file',
+      'some_test_path',
+    ];
+    expect(() => parseAndValidateInputs(argv)).toThrow();
+  });
+
+  it('should fail if using both --dst-only and --src-check-connection', () => {
+    jest.spyOn(process, 'exit').mockImplementation(() => {
+      throw new Error('process.exit() was called by commander js');
+    });
+    const argv = ['./airbyte-local-cli', 'index.js', '--src-check-connection', '--dst-only', 'some_test_path'];
+    expect(() => parseAndValidateInputs(argv)).toThrow();
+  });
 });
 
 describe('Check src and dst config parsing', () => {
@@ -134,6 +165,34 @@ describe('Check src and dst config parsing', () => {
         image: 'destination-image',
         config: {
           edition_config: {graph: 'default', edition: 'cloud'},
+        },
+      },
+    });
+  });
+
+  it('should parse and validate options: json object as string', () => {
+    const argv = [
+      './airbyte-local-cli',
+      'index.js',
+      '--src',
+      'source-image',
+      '--dst',
+      'destination-image',
+      '--dst.edition_config',
+      '{"edition":"cloud", "graphql_api": "v2"}',
+      '--dst.edition_config.graph',
+      'default',
+      '--dst.edition_config.edition',
+      'cloud',
+    ];
+    const result = parseAndValidateInputs(argv);
+    expect(result).toEqual({
+      ...defaultConfig,
+      src: {image: 'source-image', config: {}},
+      dst: {
+        image: 'destination-image',
+        config: {
+          edition_config: {graph: 'default', edition: 'cloud', graphql_api: 'v2'},
         },
       },
     });
