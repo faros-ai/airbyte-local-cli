@@ -96,14 +96,14 @@ jobs:
       - name: Check out
         uses: actions/checkout@v4
         with:
-          fetch-depth: 2
-
-      - name: Change to nodejs directory
-        run: cd airbyte-local-cli-nodejs
+          fetch-depth: 5
 
       - name: Create tag
         id: create-tag
         uses: salsify/action-detect-and-tag-new-version@v2
+        with:
+          version-command: |
+            cat airbyte-local-cli-nodejs/package.json | jq -r '.version'
 
   Release:
     name: Release
