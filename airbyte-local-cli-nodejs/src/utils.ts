@@ -327,25 +327,6 @@ export async function writeCatalog(tmpDir: string, config: FarosConfig): Promise
   logger.debug(`Airbyte catalog files written to: ${srcCatalogFilePath}, ${dstCatalogFilePath}`);
 }
 
-// Read file content
-export function readFile(file: string): any {
-  try {
-    const data = readFileSync(file, 'utf8');
-    return data;
-  } catch (error: any) {
-    throw new Error(`Failed to read '${file}': ${error.message}`);
-  }
-}
-
-// Write file content
-export function writeFile(file: string, data: any): void {
-  try {
-    writeFileSync(file, data);
-  } catch (error: any) {
-    throw new Error(`Failed to write '${file}': ${error.message}`);
-  }
-}
-
 /**
  * Process the source output.
  *
@@ -435,6 +416,7 @@ export async function processSrcInputFile(tmpDir: string, cfg: FarosConfig): Pro
 
 /**
  * Update `dstStreamPrefix` and `connectionName` in the config based on the source image.
+ * Only update if the destination image is a Faros destination image.
  */
 export function generateDstStreamPrefix(cfg: FarosConfig): void {
   const srcImage = cfg.src?.image;
