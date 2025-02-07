@@ -1,4 +1,4 @@
-import {createReadStream, createWriteStream, unlinkSync, writeFileSync} from 'node:fs';
+import {createReadStream, createWriteStream, writeFileSync} from 'node:fs';
 import {Writable} from 'node:stream';
 
 import Docker from 'dockerode';
@@ -270,10 +270,6 @@ export async function runSrcSync(tmpDir: string, config: FarosConfig): Promise<v
     // Create the Docker container
     const container = await _docker.createContainer(createOptions);
 
-    // Write the container ID to the cidfile
-    const cidfilePath = `tmp-${timestamp}-src_cid`;
-    writeFileSync(cidfilePath, container.id);
-
     // Create a writable stream for the processed output data
     // If srcOutputFile is not configured, write to the intermediate output file
     const srcOutputFilePath = config.srcOutputFile ?? `${tmpDir}/${SRC_OUTPUT_DATA_FILE}`;
@@ -304,7 +300,6 @@ export async function runSrcSync(tmpDir: string, config: FarosConfig): Promise<v
     // Wait for the container to finish
     const res = await container.wait();
     logger.debug(`Source connector exit code: ${JSON.stringify(res)}`);
-    unlinkSync(cidfilePath);
 
     if (res.StatusCode === 0) {
       logger.info('Source connector ran successfully.');
@@ -391,10 +386,6 @@ export async function runDstSync(tmpDir: string, config: FarosConfig): Promise<v
     // Create the Docker container
     const container = await _docker.createContainer(createOptions);
 
-    // Write the container ID to the cidfile
-    const cidfilePath = `tmp-${timestamp}-dst_cid`;
-    writeFileSync(cidfilePath, container.id);
-
     // create a writable stream to capture the stdout
     let buffer = '';
     const states: string[] = [];
@@ -428,7 +419,6 @@ export async function runDstSync(tmpDir: string, config: FarosConfig): Promise<v
     // Wait for the container to finish
     const res = await container.wait();
     logger.debug(`Destination connector exit code: ${JSON.stringify(res)}`);
-    unlinkSync(cidfilePath);
 
     if (res.StatusCode === 0) {
       logger.info('Destination connector ran successfully.');

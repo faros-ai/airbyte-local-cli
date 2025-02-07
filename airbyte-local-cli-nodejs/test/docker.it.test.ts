@@ -1,5 +1,4 @@
-import {copyFileSync, readdirSync, readFileSync, rmSync, unlinkSync, writeFileSync} from 'node:fs';
-import path from 'node:path';
+import {copyFileSync, readFileSync, rmSync, unlinkSync, writeFileSync} from 'node:fs';
 import {Writable} from 'node:stream';
 
 import {checkSrcConnection, pullDockerImage, runDiscoverCatalog, runDstSync, runSrcSync} from '../src/docker';
@@ -79,18 +78,6 @@ describe('runSrcSync', () => {
     rmSync(`${testTmpDir}/${SRC_OUTPUT_DATA_FILE}`, {force: true});
   });
 
-  // Clean up files created by the test
-  afterAll(() => {
-    const pattern = /.*-src_cid$/;
-    const files = readdirSync(process.cwd());
-    const matchingFiles = files.filter((file) => pattern.test(file));
-
-    matchingFiles.forEach((file) => {
-      const filePath = path.join(process.cwd(), file);
-      unlinkSync(filePath);
-    });
-  });
-
   it('should success', async () => {
     await expect(runSrcSync(testTmpDir, testCfg)).resolves.not.toThrow();
 
@@ -159,15 +146,6 @@ describe('runDstSync', () => {
 
   // Clean up files created by the test
   afterAll(() => {
-    const pattern = /.*-dst_cid$/;
-    const files = readdirSync(process.cwd());
-    const matchingFiles = files.filter((file) => pattern.test(file));
-
-    matchingFiles.forEach((file) => {
-      const filePath = path.join(process.cwd(), file);
-      unlinkSync(filePath);
-    });
-
     try {
       unlinkSync(testStateFile);
     } catch (_error) {

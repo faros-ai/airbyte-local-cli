@@ -208,7 +208,6 @@ End
 # Clean up temeporary test files
 cleanup() {
   find . -name 'faros_airbyte_cli_config.json' -delete
-  find . -name '*_cid' -delete
   find . -name '*state.json' -delete
   find ./resources/ -name 'test_config_file_dst_only.json' -delete
   find ./resources/ -name 'test_config_file_graph_copy.json' -delete
