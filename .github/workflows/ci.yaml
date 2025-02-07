@@ -97,7 +97,12 @@ jobs:
       - name: Check out
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0
+          fetch-depth: 10
+
+      - name: check tags
+        run: | 
+          git tag -l
+          git fetch --tags --force
 
       - name: Create tag
         id: create-tag
