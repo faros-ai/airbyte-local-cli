@@ -92,7 +92,7 @@ describe('Check options conflict', () => {
   });
 });
 
-describe.only('Check src and dst config parsing', () => {
+describe('Check src and dst config parsing', () => {
   it('should parse and validate options: src and dst', () => {
     const argv = ['./airbyte-local-cli', 'index.js', '--src', 'source-image', '--dst', 'destination-image'];
     const result = parseAndValidateInputs(argv);
