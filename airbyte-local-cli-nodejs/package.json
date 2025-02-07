@@ -1,6 +1,6 @@
 {
   "name": "@faros-ai/airbyte-local-cli-nodejs",
-  "version": "0.0.1",
+  "version": "0.0.1-beta",
   "description": "Airbyte local cli node js version",
   "private": true,
   "packageManager": "^npm@10.8.2",
@@ -12,7 +12,9 @@
     "clean": "rm -rf lib node_modules package-lock.json",
     "bundle": "npm run build && esbuild src/index.ts --bundle --platform=node --outfile=dist/index.js --external:*.node",
     "pkg": "npm run bundle && pkg --debug --output ./out/pkg/airbyte-local dist/index.js",
-    "pkg-linuxstatic": "npm run bundle && pkg --debug --output ./out/pkg/airbyte-local -t linuxstatic dist/index.js",
+    "pkg-macos": "pkg --debug --output ./out/pkg/airbyte-local --target macos dist/index.js",
+    "pkg-linux": "pkg --debug --output ./out/pkg/airbyte-local -t linuxstatic dist/index.js",
+    "pkg-win": "pkg --debug --output ./out/pkg/airbyte-local -t win dist/index.js",
     "test": "jest",
     "shellspec": "npm run bundle && pkg --output ./test/exec/airbyte-local dist/index.js && cp -rf ./test/resources ./test/exec/resources && shellspec --chdir ./test/exec"
   },
