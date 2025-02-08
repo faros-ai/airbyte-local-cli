@@ -73,7 +73,7 @@ jobs:
         env:
           FAROS_API_KEY: ${{ secrets.FAROS_API_KEY }}
         run: |
-          cp ./out/pkg/airbyte-local ./test/exec/airbyte-local
+          cp ./out/pkg/airbyte-local_linux-x64 ./test/exec/airbyte-local
           cp -rf ./test/resources ./test/exec/resources
           shellspec --chdir ./test/exec
 
