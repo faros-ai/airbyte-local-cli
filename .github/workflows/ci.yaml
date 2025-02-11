@@ -75,7 +75,7 @@ jobs:
       - name: Upload binaries
         uses: actions/upload-artifact@v4
         with:
-          name: release-${{ env.TARGET }}
+          name: release_${{ env.TARGET }}
           path: airbyte-local-cli-nodejs/out/pkg/airbyte-local_${{ env.TARGET }}
 
   release:
