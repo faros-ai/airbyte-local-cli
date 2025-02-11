@@ -58,20 +58,17 @@ jobs:
 
       - name: Install
         working-directory: airbyte-local-cli-nodejs
+        shell: bash
         run: |
           npm ci --no-audit --no-fund
           npm run version
 
       - name: Package for Platform
         working-directory: airbyte-local-cli-nodejs
+        shell: bash
         run: |
-          if [ "${{ runner.os }}" == "Windows" ]; then
-            $env:TARGET="win-${{ matrix.platform }}"
-            echo "TARGET=$env:TARGET" >> $env:GITHUB_ENV
-          else
-            TARGET="${{ runner.os == 'macOS' && 'macos' || 'linux' }}-${{ matrix.platform }}"
-            echo "TARGET=$TARGET" >> $GITHUB_ENV
-          fi
+          TARGET="${{ runner.os == 'Windows' && 'win' || runner.os == 'macOS' && 'macos' || 'linux' }}-${{ matrix.platform }}"
+          echo "TARGET=$TARGET" >> $GITHUB_ENV
           echo "Building for $TARGET"
           npm run pkg-ci -- --target $TARGET --output ./out/pkg/airbyte-local_${TARGET}
 
