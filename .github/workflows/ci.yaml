@@ -67,7 +67,7 @@ jobs:
         working-directory: airbyte-local-cli-nodejs
         shell: bash
         run: |
-          if [ runner.os == 'Windows' ]; then
+          if [ "${{ runner.os }}" == 'Windows' ]; then
             TARGET="win-${{ matrix.platform }}"
             BINARY_NAME="airbyte-local_win-${{ matrix.platform }}.exe"
           else
