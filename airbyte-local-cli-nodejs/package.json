@@ -1,11 +1,12 @@
 {
   "name": "@faros-ai/airbyte-local-cli-nodejs",
-  "version": "0.0.1-beta.1",
+  "version": "0.0.1-beta.2",
   "description": "Airbyte local cli node js version",
   "private": true,
   "packageManager": "^npm@10.8.2",
   "scripts": {
     "version": "node -p \"'export const CLI_VERSION = \\'' + require('./package.json').version + '\\';'\" > src/version.ts",
+    "bump-beta": "npm version prerelease --preid=beta ",
     "build": "tsc -p src",
     "lint": "./scripts/lint",
     "lint-fix": "npm run lint -- --fix",
@@ -13,9 +14,7 @@
     "bundle": "npm run build && esbuild src/index.ts --bundle --platform=node --outfile=dist/index.js --external:*.node",
     "test": "jest",
     "pkg": "npm run bundle && pkg --debug --output ./out/pkg/airbyte-local dist/index.js",
-    "pkg-linux": "pkg --debug --output ./out/pkg/airbyte-local_linux-x64 -t linuxstatic-x64 dist/index.js",
-    "pkg-macos": "pkg --debug --output ./out/pkg/airbyte-local_macos-x64 -t macos-x64 dist/index.js",
-    "pkg-win": "pkg --debug --output ./out/pkg/airbyte-local_win-x64 -t win-x64 dist/index.js",
+    "pkg-ci": "pkg --debug dist/index.js",
     "shellspec": "npm run bundle && pkg --output ./test/exec/airbyte-local dist/index.js && cp -rf ./test/resources ./test/exec/resources && shellspec --chdir ./test/exec"
   },
   "homepage": "https://github.com/faros-ai/airbyte-local-cli#readme",
