@@ -67,16 +67,23 @@ jobs:
         working-directory: airbyte-local-cli-nodejs
         shell: bash
         run: |
-          TARGET="${{ runner.os == 'Windows' && 'win' || runner.os == 'macOS' && 'macos' || 'linux' }}-${{ matrix.platform }}"
+          if [ runner.os == 'Windows' ]; then
+            TARGET="win-${{ matrix.platform }}"
+            BINARY_NAME="airbyte-local_win-${{ matrix.platform }}.exe"
+          else
+            TARGET="${{ runner.os == 'macOS' && 'macos' || 'linux' }}-${{ matrix.platform }}"
+            BINARY_NAME="airbyte-local_${TARGET}"
+          fi
           echo "TARGET=$TARGET" >> $GITHUB_ENV
-          echo "Building for $TARGET"
-          npm run pkg-ci -- --target $TARGET --output ./out/pkg/airbyte-local_${TARGET}
+          echo "BINARY_NAME=$BINARY_NAME" >> $GITHUB_ENV
+          echo "Building for $TARGET with binary name $BINARY_NAME"
+          npm run pkg-ci -- --target $TARGET --output ./out/pkg/$BINARY_NAME
 
       - name: Upload binaries
         uses: actions/upload-artifact@v4
         with:
           name: release_${{ env.TARGET }}
-          path: airbyte-local-cli-nodejs/out/pkg/airbyte-local_${{ env.TARGET }}
+          path: airbyte-local-cli-nodejs/out/pkg/${{ env.BINARY_NAME }}
 
   release:
     name: Release
@@ -100,5 +107,5 @@ jobs:
             airbyte-local-cli-nodejs/out/pkg/release_linux-arm64/airbyte-local_linux-arm64
             airbyte-local-cli-nodejs/out/pkg/release_macos-x64/airbyte-local_macos-x64
             airbyte-local-cli-nodejs/out/pkg/release_macos-arm64/airbyte-local_macos-arm64
-            airbyte-local-cli-nodejs/out/pkg/release_win-x64/airbyte-local_win-x64
+            airbyte-local-cli-nodejs/out/pkg/release_win-x64/airbyte-local_win-x64.exe
           tag_name: ${{ needs.tag.outputs.createdTag }}
