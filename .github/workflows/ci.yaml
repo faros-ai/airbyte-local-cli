@@ -75,7 +75,7 @@ jobs:
       - name: Upload binaries
         uses: actions/upload-artifact@v4
         with:
-          name: release
+          name: release-${{ env.TARGET }}
           path: airbyte-local-cli-nodejs/out/pkg/airbyte-local_${{ env.TARGET }}
 
   release:
@@ -96,9 +96,9 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            airbyte-local-cli-nodejs/out/pkg/release/airbyte-local_linux-x64
-            airbyte-local-cli-nodejs/out/pkg/release/airbyte-local_linux-arm64
-            airbyte-local-cli-nodejs/out/pkg/release/airbyte-local_macos-x64
-            airbyte-local-cli-nodejs/out/pkg/release/airbyte-local_macos-arm64
-            airbyte-local-cli-nodejs/out/pkg/release/airbyte-local_win-x64
+            airbyte-local-cli-nodejs/out/pkg/release_linux-x64/airbyte-local_linux-x64
+            airbyte-local-cli-nodejs/out/pkg/release_linux-arm64/airbyte-local_linux-arm64
+            airbyte-local-cli-nodejs/out/pkg/release_macos-x64/airbyte-local_macos-x64
+            airbyte-local-cli-nodejs/out/pkg/release_macos-arm64/airbyte-local_macos-arm64
+            airbyte-local-cli-nodejs/out/pkg/release_win-x64/airbyte-local_win-x64
           tag_name: ${{ needs.tag.outputs.createdTag }}
