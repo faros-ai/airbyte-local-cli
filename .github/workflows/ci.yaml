@@ -95,7 +95,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: release_${{ env.TARGET }}
-          path: airbyte-local-cli-nodejs/out/pkg/airbyte-local-${{ env.TARGET }}.zip
+          path: airbyte-local-cli-nodejs/out/pkg/airbyte-local-win-x64.zip
 
   release:
     name: Release
