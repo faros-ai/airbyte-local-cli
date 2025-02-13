@@ -97,7 +97,9 @@ jobs:
           path: airbyte-local-cli-nodejs/out/pkg
 
       - name: List Downloaded Binaries
-        run: ls -R airbyte-local-cli-nodejs/out/pkg
+        run: |
+          ls -R airbyte-local-cli-nodejs/out/pkg
+          chmod +x airbyte-local-cli-nodejs/out/pkg/*/*
 
       - name: Release
         uses: softprops/action-gh-release@v2
