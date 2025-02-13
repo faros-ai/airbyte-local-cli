@@ -89,13 +89,13 @@ jobs:
         working-directory: airbyte-local-cli-nodejs/out/pkg
         if: runner.os == 'Windows'
         run: |
-          Compress-Archive -Path airbyte-local.exe -DestinationPath airbyte-local-${TARGET}.zip
+          Compress-Archive -Path airbyte-local.exe -DestinationPath airbyte-local-win-x64.zip
 
       - name: Upload binaries
         uses: actions/upload-artifact@v4
         with:
           name: release_${{ env.TARGET }}
-          path: airbyte-local-cli-nodejs/out/pkg/airbyte-local-win-x64.zip
+          path: airbyte-local-cli-nodejs/out/pkg/airbyte-local-${{ env.TARGET }}.zip
 
   release:
     name: Release
