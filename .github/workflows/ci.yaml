@@ -12,8 +12,77 @@ on:
     - main
 
 jobs:
+  test:
+    name: Test
+    timeout-minutes: 10
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20.x
+
+      - name: Install
+        working-directory: airbyte-local-cli-nodejs
+        run: npm ci --no-audit --no-fund
+
+      - name: Build
+        working-directory: airbyte-local-cli-nodejs
+        run: npm run build
+
+      - name: Lint
+        working-directory: airbyte-local-cli-nodejs
+        run: npm run lint
+
+      - name: Test
+        working-directory: airbyte-local-cli-nodejs
+        env:
+          FAROS_API_KEY: ${{ secrets.FAROS_API_KEY }}
+        run: npm run test -- --coverage --color
+
+      - name: Package
+        working-directory: airbyte-local-cli-nodejs
+        run: npm run pkg-linuxstatic
+
+      - name: Build Shellspec image
+        working-directory: test
+        run: |
+          docker build . -t 'farosai/shellspec:kcov'
+
+      # Run shellspec tests againgst airbyte-local.sh
+      - name: Run ShellSpec tests
+        run: |
+          docker run --rm \
+            -v "$PWD/test:/src" \
+            -v "$PWD/airbyte-local.sh:/airbyte-local.sh" \
+            farosai/shellspec:kcov  
+
+      - name: Install ShellSpec
+        run: |
+          curl -fsSL https://git.io/shellspec | sh -s 0.28.1 --yes
+    
+      # Run shellspec tests againgst airbyte-local nodejs
+      - name: Run ShellSpec tests
+        working-directory: airbyte-local-cli-nodejs
+        env:
+          FAROS_API_KEY: ${{ secrets.FAROS_API_KEY }}
+        run: |
+          cp ./out/pkg/airbyte-local ./test/exec/airbyte-local
+          cp -rf ./test/resources ./test/exec/resources
+          shellspec --chdir ./test/exec
+
+      - name: SonarCloud Scan
+        uses: sonarsource/sonarcloud-github-action@master
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+
   tag:
     name: Tag
+    needs: [test]
     runs-on: ubuntu-latest
     timeout-minutes: 5
     if: github.ref == 'refs/heads/jg/nodecli-release-test'
