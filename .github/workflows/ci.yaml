@@ -83,13 +83,13 @@ jobs:
         working-directory: airbyte-local-cli-nodejs/out/pkg
         if: runner.os != 'Windows'
         run: |
-          zip airbyte-local-${TARGET}.zip airbtye-local
+          zip airbyte-local-${TARGET}.zip airbyte-local
 
       - name: Compress Windows binaries
         working-directory: airbyte-local-cli-nodejs/out/pkg
         if: runner.os == 'Windows'
         run: |
-          Compress-Archive -Path airbtye-local.exe -DestinationPath airbyte-local-${TARGET}.zip
+          Compress-Archive -Path airbyte-local.exe -DestinationPath airbyte-local-${TARGET}.zip
 
       - name: Upload binaries
         uses: actions/upload-artifact@v4
