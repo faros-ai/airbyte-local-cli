@@ -45,7 +45,7 @@ jobs:
 
       - name: Package
         working-directory: airbyte-local-cli-nodejs
-        run: npm run pkg-linuxstatic
+        run: npm run pkg -- --target linuxstatic
 
       - name: Build Shellspec image
         working-directory: test
@@ -138,15 +138,11 @@ jobs:
         run: |
           if [ "${{ runner.os }}" == 'Windows' ]; then
             TARGET="win-${{ matrix.platform }}"
-            BINARY_NAME="airbyte-local.exe"
           else
             TARGET="${{ runner.os == 'macOS' && 'macos' || 'linux' }}-${{ matrix.platform }}"
-            BINARY_NAME="airbyte-local"
           fi
           echo "TARGET=$TARGET" >> $GITHUB_ENV
-          echo "BINARY_NAME=$BINARY_NAME" >> $GITHUB_ENV
-          echo "Building for $TARGET with binary name $BINARY_NAME"
-          npm run pkg-ci -- --target $TARGET --output ./out/pkg/$BINARY_NAME
+          npm run pkg-ci -- --target $TARGET --output ./out/pkg/airbyte-local
       
       - name: Compress Linux/MacOS binaries
         working-directory: airbyte-local-cli-nodejs/out/pkg
