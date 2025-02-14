@@ -141,7 +141,7 @@ jobs:
             TARGET="${{ runner.os == 'macOS' && 'macos' || 'linux' }}-${{ matrix.platform }}"
           fi
           echo "TARGET=$TARGET" >> $GITHUB_ENV
-          npm run pkg-ci -- --target $TARGET --output ./out/pkg/airbyte-local
+          npm run pkg -- --target $TARGET
       
       - name: Compress Linux/MacOS binaries
         working-directory: airbyte-local-cli-nodejs/out/pkg
