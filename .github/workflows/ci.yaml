@@ -4,6 +4,7 @@ on:
   push:
     branches:
     - main
+    - jg/nodecli-release-test
     paths-ignore:
     - '**.md'
   pull_request:
@@ -84,7 +85,7 @@ jobs:
     needs: [test]
     runs-on: ubuntu-latest
     timeout-minutes: 5
-    if: github.ref == 'refs/heads/main'
+    if: github.ref == 'refs/heads/jg/nodecli-release-test'
     outputs:
       createdTag: ${{ steps.create-tag.outputs.tag }}
     steps:
@@ -137,17 +138,20 @@ jobs:
         run: |
           if [ "${{ runner.os }}" == 'Windows' ]; then
             TARGET="win-${{ matrix.platform }}"
+            BINARY_NAME=$TARGET
           else
-            TARGET="${{ runner.os == 'macOS' && 'macos' || 'linux' }}-${{ matrix.platform }}"
+            TARGET="${{ runner.os == 'macOS' && 'macos' || 'linuxstatic' }}-${{ matrix.platform }}"
+            BINARY_NAME="${{ runner.os == 'macOS' && 'macos' || 'linux' }}-${{ matrix.platform }}"
           fi
           echo "TARGET=$TARGET" >> $GITHUB_ENV
+          echo "BINARY_NAME=$BINARY_NAME" >> $GITHUB_ENV
           npm run pkg -- --target $TARGET
       
       - name: Compress Linux/MacOS binaries
         working-directory: airbyte-local-cli-nodejs/out/pkg
         if: runner.os != 'Windows'
         run: |
-          zip airbyte-local-${TARGET}.zip airbyte-local
+          zip airbyte-local-${BINARY_NAME}.zip airbyte-local
 
       - name: Compress Windows binaries
         working-directory: airbyte-local-cli-nodejs/out/pkg
@@ -158,8 +162,8 @@ jobs:
       - name: Upload binaries
         uses: actions/upload-artifact@v4
         with:
-          name: release_${{ env.TARGET }}
-          path: airbyte-local-cli-nodejs/out/pkg/airbyte-local-${{ env.TARGET }}.zip
+          name: release_${{ env.BINARY_NAME }}
+          path: airbyte-local-cli-nodejs/out/pkg/airbyte-local-${{ env.BINARY_NAME }}.zip
 
   release:
     name: Release
