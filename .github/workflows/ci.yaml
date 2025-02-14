@@ -4,7 +4,6 @@ on:
   push:
     branches:
     - main
-    - jg/nodecli-release-test
     paths-ignore:
     - '**.md'
   pull_request:
@@ -85,7 +84,7 @@ jobs:
     needs: [test]
     runs-on: ubuntu-latest
     timeout-minutes: 5
-    if: github.ref == 'refs/heads/jg/nodecli-release-test'
+    if: github.ref == 'refs/heads/main'
     outputs:
       createdTag: ${{ steps.create-tag.outputs.tag }}
     steps:
@@ -143,7 +142,6 @@ jobs:
             TARGET="${{ runner.os == 'macOS' && 'macos' || 'linuxstatic' }}-${{ matrix.platform }}"
             BINARY_NAME="${{ runner.os == 'macOS' && 'macos' || 'linux' }}-${{ matrix.platform }}"
           fi
-          echo "TARGET=$TARGET" >> $GITHUB_ENV
           echo "BINARY_NAME=$BINARY_NAME" >> $GITHUB_ENV
           npm run pkg -- --target $TARGET
       
