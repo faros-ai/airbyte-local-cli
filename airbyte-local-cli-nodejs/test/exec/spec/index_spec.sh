@@ -124,15 +124,100 @@ Describe 'Validate temporary directory and files creation'
     The output should include "Docker version"
     The status should equal 0
   End
+  It 'should create temporary directory'
+    airbyte_local_test() {
+      ./airbyte-local \
+        --src 'farosai/foo' \
+        --dst 'farosai/bar' \
+        --debug
+    }
+    When call airbyte_local_test
+    The output should include "Temporary directory created"
+    # both src and dst images are invalid so errors are expected
+    The status should equal 1
+  End
+End
+
+Describe 'Stream prefix'
+  It 'should generate stream prefix'
+    airbyte_local_test() {
+      ./airbyte-local \
+        --src 'farosai/airbyte-foo-source' \
+        --dst 'farosai/airbyte-faros-destination-bar' \
+        --debug
+    }
+    When call airbyte_local_test
+    The output should include "Using connection name: myfoosrc"
+    The output should include "Using destination stream prefix: myfoosrc_foo__"
+    # both src and dst images are invalid so errors are expected
+    The status should equal 1
+  End
+  It 'should generate stream prefix with connection name'
+    airbyte_local_test() {
+      ./airbyte-local \
+        --src 'farosai/airbyte-foo-source' \
+        --dst 'farosai/airbyte-faros-destination-bar' \
+        --connection-name 'jennie-connection' \
+        --debug
+    }
+    When call airbyte_local_test
+    The output should include "Using connection name: jennie-connection"
+    The output should include "Using destination stream prefix: jennie-connection_foo__"
+    The output should include "State file 'jennie-connection__state.json' not found. An empty state file will be created."
+    # both src and dst images are invalid so errors are expected
+    The status should equal 1
+  End
+End
+
+Describe 'Load state file'
+  It 'should create state file'
+    airbyte_local_test() {
+      ./airbyte-local \
+        --src 'farosai/airbyte-foo-source' \
+        --dst 'farosai/airbyte-faros-destination-bar' \
+        --debug
+    }
+    When call airbyte_local_test
+    The output should include "State file 'myfoosrc__state.json' not found. An empty state file will be created."
+    # both src and dst images are invalid so errors are expected
+    The status should equal 1
+  End
+  It 'should load state file'
+    airbyte_local_test() {
+      ./airbyte-local \
+        --src 'farosai/foo' \
+        --dst 'farosai/bar' \
+        --state-file './resources/test__state.json'
+    }
+    When call airbyte_local_test
+    The output should include "Using state file: './resources/test__state.json'"
+    # both src and dst images are invalid so errors are expected
+    The status should equal 1
+  End
   It 'should fail if provided state file path is invalid'
     airbyte_local_test() {
       ./airbyte-local \
-        --src 'farosai/airbyte-servicenow-source' \
-        --dst 'farosai/airbyte-faros-destination' \
+        --src 'farosai/foo' \
+        --dst 'farosai/bar' \
         --state-file 'invalid_file'
     }
     When call airbyte_local_test
     The output should include "State file 'invalid_file' not found. Please make sure the state file exists and have read access."
+    The status should equal 1
+  End
+End
+
+Describe 'No image pull'
+  It 'should not pull images'
+    airbyte_local_test() {
+      ./airbyte-local \
+        --src 'farosai/foo' \
+        --dst 'farosai/bar' \
+        --no-src-pull \
+        --no-dst-pull
+    }
+    When call airbyte_local_test
+    The output should not include "Pulling docker image"
     The status should equal 1
   End
 End
