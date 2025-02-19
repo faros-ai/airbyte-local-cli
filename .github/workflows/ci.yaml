@@ -103,6 +103,11 @@ jobs:
           echo "BINARY_NAME=$BINARY_NAME" >> $GITHUB_ENV
           npm run pkg -- --target $TARGET
 
+      - name: Debug Package
+        run: |
+          uname -m
+          file /home/runner/.pkg-cache/v3.5/fetched-v20.18.1-linuxstatic-arm64
+      
       - name: Install ShellSpec
         shell: bash
         run: |
