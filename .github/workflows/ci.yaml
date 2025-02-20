@@ -114,7 +114,17 @@ jobs:
           ./airbyte-local --help
 
       - name: Check Docker Info
-        run: docker info
+        if: matrix.os == 'windows-latest'
+        run: |
+          docker info
+          & 'C:\Program Files\Docker\Docker\DockerCli.exe' -SwitchLinuxEngine
+          echo "Waiting for Docker to restart..."
+          $count = 0
+          while (!(docker info -f '{{.OSType}}' 2>$null) -or ($count -ge 30)) {
+            Start-Sleep -Seconds 2
+            $count++
+          }
+          docker info
         
       - name: Install ShellSpec
         if: matrix.os == 'ubuntu-latest' || matrix.os == 'windows-latest'
