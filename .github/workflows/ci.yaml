@@ -107,19 +107,19 @@ jobs:
           fi
           npm run pkg -- --target $TARGET
       
+      - name: Run binary
+        working-directory: airbyte-local-cli-nodejs
+        run: |
+          ./out/pkg/airbyte-local --help
+
       - name: Install ShellSpec
+        if: runner.os == 'Linux'
         shell: bash
         run: |
           curl -fsSL https://git.io/shellspec | sh -s 0.28.1 --yes
     
-      - name: Install docker (missing on MacOS)
-        if: runner.os == 'macos'
-        run: |
-          brew install docker colima
-          colima start
-
-      # Run shellspec tests
       - name: Run ShellSpec tests
+        if: runner.os == 'Linux'
         working-directory: airbyte-local-cli-nodejs
         env:
           FAROS_API_KEY: ${{ secrets.FAROS_API_KEY }}
