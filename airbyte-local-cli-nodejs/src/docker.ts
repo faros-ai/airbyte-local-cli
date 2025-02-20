@@ -37,8 +37,9 @@ export function setDocker(docker: Docker): void {
 
 export async function checkDockerInstalled(): Promise<void> {
   try {
-    await _docker.version();
+    const version = await _docker.version();
     logger.info('Docker is installed and running.');
+    logger.debug(`Docker version: ${JSON.stringify(version)}`);
   } catch (error: any) {
     logger.error('Docker is not installed or running.');
     throw error;

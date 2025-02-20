@@ -1,6 +1,6 @@
 {
   "name": "@faros-ai/airbyte-local-cli-nodejs",
-  "version": "0.0.1-beta.2",
+  "version": "0.0.1-beta.3",
   "description": "Airbyte local cli node js version",
   "private": true,
   "packageManager": "^npm@10.8.2",
@@ -14,7 +14,7 @@
     "bundle": "npm run build && esbuild src/index.ts --bundle --platform=node --outfile=dist/index.js --external:*.node",
     "test": "jest",
     "pkg": "npm run bundle && pkg --debug --output ./out/pkg/airbyte-local dist/index.js",
-    "shellspec": "npm run bundle && pkg --output ./test/exec/airbyte-local dist/index.js && cp -rf ./test/resources ./test/exec/resources && shellspec --chdir ./test/exec"
+    "shellspec": "npm run bundle && pkg --output ./test/exec/airbyte-local dist/index.js && cp -rf ./test/resources ./test/exec/ && shellspec --chdir ./test/exec"
   },
   "homepage": "https://github.com/faros-ai/airbyte-local-cli#readme",
   "author": "Faros AI, Inc.",
