@@ -61,7 +61,9 @@ export async function pullDockerImage(image: string): Promise<void> {
 
   // TODO: remove debug lines
   const images = await _docker.listImages();
-  logger.debug(`Docker images: ${JSON.stringify(images)}`);
+  images.forEach((img) => {
+    logger.debug(`Image: ${JSON.stringify(img.RepoDigests)}`);
+  });
 }
 
 export async function inspectDockerImage(image: string): Promise<{digest: string; version: string}> {
