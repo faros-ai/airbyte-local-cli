@@ -137,6 +137,7 @@ jobs:
           if [ "${{ matrix.os }}" == 'ubuntu-latest' ]; then
             shellspec --chdir ./test/exec
           elif [ "${{ matrix.os }}" == 'windows-latest' ]; then
+            docker context ls
             ~/.local/bin/shellspec --chdir ./test/exec --example 'Run destination sync'
           fi
 
