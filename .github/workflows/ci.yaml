@@ -116,6 +116,7 @@ jobs:
         if: runner.os == 'macos'
         run: |
           brew install docker
+          colima start
 
       # Run shellspec tests
       - name: Run ShellSpec tests
