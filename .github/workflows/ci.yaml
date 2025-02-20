@@ -65,11 +65,12 @@ jobs:
     name: Test NodeJS Cli
     strategy:
       matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
-        platform: [x64, arm64]
-        exclude:
-          - os: windows-latest
-            platform: arm64
+        os: 
+          - ubuntu-latest # linux x64
+          - ubuntu-24.04-arm # linux arm64
+          - macos-13 # macos x64
+          - macos-latest # macos arm64
+          - windows-latest # windows x64
     runs-on: ${{ matrix.os }}
     timeout-minutes: 15
     needs: [build]
@@ -93,20 +94,22 @@ jobs:
         working-directory: airbyte-local-cli-nodejs
         shell: bash
         run: |
-          if [ "${{ runner.os }}" == 'Windows' ]; then
-            TARGET="win-${{ matrix.platform }}"
-            BINARY_NAME=$TARGET
-          else
-            TARGET="${{ runner.os == 'macOS' && 'macos' || 'linuxstatic' }}-${{ matrix.platform }}"
-            BINARY_NAME="${{ runner.os == 'macOS' && 'macos' || 'linux' }}-${{ matrix.platform }}"
+          if [ "${{ matrix.os }}" == 'ubuntu-latest' ]; then
+            TARGET="linuxstatic-x64"
+          elif [ "${{ matrix.os }}" == 'ubuntu-24.04-arm' ]; then
+            TARGET="linuxstatic-arm64"
+          elif [ "${{ matrix.os }}" == 'macos-13' ]; then
+            TARGET="macos-x64"
+          elif [ "${{ matrix.os }}" == 'macos-latest' ]; then
+            TARGET="macos-arm64"
+          elif [ "${{ matrix.os }}" == 'windows-latest' ]; then
+            TARGET="win-x64"
           fi
-          echo "BINARY_NAME=$BINARY_NAME" >> $GITHUB_ENV
           npm run pkg -- --target $TARGET
 
       - name: Debug Package
         run: |
           uname -m
-          file /home/runner/.pkg-cache/v3.5/fetched-v20.18.1-linuxstatic-arm64
       
       - name: Install ShellSpec
         shell: bash
