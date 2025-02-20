@@ -115,7 +115,7 @@ jobs:
       - name: Install docker (missing on MacOS)
         if: runner.os == 'macos'
         run: |
-          brew install docker
+          brew install docker colima
           colima start
 
       # Run shellspec tests
