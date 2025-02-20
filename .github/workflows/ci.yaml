@@ -134,7 +134,11 @@ jobs:
         run: |
           cp ./out/pkg/airbyte-local ./test/exec/airbyte-local
           cp -rf ./test/resources ./test/exec/
-          shellspec --chdir ./test/exec
+          if [ "${{ matrix.os }}" == 'ubuntu-latest' ]; then
+            shellspec --chdir ./test/exec
+          elif [ "${{ matrix.os }}" == 'windows-latest' ]; then
+            ~/.local/bin/shellspec --chdir ./test/exec
+          fi
 
   tag:
     name: Tag
