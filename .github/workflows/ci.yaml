@@ -108,18 +108,18 @@ jobs:
           npm run pkg -- --target $TARGET
       
       - name: Run binary
-        working-directory: airbyte-local-cli-nodejs
+        working-directory: airbyte-local-cli-nodejs/out/pkg
         run: |
-          ./out/pkg/airbyte-local --help
+          ./airbyte-local --help | grep 'Airbyte local CLI'
 
       - name: Install ShellSpec
-        if: runner.os == 'Linux'
+        if: matrix.os == 'ubuntu-latest'
         shell: bash
         run: |
           curl -fsSL https://git.io/shellspec | sh -s 0.28.1 --yes
     
       - name: Run ShellSpec tests
-        if: runner.os == 'Linux'
+        if: matrix.os == 'ubuntu-latest'
         working-directory: airbyte-local-cli-nodejs
         env:
           FAROS_API_KEY: ${{ secrets.FAROS_API_KEY }}
