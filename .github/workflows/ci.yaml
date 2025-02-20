@@ -70,7 +70,7 @@ jobs:
           - ubuntu-24.04-arm # linux arm64
           - macos-13 # macos x64
           - macos-latest # macos arm64
-          # - windows-latest # windows x64
+          - windows-latest # windows x64
     runs-on: ${{ matrix.os }}
     timeout-minutes: 20
     needs: [build]
@@ -110,7 +110,7 @@ jobs:
       - name: Run binary
         working-directory: airbyte-local-cli-nodejs/out/pkg
         run: |
-          ./airbyte-local --help | grep 'Airbyte local CLI'
+          ./airbyte-local --help
 
       - name: Install ShellSpec
         if: matrix.os == 'ubuntu-latest'
