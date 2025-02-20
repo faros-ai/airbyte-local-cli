@@ -60,29 +60,6 @@ export async function pullDockerImage(image: string): Promise<void> {
     logger.error(`Failed to pull docker image: ${image}`);
     throw error;
   }
-
-  /* TODO: remove  - debug lines section */
-  let images = await _docker.listImages();
-  images.forEach((img) => {
-    logger.debug(`Image: ${JSON.stringify(img.RepoDigests)}`);
-  });
-
-  await new Promise((resolve, reject) => {
-    exec(`docker pull ${image}`, (error, stdout, stderr) => {
-      if (error) {
-        logger.error(`Failed to pull docker image: ${image} - ${stderr}`);
-        reject(error);
-      } else {
-        logger.info(`Docker image pulled: ${image}`);
-        resolve(stdout);
-      }
-    });
-  });
-  images = await _docker.listImages();
-  images.forEach((img) => {
-    logger.debug(`Image: ${JSON.stringify(img.RepoDigests)}`);
-  });
-  /* debug lines section */
 }
 
 export async function inspectDockerImage(image: string): Promise<{digest: string; version: string}> {

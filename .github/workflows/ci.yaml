@@ -66,10 +66,10 @@ jobs:
     strategy:
       matrix:
         os: 
-          # - ubuntu-latest # linux x64
-          # - ubuntu-24.04-arm # linux arm64
-          # - macos-13 # macos x64
-          # - macos-latest # macos arm64
+          - ubuntu-latest # linux x64
+          - ubuntu-24.04-arm # linux arm64
+          - macos-13 # macos x64
+          - macos-latest # macos arm64
           - windows-latest # windows x64
     runs-on: ${{ matrix.os }}
     timeout-minutes: 20
@@ -113,21 +113,8 @@ jobs:
         run: |
           ./airbyte-local --help
 
-      - name: Check Docker Info
-        if: matrix.os == 'windows-latest'
-        run: |
-          docker info
-          & 'C:\Program Files\Docker\Docker\DockerCli.exe' -SwitchLinuxEngine
-          echo "Waiting for Docker to restart..."
-          $count = 0
-          while (!(docker info -f '{{.OSType}}' 2>$null) -or ($count -ge 30)) {
-            Start-Sleep -Seconds 2
-            $count++
-          }
-          docker info
-        
       - name: Install ShellSpec
-        if: matrix.os == 'ubuntu-latest' || matrix.os == 'windows-latest'
+        if: matrix.os == 'ubuntu-latest'
         shell: bash
         run: |
           curl -fsSL https://git.io/shellspec | sh -s 0.28.1 --yes
@@ -139,20 +126,14 @@ jobs:
       #  - windows: TODO
       ##
       - name: Run ShellSpec tests
-        if: matrix.os == 'ubuntu-latest' || matrix.os == 'windows-latest'
+        if: matrix.os == 'ubuntu-latest'
         working-directory: airbyte-local-cli-nodejs
-        shell: bash
         env:
           FAROS_API_KEY: ${{ secrets.FAROS_API_KEY }}
         run: |
           cp ./out/pkg/airbyte-local ./test/exec/airbyte-local
           cp -rf ./test/resources ./test/exec/
-          if [ "${{ matrix.os }}" == 'ubuntu-latest' ]; then
-            shellspec --chdir ./test/exec
-          elif [ "${{ matrix.os }}" == 'windows-latest' ]; then
-            docker context ls
-            ~/.local/bin/shellspec --chdir ./test/exec --example 'Run destination sync'
-          fi
+          shellspec --chdir ./test/exec
 
   tag:
     name: Tag
