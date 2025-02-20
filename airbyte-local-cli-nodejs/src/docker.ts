@@ -58,6 +58,10 @@ export async function pullDockerImage(image: string): Promise<void> {
     logger.error(`Failed to pull docker image: ${image}`);
     throw error;
   }
+
+  // TODO: remove debug lines
+  const images = await _docker.listImages();
+  logger.debug(`Docker images: ${JSON.stringify(images)}`);
 }
 
 export async function inspectDockerImage(image: string): Promise<{digest: string; version: string}> {

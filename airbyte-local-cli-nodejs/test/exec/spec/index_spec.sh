@@ -288,7 +288,8 @@ Describe 'Run destination sync'
     airbyte_local_test() {
       ./airbyte-local \
         --config-file './resources/test_config_file_dst_only.json' \
-        --dst-only './resources/dockerIt_runDstSync/faros_airbyte_cli_src_output'
+        --dst-only './resources/dockerIt_runDstSync/faros_airbyte_cli_src_output' \
+        --debug
     }
     When call airbyte_local_test
     The output should include '[DST] - {"log":{"level":"INFO","message":"Errored 0 records"},"type":"LOG"}'
