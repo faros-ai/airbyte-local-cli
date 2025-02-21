@@ -436,7 +436,7 @@ export function generateDstStreamPrefix(cfg: FarosConfig): void {
       const [imageName] = srcImage.split(':');
       const imageParts = imageName?.split('-').slice(1, -1);
       cfg.connectionName = cfg.connectionName ?? `my${imageParts?.join('') ?? ''}src`;
-      cfg.dstStreamPrefix = `${cfg.connectionName}_${imageParts?.join('_') ?? ''}__`;
+      cfg.dstStreamPrefix = `${cfg.connectionName}__${imageParts?.join('_') ?? ''}__`;
       logger.debug(`Using connection name: ${cfg.connectionName}`);
       logger.debug(`Using destination stream prefix: ${cfg.dstStreamPrefix}`);
     }
