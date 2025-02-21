@@ -25,6 +25,7 @@ import {
   AirbyteCliContext,
   AirbyteConfig,
   AirbyteConfiguredCatalog,
+  AirbyteMessageType,
   AirbyteStream,
   DestinationSyncMode,
   FarosConfig,
@@ -359,11 +360,24 @@ export function processSrcDataByLine(line: string, outputStream: Writable, cfg: 
 
     // non RECORD and STATE type messages: print as stdout
     // RECORD and STATE type messages: when the output is set to stdout
-    if ((data?.type !== 'RECORD' && data?.type !== 'STATE') || cfg.srcOutputFile === OutputStream.STDOUT) {
+    if (
+      (data?.type !== AirbyteMessageType.RECORD && data?.type !== AirbyteMessageType.STATE) ||
+      cfg.srcOutputFile === OutputStream.STDOUT
+    ) {
       if (cfg.rawMessages) {
         process.stdout.write(`${line}\n`);
       } else {
-        logger.info(formatSrcMsg(data));
+        if (data?.type === AirbyteMessageType.LOG && data?.log?.level !== 'INFO') {
+          if (data?.log?.level === 'ERROR') {
+            logger.error(formatSrcMsg(data));
+          } else if (data?.log?.level === 'WARN') {
+            logger.warn(formatSrcMsg(data));
+          } else if (data?.log?.level === 'DEBUG') {
+            logger.debug(formatSrcMsg(data));
+          }
+        } else {
+          logger.info(formatSrcMsg(data));
+        }
       }
     }
     // RECORD and STATE type messages: write to output file
@@ -459,14 +473,24 @@ export function processDstDataByLine(line: string, cfg: FarosConfig): string {
   try {
     const data = JSON.parse(line);
 
-    if (data?.type === 'STATE' && data?.state?.data) {
+    if (data?.type === AirbyteMessageType.STATE && data?.state?.data) {
       state = JSON.stringify(data.state.data);
       logger.debug(formatDstMsg(data));
     }
     if (cfg.rawMessages) {
       process.stdout.write(`${line}\n`);
     } else {
-      logger.info(formatDstMsg(data));
+      if (data?.type === AirbyteMessageType.LOG && data?.log?.level !== 'INFO') {
+        if (data?.log?.level === 'ERROR') {
+          logger.error(formatDstMsg(data));
+        } else if (data?.log?.level === 'WARN') {
+          logger.warn(formatDstMsg(data));
+        } else if (data?.log?.level === 'DEBUG') {
+          logger.debug(formatDstMsg(data));
+        }
+      } else {
+        logger.info(formatDstMsg(data));
+      }
     }
   } catch (error: any) {
     // log as errors but not throw it
