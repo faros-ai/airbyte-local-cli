@@ -234,7 +234,7 @@ jobs:
     name: Release
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    needs: [tag, build]
+    needs: [tag, build-binaries]
     steps:
       - name: Download All Artifacts
         uses: actions/download-artifact@v4
