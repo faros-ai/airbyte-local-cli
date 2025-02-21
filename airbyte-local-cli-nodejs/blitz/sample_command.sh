@@ -1,6 +1,6 @@
 ## Replace the api key
 # Please make sure your key and url is pointing to DEV
-export FAROS_API_KEY="your_api_key"
+export FAROS_API_KEY="R0eSuRHieYU6qnVgWfkInIoJX8BOdwgY"
 export FAROS_API_URL="https://dev.api.faros.ai"
 
 jq --arg api_key "$FAROS_API_KEY" '
@@ -12,8 +12,16 @@ jq --arg api_key "$FAROS_API_KEY" '
   .dst.config.edition_configs.api_key = $api_key
 ' ./resources/graph_copy_with_tags.json.template > ./resources/graph_copy_with_tags.json
 jq --arg api_key "$FAROS_API_KEY" '
+  .src.config.api_key = $api_key |
+  .dst.config.edition_configs.api_key = $api_key
+' ./resources/graph_copy_docker_options.json.template > ./resources/graph_copy_docker_options.json
+
+jq --arg api_key "$FAROS_API_KEY" '
   .src.config.api_key = $api_key
 ' ./resources/graph_copy_src_only.json.template > ./resources/graph_copy_src_only.json
+jq --arg api_key "$FAROS_API_KEY" '
+  .src.config.api_key = $api_key
+' ./resources/graph_copy_src_only_catalog.json.template > ./resources/graph_copy_src_only_catalog.json
 jq --arg api_key "$FAROS_API_KEY" '
   .dst.config.edition_configs.api_key = $api_key
 ' ./resources/graph_copy_dst_only.json.template > ./resources/graph_copy_dst_only.json
@@ -40,11 +48,15 @@ jq --arg api_key "$FAROS_API_KEY" '
 ./airbyte-local \
   --config-file './resources/graph_copy.json' 
 
-# src and dst sync with catalogs
-
+# src sync with catalogs
+./airbyte-local \
+  --config-file './resources/graph_copy_src_only_catalog.json' \
+  --src-only
 
 # src and dst sync with docker options
-
+./airbyte-local \
+  --config-file './resources/graph_copy_docker_options.json' \
+  --keep-containers
 
 # check connection
 ./airbyte-local \
@@ -151,4 +163,5 @@ jq --arg api_key "$FAROS_API_KEY" '
   --src.password "${$JIRA_TOKEN}" \
   --dst farosai/airbyte-faros-destination \
   --dst.edition_configs.api_key $FAROS_API_KEY \
+  --dst.edition_configs.api_url $FAROS_API_URL \
   --connection-name "myjirasrc"
