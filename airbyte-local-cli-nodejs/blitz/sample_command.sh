@@ -1,6 +1,6 @@
 ## Replace the api key
 # Please make sure your key and url is pointing to DEV
-export FAROS_API_KEY="R0eSuRHieYU6qnVgWfkInIoJX8BOdwgY"
+export FAROS_API_KEY=""
 export FAROS_API_URL="https://dev.api.faros.ai"
 
 jq --arg api_key "$FAROS_API_KEY" '
@@ -154,6 +154,55 @@ jq --arg api_key "$FAROS_API_KEY" '
   --dst.edition_configs.api_key $FAROS_API_KEY \
   --dst.edition_configs.api_url $FAROS_API_URL \
   --connection-name "mygithubsrc"
+
+# riskfield github source
+# update to my own org and dev env
+./airbyte-local \
+  --src "farosai/airbyte-github-source" \
+  --src.authentication.type "token" \
+  --src.authentication.personal_access_token "$GITHUB_TOKEN" \
+  --src.organizations "[\"jg-test-org-1\"]" \
+  --src.use_faros_graph_repos_selection "true" \
+  --src.api_url "https://dev.api.faros.ai" \
+  --src.api_key "$FAROS_API_KEY" \
+  --src.graph "jennie-test" \
+  --src.run_mode "Custom" \
+  --src.custom_streams "[\"faros_commits\",\"faros_copilot_seats\",\"faros_copilot_usage\",\"faros_organizations\",\"faros_pull_requests\",\"faros_releases\",\"faros_repositories\",\"faros_users\"]" \
+  --src.fetch_teams "true" \
+  --src.copilot_licenses_dates_fix "false" \
+  --src.cutoff_days "7" \
+  --dst "farosai/airbyte-faros-destination" \
+  --dst.edition_configs.edition "cloud" \
+  --dst.edition_configs.api_url "https://dev.api.faros.ai" \
+  --dst.edition_configs.api_key "$FAROS_API_KEY" \
+  --dst.edition_configs.graphql_api "v2" \
+  --dst.edition_configs.graph "jennie-test" \
+  --connection-name "github_v2"
+# -->
+./airbyte-local \
+  --config-file './resources/github_riskifield.json' \
+  --connection-name "github_v2"
+
+# rickifield github coplilot source
+./airbyte-local \
+  --src "farosai/airbyte-github-source" \
+  --src.authentication.type "token" \
+  --src.authentication.personal_access_token "$GITHUB_TOKEN" \
+  --src.organizations "[\"faros-ai\"]" \
+  --src.use_faros_graph_repos_selection "true" \
+  --src.api_url "https://dev.api.faros.ai" \
+  --src.api_key "$FAROS_API_KEY" \
+  --src.graph "jennie-test" \
+  --src.run_mode "CopilotEvaluationApp" \
+  --src.copilot_licenses_dates_fix "false" \
+  --src.cutoff_days "7" \
+  --dst "farosai/airbyte-faros-destination" \
+  --dst.edition_configs.edition "cloud" \
+  --dst.edition_configs.api_url "https://dev.api.faros.ai" \
+  --dst.edition_configs.api_key "$FAROS_API_KEY" \
+  --dst.edition_configs.graphql_api "v2" \
+  --dst.edition_configs.graph "jennie-test" \
+  --connection-name "github_v2_copilot"
 
 # jira source
 ./airbyte-local \

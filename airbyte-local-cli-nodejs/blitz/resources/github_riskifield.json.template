@@ -1,0 +1,44 @@
+{
+  "src": {
+    "image": "farosai/airbyte-github-source",
+    "config": {
+      "authentication": {
+        "type": "token",
+        "personal_access_token": ""
+      },
+      "organizations": [
+        "jg-test-org-1"
+      ],
+      "use_faros_graph_repos_selection": true,
+      "api_url": "https://dev.api.faros.ai",
+      "api_key": "",
+      "graph": "jennie-test",
+      "run_mode": "Custom",
+      "custom_streams": [
+        "faros_commits",
+        "faros_copilot_seats",
+        "faros_copilot_usage",
+        "faros_organizations",
+        "faros_pull_requests",
+        "faros_releases",
+        "faros_repositories",
+        "faros_users"
+      ],
+      "fetch_teams": true,
+      "copilot_licenses_dates_fix": false,
+      "cutoff_days": 7
+    }
+  },
+  "dst": {
+    "image": "farosai/airbyte-faros-destination",
+    "config": {
+      "edition_configs": {
+        "edition": "cloud",
+        "api_url": "https://dev.api.faros.ai",
+        "api_key": "",
+        "graphql_api": "v2",
+        "graph": "jennie-test"
+      }
+    }
+  }
+}

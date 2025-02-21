@@ -13,3 +13,6 @@ out/pkg
 *airbyte-local
 test/exec/resources
 tmp*
+blitz/resources/*.json
+blitz/*state.json
+blitz/faros_airbyte_cli_config.json
