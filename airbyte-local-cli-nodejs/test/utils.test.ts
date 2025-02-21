@@ -223,7 +223,7 @@ describe('generateDstStreamPrefix', () => {
     } as FarosConfig;
     generateDstStreamPrefix(testAirbyteConfig);
     expect(testAirbyteConfig.connectionName).toEqual('myexamplesrc');
-    expect(testAirbyteConfig.dstStreamPrefix).toEqual('myexamplesrc_example__');
+    expect(testAirbyteConfig.dstStreamPrefix).toEqual('myexamplesrc__example__');
   });
 
   it('should succeed with connection name flag', () => {
@@ -238,7 +238,7 @@ describe('generateDstStreamPrefix', () => {
     } as FarosConfig;
     generateDstStreamPrefix(testAirbyteConfig);
     expect(testAirbyteConfig.connectionName).toEqual('testConnectionName');
-    expect(testAirbyteConfig.dstStreamPrefix).toEqual('testConnectionName_example__');
+    expect(testAirbyteConfig.dstStreamPrefix).toEqual('testConnectionName__example__');
   });
 
   it('should succeed with feeds source', () => {
@@ -252,7 +252,7 @@ describe('generateDstStreamPrefix', () => {
     } as FarosConfig;
     generateDstStreamPrefix(testAirbyteConfig);
     expect(testAirbyteConfig.connectionName).toEqual('myfarosfeedssrc');
-    expect(testAirbyteConfig.dstStreamPrefix).toEqual('myfarosfeedssrc_faros_feeds__');
+    expect(testAirbyteConfig.dstStreamPrefix).toEqual('myfarosfeedssrc__faros_feeds__');
   });
 
   it('should succeed with feeds source and connection name flag', () => {
@@ -267,6 +267,6 @@ describe('generateDstStreamPrefix', () => {
     } as FarosConfig;
     generateDstStreamPrefix(testAirbyteConfig);
     expect(testAirbyteConfig.connectionName).toEqual('testConnectionName');
-    expect(testAirbyteConfig.dstStreamPrefix).toEqual('testConnectionName_faros_feeds__');
+    expect(testAirbyteConfig.dstStreamPrefix).toEqual('testConnectionName__faros_feeds__');
   });
 });

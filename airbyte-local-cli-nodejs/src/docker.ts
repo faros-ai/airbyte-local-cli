@@ -307,7 +307,7 @@ export async function runSrcSync(tmpDir: string, config: FarosConfig): Promise<v
     logger.debug(`Source connector exit code: ${JSON.stringify(res)}`);
 
     if (res.StatusCode === 0) {
-      logger.info('Source connector ran successfully.');
+      logger.info('Source connector completed.');
     } else {
       throw new Error('Failed to run source connector.');
     }
@@ -430,7 +430,7 @@ export async function runDstSync(tmpDir: string, config: FarosConfig): Promise<v
     logger.debug(`Destination connector exit code: ${JSON.stringify(res)}`);
 
     if (res.StatusCode === 0) {
-      logger.info('Destination connector ran successfully.');
+      logger.info('Destination connector completed.');
 
       // Write the state file
       const lastState = states.pop();
