@@ -208,9 +208,9 @@ jq --arg api_key "$FAROS_API_KEY" '
 ./airbyte-local \
   --src farosai/airbyte-jira-source \
   --src.url "https://xyz.atlassian.net" \
-  --src.username "${JIRA_USER_EMAIL}" \
-  --src.password "${$JIRA_TOKEN}" \
+  --src.username "jennie@faros.ai" \
+  --src.password "$JIRA_TOKEN" \
   --dst farosai/airbyte-faros-destination \
   --dst.edition_configs.api_key $FAROS_API_KEY \
   --dst.edition_configs.api_url $FAROS_API_URL \
-  --connection-name "myjirasrc"
+  --dst.edition_configs.graph "jennie-test"
