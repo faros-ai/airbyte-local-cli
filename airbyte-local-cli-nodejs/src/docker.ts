@@ -236,8 +236,12 @@ export async function runSrcSync(tmpDir: string, config: FarosConfig): Promise<v
       '--state',
       `/configs/${DEFAULT_STATE_FILE}`,
     ];
-    const maxNanoCpus = config.src?.dockerOptions?.maxCpus;
-    const maxMemory = config.src?.dockerOptions?.maxMemory;
+    // 1e9 nano cpus = 1 cpu
+    const maxNanoCpus = config.src?.dockerOptions?.maxCpus ? config.src?.dockerOptions?.maxCpus * 1e9 : undefined;
+    // 1024 * 1024 bytes = 1MB
+    const maxMemory = config.src?.dockerOptions?.maxMemory
+      ? config.src?.dockerOptions?.maxMemory * 1024 * 1024
+      : undefined;
     const createOptions: Docker.ContainerCreateOptions = {
       // Default config: can be overridden by the docker options provided by users
       name: srcContainerName,
@@ -252,8 +256,8 @@ export async function runSrcSync(tmpDir: string, config: FarosConfig): Promise<v
       Env: [`LOG_LEVEL=${config.logLevel}`, ...(config.src?.dockerOptions?.additionalOptions?.Env || [])],
       HostConfig: {
         // Defautl host config: can be overridden by users
-        NanoCpus: maxNanoCpus, // 1e9 nano cpus = 1 cpu
-        Memory: maxMemory, // 1024 * 1024 bytes = 1MB
+        NanoCpus: maxNanoCpus,
+        Memory: maxMemory,
         LogConfig: {
           Type: 'json-file',
           Config: {
@@ -349,8 +353,12 @@ export async function runDstSync(tmpDir: string, config: FarosConfig): Promise<v
       '--catalog',
       `/configs/${DST_CATALOG_FILENAME}`,
     ];
-    const maxNanoCpus = config.dst?.dockerOptions?.maxCpus;
-    const maxMemory = config.dst?.dockerOptions?.maxMemory;
+    // 1e9 nano cpus = 1 cpu
+    const maxNanoCpus = config.src?.dockerOptions?.maxCpus ? config.src?.dockerOptions?.maxCpus * 1e9 : undefined;
+    // 1024 * 1024 bytes = 1MB
+    const maxMemory = config.src?.dockerOptions?.maxMemory
+      ? config.src?.dockerOptions?.maxMemory * 1024 * 1024
+      : undefined;
     const createOptions: Docker.ContainerCreateOptions = {
       // Default config: can be overridden by the docker options provided by users
       name: dstContainerName,
@@ -368,8 +376,8 @@ export async function runDstSync(tmpDir: string, config: FarosConfig): Promise<v
       Env: [`LOG_LEVEL=${config.logLevel}`, ...(config.dst?.dockerOptions?.additionalOptions?.Env || [])],
       HostConfig: {
         // Defautl host config: can be overridden by users
-        NanoCpus: maxNanoCpus, // 1e9 nano cpus = 1 cpu
-        Memory: maxMemory, // 1024 * 1024 bytes = 1MB
+        NanoCpus: maxNanoCpus,
+        Memory: maxMemory,
         LogConfig: {
           Type: 'json-file',
           Config: {
