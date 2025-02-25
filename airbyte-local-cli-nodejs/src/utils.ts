@@ -68,10 +68,26 @@ export async function logImageVersion(type: ImageType, image: string | undefined
   logger.info(`Using ${type} image version ${version}`);
 }
 
+// Read a file and detect the encoding by checking Byte Order Mark
+function readFile(filePath: string): string {
+  try {
+    const buffer = readFileSync(filePath);
+    const encoding =
+      buffer[0] === 0xff && buffer[1] === 0xfe
+        ? 'utf-16le'
+        : buffer[0] === 0xfe && buffer[1] === 0xff
+          ? 'utf-16be'
+          : 'utf-8';
+    return new TextDecoder(encoding).decode(buffer);
+  } catch (error: any) {
+    throw new Error(`Failed to read file: ${error.message}`);
+  }
+}
+
 // Read the config file and covert to AirbyteConfig
 export function parseConfigFile(configFilePath: string): {src: AirbyteConfig; dst: AirbyteConfig} {
   try {
-    const data = readFileSync(configFilePath, 'utf8');
+    const data = readFile(configFilePath);
     const configJson = JSON.parse(data);
     const config = {
       src: configJson.src as AirbyteConfig,
@@ -137,7 +153,7 @@ export function loadStateFile(tempDir: string, filePath?: string, connectionName
   // Write an empty state file if the state file hasn't existed yet
   try {
     accessSync(path, constants.R_OK);
-    const stateData = readFileSync(path, 'utf8');
+    const stateData = readFile(path);
     logger.info(`Using state file: '${path}'`);
 
     logger.debug(`Writing state file to temporary directory: '${tempDir}/${DEFAULT_STATE_FILE}'...`);

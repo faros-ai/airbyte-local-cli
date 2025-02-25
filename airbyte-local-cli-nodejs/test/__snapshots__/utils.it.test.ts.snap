@@ -1,5 +1,39 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
+exports[`parseConfigFile should parse utf16 encoding 1`] = `
+{
+  "dst": {
+    "catalog": {},
+    "config": {
+      "edition_config": {
+        "api_key": "***",
+        "api_url": "https://prod.api.faros.ai",
+        "edition": "cloud",
+        "graph": "default",
+      },
+    },
+    "dockerOptions": {
+      "maxCpus": 2,
+      "maxMemory": 2048,
+    },
+    "image": "farosai/airbyte-servicenow-destination",
+  },
+  "src": {
+    "catalog": {},
+    "config": {
+      "password": "***",
+      "url": "https://test-instance.service-now.com",
+      "username": "test-username",
+    },
+    "dockerOptions": {
+      "maxCpus": 2,
+      "maxMemory": 2048,
+    },
+    "image": "farosai/airbyte-servicenow-source",
+  },
+}
+`;
+
 exports[`parseConfigFile should pass 1`] = `
 {
   "dst": {
@@ -42,6 +76,11 @@ exports[`processSrcInputFile should succeed writing to an output file 1`] = `
 `;
 
 exports[`write files to temporary dir loadStateFile should pass with existing state file 1`] = `
+"{"format":"base64/gzip","data":"dGVzdA=="}
+"
+`;
+
+exports[`write files to temporary dir loadStateFile should pass with utf16 state file 1`] = `
 "{"format":"base64/gzip","data":"dGVzdA=="}
 "
 `;
