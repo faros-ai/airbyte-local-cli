@@ -1,7 +1,6 @@
 import * as command from '../src/command';
 import * as docker from '../src/docker';
 import {FarosConfig} from '../src/types';
-// import * as utils from '../src/utils';
 
 jest.mock('../src/command');
 jest.mock('../src/docker');
