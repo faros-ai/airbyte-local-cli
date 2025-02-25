@@ -14,7 +14,7 @@ import {
   writeConfig,
 } from './utils';
 
-async function main(): Promise<void> {
+export async function main(): Promise<void> {
   const context: AirbyteCliContext = {};
   try {
     // Parse and validate cli arguments
