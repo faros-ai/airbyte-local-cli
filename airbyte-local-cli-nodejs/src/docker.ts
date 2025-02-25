@@ -37,9 +37,8 @@ export function setDocker(docker: Docker): void {
 
 export async function checkDockerInstalled(): Promise<void> {
   try {
-    const version = await _docker.version();
+    await _docker.version();
     logger.info('Docker is installed and running.');
-    logger.debug(`Docker version: ${JSON.stringify(version)}`);
   } catch (error: any) {
     logger.error('Docker is not installed or running.');
     throw error;
@@ -236,8 +235,12 @@ export async function runSrcSync(tmpDir: string, config: FarosConfig): Promise<v
       '--state',
       `/configs/${DEFAULT_STATE_FILE}`,
     ];
-    const maxNanoCpus = config.src?.dockerOptions?.maxCpus;
-    const maxMemory = config.src?.dockerOptions?.maxMemory;
+    // 1e9 nano cpus = 1 cpu
+    const maxNanoCpus = config.src?.dockerOptions?.maxCpus ? config.src?.dockerOptions?.maxCpus * 1e9 : undefined;
+    // 1024 * 1024 bytes = 1MB
+    const maxMemory = config.src?.dockerOptions?.maxMemory
+      ? config.src?.dockerOptions?.maxMemory * 1024 * 1024
+      : undefined;
     const createOptions: Docker.ContainerCreateOptions = {
       // Default config: can be overridden by the docker options provided by users
       name: srcContainerName,
@@ -252,8 +255,8 @@ export async function runSrcSync(tmpDir: string, config: FarosConfig): Promise<v
       Env: [`LOG_LEVEL=${config.logLevel}`, ...(config.src?.dockerOptions?.additionalOptions?.Env || [])],
       HostConfig: {
         // Defautl host config: can be overridden by users
-        NanoCpus: maxNanoCpus, // 1e9 nano cpus = 1 cpu
-        Memory: maxMemory, // 1024 * 1024 bytes = 1MB
+        NanoCpus: maxNanoCpus,
+        Memory: maxMemory,
         LogConfig: {
           Type: 'json-file',
           Config: {
@@ -303,7 +306,7 @@ export async function runSrcSync(tmpDir: string, config: FarosConfig): Promise<v
     logger.debug(`Source connector exit code: ${JSON.stringify(res)}`);
 
     if (res.StatusCode === 0) {
-      logger.info('Source connector ran successfully.');
+      logger.info('Source connector completed.');
     } else {
       throw new Error('Failed to run source connector.');
     }
@@ -349,8 +352,12 @@ export async function runDstSync(tmpDir: string, config: FarosConfig): Promise<v
       '--catalog',
       `/configs/${DST_CATALOG_FILENAME}`,
     ];
-    const maxNanoCpus = config.dst?.dockerOptions?.maxCpus;
-    const maxMemory = config.dst?.dockerOptions?.maxMemory;
+    // 1e9 nano cpus = 1 cpu
+    const maxNanoCpus = config.src?.dockerOptions?.maxCpus ? config.src?.dockerOptions?.maxCpus * 1e9 : undefined;
+    // 1024 * 1024 bytes = 1MB
+    const maxMemory = config.src?.dockerOptions?.maxMemory
+      ? config.src?.dockerOptions?.maxMemory * 1024 * 1024
+      : undefined;
     const createOptions: Docker.ContainerCreateOptions = {
       // Default config: can be overridden by the docker options provided by users
       name: dstContainerName,
@@ -368,8 +375,8 @@ export async function runDstSync(tmpDir: string, config: FarosConfig): Promise<v
       Env: [`LOG_LEVEL=${config.logLevel}`, ...(config.dst?.dockerOptions?.additionalOptions?.Env || [])],
       HostConfig: {
         // Defautl host config: can be overridden by users
-        NanoCpus: maxNanoCpus, // 1e9 nano cpus = 1 cpu
-        Memory: maxMemory, // 1024 * 1024 bytes = 1MB
+        NanoCpus: maxNanoCpus,
+        Memory: maxMemory,
         LogConfig: {
           Type: 'json-file',
           Config: {
@@ -422,7 +429,7 @@ export async function runDstSync(tmpDir: string, config: FarosConfig): Promise<v
     logger.debug(`Destination connector exit code: ${JSON.stringify(res)}`);
 
     if (res.StatusCode === 0) {
-      logger.info('Destination connector ran successfully.');
+      logger.info('Destination connector completed.');
 
       // Write the state file
       const lastState = states.pop();

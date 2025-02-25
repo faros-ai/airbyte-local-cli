@@ -148,7 +148,7 @@ Describe 'Stream prefix'
     }
     When call airbyte_local_test
     The output should include "Using connection name: myfoosrc"
-    The output should include "Using destination stream prefix: myfoosrc_foo__"
+    The output should include "Using destination stream prefix: myfoosrc__foo__"
     # both src and dst images are invalid so errors are expected
     The status should equal 1
   End
@@ -162,7 +162,7 @@ Describe 'Stream prefix'
     }
     When call airbyte_local_test
     The output should include "Using connection name: jennie-connection"
-    The output should include "Using destination stream prefix: jennie-connection_foo__"
+    The output should include "Using destination stream prefix: jennie-connection__foo__"
     The output should include "State file 'jennie-connection__state.json' not found. An empty state file will be created."
     # both src and dst images are invalid so errors are expected
     The status should equal 1
@@ -267,7 +267,7 @@ Describe 'Run source sync only'
     }
     When call airbyte_local_test
     The status should equal 0
-    The output should include "Source connector ran successfully."
+    The output should include "Source connector completed."
   End
   It 'should succeed with srcOnly and output file'
     airbyte_local_test() {
@@ -278,7 +278,7 @@ Describe 'Run source sync only'
       grep -q '"uid":"5"' test_src_output_file
     }
     When call airbyte_local_test
-    The output should include "Source connector ran successfully."
+    The output should include "Source connector completed."
     The status should equal 0
   End
 End
@@ -293,8 +293,8 @@ Describe 'Run destination sync'
     }
     When call airbyte_local_test
     The output should include '[DST] - {"log":{"level":"INFO","message":"Errored 0 records"},"type":"LOG"}'
-    The output should include "Destination connector ran successfully."
-    The output should include "Airbyte CLI completed successfully."
+    The output should include "Destination connector completed."
+    The output should include "Airbyte CLI completed."
     The status should equal 0
   End
 End
@@ -306,15 +306,15 @@ Describe 'Run source and destination sync'
         --config-file './resources/test_config_file_graph_copy.json'
     }
     When call airbyte_local_test
-    The output should include "Source connector ran successfully."
+    The output should include "Source connector completed."
 
     # default is incremental sync
     The output should include '[SRC] - {"log":{"level":"INFO","message":"Catalog: {\"streams\":[{\"stream\":{\"name\":\"faros_graph\",\"json_schema\":{},\"supported_sync_modes\":[\"full_refresh\",\"incremental\"]},\"sync_mode\":\"incremental\",\"destination_sync_mode\":\"append\"}]}"},"type":"LOG"}'
-    The output should include '[DST] - {"log":{"level":"INFO","message":"Catalog: {\"streams\":[{\"stream\":{\"name\":\"myfarosgraphqlsrc_faros_graphql__faros_graph\",\"json_schema\":{},\"supported_sync_modes\":[\"full_refresh\",\"incremental\"]},\"sync_mode\":\"incremental\",\"destination_sync_mode\":\"append\"}]}"},"type":"LOG"}'
+    The output should include '[DST] - {"log":{"level":"INFO","message":"Catalog: {\"streams\":[{\"stream\":{\"name\":\"myfarosgraphqlsrc__faros_graphql__faros_graph\",\"json_schema\":{},\"supported_sync_modes\":[\"full_refresh\",\"incremental\"]},\"sync_mode\":\"incremental\",\"destination_sync_mode\":\"append\"}]}"},"type":"LOG"}'
 
     The output should include '[DST] - {"log":{"level":"INFO","message":"Errored 0 records"},"type":"LOG"}'
-    The output should include "Destination connector ran successfully."
-    The output should include "Airbyte CLI completed successfully."
+    The output should include "Destination connector completed."
+    The output should include "Airbyte CLI completed."
     The status should equal 0
   End
   It 'should succeed with full refresh'
@@ -324,14 +324,14 @@ Describe 'Run source and destination sync'
         --full-refresh
     }
     When call airbyte_local_test
-    The output should include "Source connector ran successfully."
+    The output should include "Source connector completed."
     
     # catalog should be full refresh
     The output should include '[SRC] - {"log":{"level":"INFO","message":"Catalog: {\"streams\":[{\"stream\":{\"name\":\"faros_graph\",\"json_schema\":{},\"supported_sync_modes\":[\"full_refresh\",\"incremental\"]},\"sync_mode\":\"full_refresh\",\"destination_sync_mode\":\"overwrite\"}]}"},"type":"LOG"}'
-    The output should include '[DST] - {"log":{"level":"INFO","message":"Catalog: {\"streams\":[{\"stream\":{\"name\":\"myfarosgraphqlsrc_faros_graphql__faros_graph\",\"json_schema\":{},\"supported_sync_modes\":[\"full_refresh\",\"incremental\"]},\"sync_mode\":\"full_refresh\",\"destination_sync_mode\":\"overwrite\"}]}"},"type":"LOG"}'
+    The output should include '[DST] - {"log":{"level":"INFO","message":"Catalog: {\"streams\":[{\"stream\":{\"name\":\"myfarosgraphqlsrc__faros_graphql__faros_graph\",\"json_schema\":{},\"supported_sync_modes\":[\"full_refresh\",\"incremental\"]},\"sync_mode\":\"full_refresh\",\"destination_sync_mode\":\"overwrite\"}]}"},"type":"LOG"}'
 
-    The output should include "Destination connector ran successfully."
-    The output should include "Airbyte CLI completed successfully."
+    The output should include "Destination connector completed."
+    The output should include "Airbyte CLI completed."
     The status should equal 0
   End
 End

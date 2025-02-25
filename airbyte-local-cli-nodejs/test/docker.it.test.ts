@@ -86,8 +86,8 @@ describe('runSrcSync', () => {
     const outputWithoutTS = output.split('\n').map((line) => {
       return line
         .replace(/"timestamp":\d+/g, '"timestamp":***')
-        .replace(/"sourceVersion":"[\d.]+"/g, '"sourceVersion":***')
-        .replace(/Source version: [\d.]+/g, 'Source version: ***');
+        .replace(/"sourceVersion":"[\w.-]+"/g, '"sourceVersion":***')
+        .replace(/Source version: [\w.-]+/g, 'Source version: ***');
     });
     expect(outputWithoutTS.join('\n')).toMatchSnapshot();
   });
