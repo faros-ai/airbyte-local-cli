@@ -25,12 +25,12 @@ describe('parseConfigFile', () => {
         config: {},
       },
     };
-    (readFileSync as jest.Mock).mockReturnValue(JSON.stringify(airbyteConfig));
+    (readFileSync as jest.Mock).mockReturnValue(Buffer.from(JSON.stringify(airbyteConfig)));
     expect(parseConfigFile('test-config-file')).toEqual(airbyteConfig);
   });
 
   it('should fail if config file is not valid json', () => {
-    (readFileSync as jest.Mock).mockReturnValue('invalid-json');
+    (readFileSync as jest.Mock).mockReturnValue(Buffer.from('invalid-json'));
     expect(() => parseConfigFile('test-config-file')).toThrow('Failed to read or parse config file');
   });
 
@@ -45,7 +45,7 @@ describe('parseConfigFile', () => {
         bad_config: {},
       },
     };
-    (readFileSync as jest.Mock).mockReturnValue(JSON.stringify(airbyteConfig));
+    (readFileSync as jest.Mock).mockReturnValue(Buffer.from(JSON.stringify(airbyteConfig)));
     expect(() => parseConfigFile('test-config-file')).toThrow(
       'Failed to read or parse config file: ' +
         'Invalid config file json format. Please check if it contains invalid properties.',
