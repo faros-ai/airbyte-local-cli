@@ -11,7 +11,6 @@ CLI for running Airbyte sources & destinations locally.
   - [Step 3. Run it!](#step-3-run-it)
 - [Advanced Settings](#advanced-settings)
   - [CLI Arguments](#cli-arguments)
-  - [Unsupported Arguments](#unsupported-arguments)
   - [Airbyte Configuration - Override Airbyte Catalog](#airbyte-configuration---override-airbyte-catalog)
   - [Airbyte Configuration - Customize Docker Settings](#airbyte-configuration---customize-docker-settings)
 - [FAQ](#faq)
