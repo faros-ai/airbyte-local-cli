@@ -2,6 +2,24 @@
 
 CLI for running Airbyte sources & destinations locally.
 
+## Table of Contents
+
+- [Getting Started](#getting-started)
+  - [Prerequisites](#prerequisites)
+  - [Step 1. Install](#step-1-install)
+  - [Step 2. Create an Airbyte Configuration File](#step-2-create-an-airbyte-configuration-file)
+  - [Step 3. Run it!](#step-3-run-it)
+- [Advanced Settings](#advanced-settings)
+  - [CLI Arguments](#cli-arguments)
+  - [Unsupported Arguments](#unsupported-arguments)
+  - [Airbyte Configuration - Override Airbyte Catalog](#airbyte-configuration---override-airbyte-catalog)
+  - [Airbyte Configuration - Customize Docker Settings](#airbyte-configuration---customize-docker-settings)
+- [FAQ](#faq)
+- [Migration Guide](#migration-guide)
+  - [Old CLI v.s. New CLI](#old-cli-vs-new-cli)
+  - [New/Renamed Arguments](#newrenamed-arguments)
+  - [Unsupported Arguments](#unsupported-arguments)
+
 ## Getting Started
 
 **Supported System**
@@ -10,12 +28,12 @@ CLI for running Airbyte sources & destinations locally.
 - MacOS arm64 (Apple chip)
 - Windows x86_64
 
-**Prerequisites**:
+### Prerequisites
 
 - Docker
 - Faros API key: check out the [instructions](https://docs.faros.ai/reference/getting-api-access).
 
-### 1. Install
+### Step 1. Install
 
 [All releases](https://github.com/faros-ai/airbyte-local-cli/releases.)
 
@@ -47,7 +65,7 @@ Expand-Archive -Path "airbyte-local-win-x64.zip" -DestinationPath . -Force
 
 ```
 
-### 2. Create an Airbyte Configuration File
+### Step 2. Create an Airbyte Configuration File
 
 The CLI uses arguement `--config-file` to take the airybte configuration in a JSON file format.
 
@@ -108,7 +126,7 @@ In most cases, you always have to provide Faros API key and workspace under `src
 
 More resources you can find it in [Faros Documantation](https://docs.faros.ai/), e.g. instructions to create GitHub PAT and what permission you need for the PAT, etc.
 
-### 3. Run it!
+### Step 3. Run it!
 
 #### Linux/MacOS
 
