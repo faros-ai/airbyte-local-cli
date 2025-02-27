@@ -261,16 +261,69 @@ If you want to customize the Airbyte connectors docker settings, there're option
 
 ```
 
-### WIP
-
-- `--wizard` argument
-
-## Migration Guide
-
-As some users might come from our previous bash version Airbyte CLI version.
-Here is some guide for you to upgrade to the new one.
-
 ## FAQ
 
 - If you have customized your docker socket, please exports the docker socket in env var `DOCKER_HOST`.
 - We only support reading Airbyte configuration file in encoding: `utf-8`, `utf-16le`, `utf-16be`.
+
+## Migration Guide
+
+As some users might come from our previous Airbyte CLI Bash version. \
+Here is some guide for you to upgrade to the new one.
+
+### Old CLI v.s. New CLI
+
+1. Update the CLI from Bash script to binary - open up to users that don't use Bash by default
+1. Move Airbyte configuration into one JSON file - avoid syntax issues caused by running on different systems
+
+#### Example Usage
+
+```sh
+# Older version
+./airbyte-local.sh  \
+  --src 'farosai/airbyte-faros-graphql-source' \
+  --src.api_url $FAROS_API_URL \
+  --src.graph 'faros' \
+  --src.result_model 'Flat' \
+  --src.models_filter '["org_Team"]' \
+  --dst 'farosai/airbyte-faros-destination' \
+  --dst.edition_configs.graph 'default' \
+  --dst.edition_configs.api_url $FAROS_API_URL
+
+# Newer version
+./airbyte-local --config-file graph_copy.json
+```
+
+### New/Renamed Arguments
+
+| Old Argument         | New Argument             | Replacement/Notes                          |
+| -------------------- | ------------------------ | ------------------------------------------ |
+|                      | `--config-file`          | New arugment to take Airbyte configuration |
+| `--check-connection` | `--src-check-connection` | For naming consistency                     |
+| `--state <file>`     | `--state-file <file>`    | For naming consistency                     |
+
+### Unsupported Arguments
+
+The following arguments are droppeed in the new CLI. Please update your command according.
+
+For arguments `--src ...` and `--dst ...`, they are still supported for user convenience. We strongly encourage users to use the new arugment `--config-file` to pass in Airbyte configuration in favor of the deprecated ones. Also, you can find a file named `faros_airbyte_cli_config.json` be automatically generated after running the CLI. It should covert your Airybte configuration to the new schema and next time you can just pass in this file with arugment `--config-file` and stop using the deprecated arguments!
+
+| Argument                         | Status      | Replacement/Notes                                                   |
+| -------------------------------- | ----------- | ------------------------------------------------------------------- |
+| `--src <image>`                  | Deprecated  | Image name is now defined in Aribyte configuration file             |
+| `--dst <image>`                  | Deprecated  | Image name is now defined in Aribyte configuration file             |
+| `--src.<key> <value>`            | Deprecated  | Airbyte config is now defined in Aribyte configuration file         |
+| `--dst.<key> <value>`            | Deprecated  | Airbyte config is now defined in Aribyte configuration file         |
+| `--src-catalog-overrides <json>` | Unsupported | Airbyte catalog config is now defined in Aribyte configuration file |
+| `--src-catalog-file <path>`      | Unsupported | Airbyte catalog config is now defined in Aribyte configuration file |
+| `--src-catalog-json <json>`      | Unsupported | Airbyte catalog config is now defined in Aribyte configuration file |
+| `--dst-catalog-file <path>`      | Unsupported | Airbyte catalog config is now defined in Aribyte configuration file |
+| `--dst-catalog-json <json>`      | Unsupported | Airbyte catalog config is now defined in Aribyte configuration file |
+| `--src-wizard`                   | Unsupported | Replaced by `--wizard` (WIP)                                        |
+| `--dst-wizard`                   | Unsupported | Replaced by `--wizard` (WIP)                                        |
+| `--max-log-size <size>`          | Unsupported | Docker settings are now defined in Aribyte configuration file       |
+| `--max-mem <mem>`                | Unsupported | Docker settings are now defined in Aribyte configuration file       |
+| `--max-cpus <cpus>`              | Unsupported | Docker settings are now defined in Aribyte configuration file       |
+| `--src-docker-options "<string>` | Unsupported | Docker settings are now defined in Aribyte configuration file       |
+| `--dst-docker-options "<string>` | Unsupported | Docker settings are now defined in Aribyte configuration file       |
+| `--k8s-deployment`               | Unsupported | Stop surporting running on local kubernetes cluster                 |

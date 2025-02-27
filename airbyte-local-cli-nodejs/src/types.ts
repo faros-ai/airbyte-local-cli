@@ -35,6 +35,10 @@ export interface CliOptions {
 
   // logging
   debug?: boolean;
+
+  // deprecated
+  checkConnection?: boolean; // use srcCheckConnection instead
+  state?: string; // use stateFile instead
 }
 
 // Airbyte connector source or destination config
