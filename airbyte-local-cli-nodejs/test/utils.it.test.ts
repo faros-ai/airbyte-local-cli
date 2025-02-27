@@ -71,6 +71,9 @@ describe('parseConfigFile', () => {
   it('should fail with invalid json', () => {
     expect(() => parseConfigFile('test_config_file_invalid')).toThrow();
   });
+  it('should parse utf16 encoding', () => {
+    expect(parseConfigFile('test/resources/test_config_file.json')).toMatchSnapshot();
+  });
 });
 
 describe('checkDockerInstalled', () => {
@@ -124,6 +127,13 @@ describe('write files to temporary dir', () => {
 
     it('should pass with existing state file', () => {
       const testStateFile = 'test/resources/test__state.json';
+      expect(() => loadStateFile(tmpDirPath, testStateFile)).not.toThrow();
+      expect(existsSync(`${tmpDirPath}/state.json`)).toBe(true);
+      expect(readFileSync(`${tmpDirPath}/state.json`, 'utf8')).toMatchSnapshot();
+    });
+
+    it('should pass with utf16 state file', () => {
+      const testStateFile = 'test/resources/test__state_utf16.json';
       expect(() => loadStateFile(tmpDirPath, testStateFile)).not.toThrow();
       expect(existsSync(`${tmpDirPath}/state.json`)).toBe(true);
       expect(readFileSync(`${tmpDirPath}/state.json`, 'utf8')).toMatchSnapshot();

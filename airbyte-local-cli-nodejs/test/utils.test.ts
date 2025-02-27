@@ -25,12 +25,12 @@ describe('parseConfigFile', () => {
         config: {},
       },
     };
-    (readFileSync as jest.Mock).mockReturnValue(JSON.stringify(airbyteConfig));
+    (readFileSync as jest.Mock).mockReturnValue(Buffer.from(JSON.stringify(airbyteConfig)));
     expect(parseConfigFile('test-config-file')).toEqual(airbyteConfig);
   });
 
   it('should fail if config file is not valid json', () => {
-    (readFileSync as jest.Mock).mockReturnValue('invalid-json');
+    (readFileSync as jest.Mock).mockReturnValue(Buffer.from('invalid-json'));
     expect(() => parseConfigFile('test-config-file')).toThrow('Failed to read or parse config file');
   });
 
@@ -45,7 +45,7 @@ describe('parseConfigFile', () => {
         bad_config: {},
       },
     };
-    (readFileSync as jest.Mock).mockReturnValue(JSON.stringify(airbyteConfig));
+    (readFileSync as jest.Mock).mockReturnValue(Buffer.from(JSON.stringify(airbyteConfig)));
     expect(() => parseConfigFile('test-config-file')).toThrow(
       'Failed to read or parse config file: ' +
         'Invalid config file json format. Please check if it contains invalid properties.',
@@ -223,7 +223,7 @@ describe('generateDstStreamPrefix', () => {
     } as FarosConfig;
     generateDstStreamPrefix(testAirbyteConfig);
     expect(testAirbyteConfig.connectionName).toEqual('myexamplesrc');
-    expect(testAirbyteConfig.dstStreamPrefix).toEqual('myexamplesrc_example__');
+    expect(testAirbyteConfig.dstStreamPrefix).toEqual('myexamplesrc__example__');
   });
 
   it('should succeed with connection name flag', () => {
@@ -238,7 +238,7 @@ describe('generateDstStreamPrefix', () => {
     } as FarosConfig;
     generateDstStreamPrefix(testAirbyteConfig);
     expect(testAirbyteConfig.connectionName).toEqual('testConnectionName');
-    expect(testAirbyteConfig.dstStreamPrefix).toEqual('testConnectionName_example__');
+    expect(testAirbyteConfig.dstStreamPrefix).toEqual('testConnectionName__example__');
   });
 
   it('should succeed with feeds source', () => {
@@ -252,7 +252,7 @@ describe('generateDstStreamPrefix', () => {
     } as FarosConfig;
     generateDstStreamPrefix(testAirbyteConfig);
     expect(testAirbyteConfig.connectionName).toEqual('myfarosfeedssrc');
-    expect(testAirbyteConfig.dstStreamPrefix).toEqual('myfarosfeedssrc_faros_feeds__');
+    expect(testAirbyteConfig.dstStreamPrefix).toEqual('myfarosfeedssrc__faros_feeds__');
   });
 
   it('should succeed with feeds source and connection name flag', () => {
@@ -267,6 +267,6 @@ describe('generateDstStreamPrefix', () => {
     } as FarosConfig;
     generateDstStreamPrefix(testAirbyteConfig);
     expect(testAirbyteConfig.connectionName).toEqual('testConnectionName');
-    expect(testAirbyteConfig.dstStreamPrefix).toEqual('testConnectionName_faros_feeds__');
+    expect(testAirbyteConfig.dstStreamPrefix).toEqual('testConnectionName__faros_feeds__');
   });
 });

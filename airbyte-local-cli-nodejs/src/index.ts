@@ -14,7 +14,7 @@ import {
   writeConfig,
 } from './utils';
 
-async function main(): Promise<void> {
+export async function main(): Promise<void> {
   const context: AirbyteCliContext = {};
   try {
     // Parse and validate cli arguments
@@ -58,7 +58,7 @@ async function main(): Promise<void> {
       await runDstSync(context.tmpDir, cfg);
     }
 
-    logger.info('Airbyte CLI completed successfully.');
+    logger.info('Airbyte CLI completed.');
   } catch (error: any) {
     logger.error(error.message, 'Error');
     cleanUp(context);

@@ -25,6 +25,7 @@ import {
   AirbyteCliContext,
   AirbyteConfig,
   AirbyteConfiguredCatalog,
+  AirbyteMessageType,
   AirbyteStream,
   DestinationSyncMode,
   FarosConfig,
@@ -67,10 +68,26 @@ export async function logImageVersion(type: ImageType, image: string | undefined
   logger.info(`Using ${type} image version ${version}`);
 }
 
+// Read a file and detect the encoding by checking Byte Order Mark
+function readFile(filePath: string): string {
+  try {
+    const buffer = readFileSync(filePath);
+    const encoding =
+      buffer[0] === 0xff && buffer[1] === 0xfe
+        ? 'utf-16le'
+        : buffer[0] === 0xfe && buffer[1] === 0xff
+          ? 'utf-16be'
+          : 'utf-8';
+    return new TextDecoder(encoding).decode(buffer);
+  } catch (error: any) {
+    throw new Error(`Failed to read file: ${error.message}`);
+  }
+}
+
 // Read the config file and covert to AirbyteConfig
 export function parseConfigFile(configFilePath: string): {src: AirbyteConfig; dst: AirbyteConfig} {
   try {
-    const data = readFileSync(configFilePath, 'utf8');
+    const data = readFile(configFilePath);
     const configJson = JSON.parse(data);
     const config = {
       src: configJson.src as AirbyteConfig,
@@ -136,7 +153,7 @@ export function loadStateFile(tempDir: string, filePath?: string, connectionName
   // Write an empty state file if the state file hasn't existed yet
   try {
     accessSync(path, constants.R_OK);
-    const stateData = readFileSync(path, 'utf8');
+    const stateData = readFile(path);
     logger.info(`Using state file: '${path}'`);
 
     logger.debug(`Writing state file to temporary directory: '${tempDir}/${DEFAULT_STATE_FILE}'...`);
@@ -359,11 +376,24 @@ export function processSrcDataByLine(line: string, outputStream: Writable, cfg: 
 
     // non RECORD and STATE type messages: print as stdout
     // RECORD and STATE type messages: when the output is set to stdout
-    if ((data?.type !== 'RECORD' && data?.type !== 'STATE') || cfg.srcOutputFile === OutputStream.STDOUT) {
+    if (
+      (data?.type !== AirbyteMessageType.RECORD && data?.type !== AirbyteMessageType.STATE) ||
+      cfg.srcOutputFile === OutputStream.STDOUT
+    ) {
       if (cfg.rawMessages) {
         process.stdout.write(`${line}\n`);
       } else {
-        logger.info(formatSrcMsg(data));
+        if (data?.type === AirbyteMessageType.LOG && data?.log?.level !== 'INFO') {
+          if (data?.log?.level === 'ERROR') {
+            logger.error(formatSrcMsg(data));
+          } else if (data?.log?.level === 'WARN') {
+            logger.warn(formatSrcMsg(data));
+          } else if (data?.log?.level === 'DEBUG') {
+            logger.debug(formatSrcMsg(data));
+          }
+        } else {
+          logger.info(formatSrcMsg(data));
+        }
       }
     }
     // RECORD and STATE type messages: write to output file
@@ -436,7 +466,7 @@ export function generateDstStreamPrefix(cfg: FarosConfig): void {
       const [imageName] = srcImage.split(':');
       const imageParts = imageName?.split('-').slice(1, -1);
       cfg.connectionName = cfg.connectionName ?? `my${imageParts?.join('') ?? ''}src`;
-      cfg.dstStreamPrefix = `${cfg.connectionName}_${imageParts?.join('_') ?? ''}__`;
+      cfg.dstStreamPrefix = `${cfg.connectionName}__${imageParts?.join('_') ?? ''}__`;
       logger.debug(`Using connection name: ${cfg.connectionName}`);
       logger.debug(`Using destination stream prefix: ${cfg.dstStreamPrefix}`);
     }
@@ -459,14 +489,24 @@ export function processDstDataByLine(line: string, cfg: FarosConfig): string {
   try {
     const data = JSON.parse(line);
 
-    if (data?.type === 'STATE' && data?.state?.data) {
+    if (data?.type === AirbyteMessageType.STATE && data?.state?.data) {
       state = JSON.stringify(data.state.data);
       logger.debug(formatDstMsg(data));
     }
     if (cfg.rawMessages) {
       process.stdout.write(`${line}\n`);
     } else {
-      logger.info(formatDstMsg(data));
+      if (data?.type === AirbyteMessageType.LOG && data?.log?.level !== 'INFO') {
+        if (data?.log?.level === 'ERROR') {
+          logger.error(formatDstMsg(data));
+        } else if (data?.log?.level === 'WARN') {
+          logger.warn(formatDstMsg(data));
+        } else if (data?.log?.level === 'DEBUG') {
+          logger.debug(formatDstMsg(data));
+        }
+      } else {
+        logger.info(formatDstMsg(data));
+      }
     }
   } catch (error: any) {
     // log as errors but not throw it
