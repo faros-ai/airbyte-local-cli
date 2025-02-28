@@ -155,7 +155,7 @@ jq --arg api_key "$FAROS_API_KEY" '
   --dst.edition_configs.api_url $FAROS_API_URL \
   --connection-name "mygithubsrc"
 
-# riskfield github source
+# github source
 # update to my own org and dev env
 ./airbyte-local \
   --src "farosai/airbyte-github-source" \
@@ -180,10 +180,10 @@ jq --arg api_key "$FAROS_API_KEY" '
   --connection-name "github_v2"
 # -->
 ./airbyte-local \
-  --config-file './resources/github_riskifield.json' \
+  --config-file './resources/github.json' \
   --connection-name "github_v2"
 
-# rickifield github coplilot source
+# github coplilot source
 ./airbyte-local \
   --src "farosai/airbyte-github-source" \
   --src.authentication.type "token" \
