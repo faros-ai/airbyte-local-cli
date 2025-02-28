@@ -34,11 +34,9 @@ function command() {
     )
     // TODO: @FAI-13889 Finalize the wizard arugments and implementation
     .addOption(
-      new Option('--wizard <src> [dst]', 'Run the Airbyte configuration wizard').conflicts([
-        'configFile',
-        'src',
-        'dst',
-      ]),
+      new Option('--wizard <src> [dst]', 'Run the Airbyte configuration wizard')
+        .conflicts(['configFile', 'src', 'dst'])
+        .hideHelp(),
     )
     .option('--src <image>', '[Deprecated] Airbyte source Docker image')
     .option('--dst <image>', '[Deprecated] Airbyte destination Docker image')
@@ -59,7 +57,7 @@ function command() {
     .option('--src-output-file <path>', 'Write source output as a file (requires a destination)')
     .option('--src-check-connection', `Validate the Airbyte source connection`)
     .addOption(
-      new Option('--dst-only <file>', 'Use a file for destination input instead of a source')
+      new Option('--dst-only <path>', 'Use a file for destination input instead of a source')
         .conflicts('srcOnly')
         .conflicts('srcOutputFile')
         .conflicts('srcCheckConnection'),
@@ -72,6 +70,10 @@ function command() {
 
     // Options: Cli settings
     .option('--debug', 'Enable debug logging')
+
+    // Options: renamed options
+    .addOption(new Option('--check-connection', 'Support for the renamed option').hideHelp())
+    .addOption(new Option('--state <file>', 'Support for the renamed option').hideHelp())
 
     // Additional check
     .action((opts: any) => {
@@ -208,8 +210,8 @@ export function parseAndValidateInputs(argv: string[]): FarosConfig {
     // Rename the `dstOnly` file path to `srcInputFile`
     srcInputFile: cliOptions.dstOnly,
     connectionName: cliOptions.connectionName,
-    stateFile: cliOptions.stateFile,
-    srcCheckConnection: cliOptions.srcCheckConnection ?? false,
+    stateFile: cliOptions.stateFile ?? cliOptions.state,
+    srcCheckConnection: cliOptions.srcCheckConnection ?? cliOptions.checkConnection ?? false,
     dstUseHostNetwork: cliOptions.dstUseHostNetwork ?? false,
     // If `dstOnly` is true, do not pull the source image. Otherwise, fall back to option `noSrcPull`
     srcPull: (cliOptions.dstOnly ? false : cliOptions.srcPull) ?? true,
