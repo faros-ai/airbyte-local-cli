@@ -207,10 +207,33 @@ jq --arg api_key "$FAROS_API_KEY" '
 # jira source
 ./airbyte-local \
   --src farosai/airbyte-jira-source \
-  --src.url "https://xyz.atlassian.net" \
+  --src.url "https://faros-ai.atlassian.net" \
   --src.username "jennie@faros.ai" \
   --src.password "$JIRA_TOKEN" \
   --dst farosai/airbyte-faros-destination \
   --dst.edition_configs.api_key $FAROS_API_KEY \
   --dst.edition_configs.api_url $FAROS_API_URL \
   --dst.edition_configs.graph "jennie-test"
+
+./airbyte-local \
+  --src farosai/airbyte-jira-source \
+  --src.url "https://faros-ai.atlassian.net/" \
+  --src.username "jennie@faros.ai" \
+  --src.password $JIRA_TOKEN \
+  --src.additional_fields '["Component", "value", "Epic Group", "KR", "Initiative"]' \
+  --src.concurrency_limit 1 \
+  --src.projects '["FAI"]' \
+  --src.cutoff_days 30 \
+  --src.use_faros_board_issue_tracker true \
+  --src.max_stream_failures -1 \
+  --src.max_slice_failures -1 \
+  --src.debug true \
+  --src.faros_source_id "jira_v2" \
+  --dst farosai/airbyte-faros-destination \
+  --dst.edition_configs.graph "jennie-test" \
+  --dst.edition_configs.api_key $FAROS_API_KEY \
+  --dst.edition_configs.api_url $FAROS_API_URL \
+  --dst.exclude_fields_map '{"tms_Task": ["description"]}'
+
+./airbyte-local \
+  --config-file 'faros_airbyte_cli_config.json'
