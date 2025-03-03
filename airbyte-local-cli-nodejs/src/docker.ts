@@ -394,6 +394,25 @@ export async function runDstSync(tmpDir: string, config: FarosConfig): Promise<v
     // Create the Docker container
     const container = await _docker.createContainer(createOptions);
 
+    // Uderlying bug in dockerode:
+    // Workaround copied from issue: https://github.com/apocas/dockerode/issues/742
+    container.modem = new Proxy(container.modem, {
+      get(target, prop) {
+        const origMethod = target[prop];
+        // internally to send http requests to the docker daemon
+        if (prop === 'dial') {
+          return function (...args: any[]) {
+            if (args[0].path.endsWith('/attach?')) {
+              // send an empty json payload instead
+              args[0].file = Buffer.from('');
+            }
+            return origMethod.apply(target, args);
+          };
+        }
+        return origMethod;
+      },
+    });
+
     // create a writable stream to capture the stdout
     let buffer = '';
     const states: string[] = [];
