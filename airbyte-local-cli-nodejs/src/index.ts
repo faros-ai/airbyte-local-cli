@@ -5,6 +5,7 @@ import {
   cleanUp,
   createTmpDir,
   generateDstStreamPrefix,
+  getWizardConfig,
   ImageType,
   loadStateFile,
   logger,
@@ -19,10 +20,20 @@ export async function main(): Promise<void> {
   try {
     // Parse and validate cli arguments
     const cfg = parseAndValidateInputs(process.argv);
+
+    // Prerequisites check: docker
     await checkDockerInstalled();
 
-    // Create temporary directory, load state file, write config and catalog to files
+    // Create temporary directory
     context.tmpDir = createTmpDir();
+
+    // Run wizard
+    if (cfg.wizard) {
+      await getWizardConfig(context.tmpDir, cfg);
+      return;
+    }
+
+    // Generate dst stream prefix and load state file
     generateDstStreamPrefix(cfg);
     cfg.stateFile = loadStateFile(context.tmpDir, cfg?.stateFile, cfg?.connectionName);
 

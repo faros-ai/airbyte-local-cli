@@ -10,8 +10,9 @@ function command() {
     .name('airbyte-local')
     .description('Airbyte local CLI')
     .version(CLI_VERSION, '-v, --version', 'Output the current version')
-    // Enable this to allow src and dst configs to be passed as options
-    .allowUnknownOption(true)
+    // Enable this to allow src and dst configs to be passed as options as it's not natively supported by commanderjs
+    .allowUnknownOption()
+    .allowExcessArguments()
     // Help configiration
     .helpOption('-h, --help', 'Display usage information')
     .showHelpAfterError('(add --help for additional information)')
@@ -34,9 +35,15 @@ function command() {
     )
     // TODO: @FAI-13889 Finalize the wizard arugments and implementation
     .addOption(
-      new Option('--wizard <src> [dst]', 'Run the Airbyte configuration wizard')
-        .conflicts(['configFile', 'src', 'dst'])
-        .hideHelp(),
+      new Option(
+        '--wizard <type...>',
+        '"--wizard <source> [destination]". ' +
+          'Run the Airbyte configuration wizard. ' +
+          'It is required to provide source, which means you will have to know ' +
+          'which source data you are pulling from, e.g. Github, Jira, etc. ' +
+          'and the default destination is Faros. ' +
+          'For example, "--wizard github" will pull data from Github and push it to Faros.',
+      ).conflicts(['configFile', 'src', 'dst']),
     )
     .option('--src <image>', '[Deprecated] Airbyte source Docker image')
     .option('--dst <image>', '[Deprecated] Airbyte destination Docker image')
@@ -178,12 +185,25 @@ function validateConfigFileInput(config: FarosConfig, inputType: AirbyteConfigIn
   }
 }
 
-// parse the command line arguments
+/**
+ * Parse the command line arguments.
+ *
+ * Since we have to handle deprecated options `--src.<key> <value>` and `--dst.<key> <value>`
+ * which its syntax are not natively supported by commanderjs, we are forced to handle the unknown options ourselves.
+ * We use `parseOptions` to get the unknown options. However theoretically, in commanderjs, parsing
+ * should only be called once. Thus, we deep clone the options before calling parsing the second time
+ * to get unknown options, to avoid the second parsing updating the options object.
+ */
 export function parseAndValidateInputs(argv: string[]): FarosConfig {
-  // Parse the command line arguments
+  // Parse arguments
   const program = command().parse(argv);
 
+  // Deep clone the parsed options before parsing the second time to get unknown options
+  const options = structuredClone(program.opts());
+  logger.debug(`Options: ${JSON.stringify(options)}`);
+
   // Check for unknown options
+  // Note: calling `parseOptions` parsing again will have side effects and update the options object
   const unknown = program.parseOptions(argv).unknown;
   unknown.forEach((u) => {
     if (u.startsWith('--') && !u.startsWith('--src.') && !u.startsWith('--dst.')) {
@@ -191,19 +211,18 @@ export function parseAndValidateInputs(argv: string[]): FarosConfig {
     }
   });
 
-  // Handle the src and dst config options passed as options
-  const configKeyValues = parseSrcAndDstConfig(argv);
-  program.setOptionValue('srcConfig', configKeyValues.srcConfig);
-  program.setOptionValue('dstConfig', configKeyValues.dstConfig);
-
-  // Get the options
-  const options = program.opts();
-  logger.debug(`Options: ${JSON.stringify(options)}`);
+  // convert the options to CliOptions
   const cliOptions = convertToCliOptions(options);
   logger.debug(`Cli options: ${JSON.stringify(cliOptions)}`);
 
+  // Handle the src and dst config options passed as options
+  const configKeyValues = parseSrcAndDstConfig(argv);
+  cliOptions.srcConfig = configKeyValues.srcConfig;
+  cliOptions.dstConfig = configKeyValues.dstConfig;
+
   // Convert the cli options to FarosConfig
   const farosConfig: FarosConfig = {
+    wizard: cliOptions.wizard,
     // The default source output file is stdout(`-`) if `srcOnly` is true
     // Take the non-default value if provided with `srcOutputFile` option
     srcOutputFile: cliOptions.srcOnly ? OutputStream.STDOUT : cliOptions.srcOutputFile,
@@ -239,9 +258,6 @@ export function parseAndValidateInputs(argv: string[]): FarosConfig {
     farosConfig.src = airbyteConfig.src;
     farosConfig.dst = airbyteConfig.dst;
     validateConfigFileInput(farosConfig, AirbyteConfigInputType.FILE);
-  } else if (cliOptions.wizard) {
-    logger.info('Runing wizard...');
-    // TODO: @FAI-13889 Implement the wizard
   }
   return farosConfig;
 }

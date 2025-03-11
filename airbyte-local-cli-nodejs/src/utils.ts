@@ -15,20 +15,25 @@ import readline from 'node:readline';
 import {pipeline, Transform, Writable} from 'node:stream';
 import {promisify} from 'node:util';
 
+import Table from 'cli-table3';
+import didYouMean from 'didyoumean2';
 import {isNil, omitBy} from 'lodash';
 import pino from 'pino';
 import pretty from 'pino-pretty';
 
-import {inspectDockerImage, runDiscoverCatalog} from './docker';
+import {airbyteTypes} from './constants/airbyteTypes';
+import {inspectDockerImage, pullDockerImage, runDiscoverCatalog, runSpec, runWizard} from './docker';
 import {
   AirbyteCatalog,
   AirbyteCliContext,
   AirbyteConfig,
   AirbyteConfiguredCatalog,
   AirbyteMessageType,
+  AirbyteSpec,
   AirbyteStream,
   DestinationSyncMode,
   FarosConfig,
+  Spec,
   SyncMode,
 } from './types';
 
@@ -50,6 +55,8 @@ export const DST_CATALOG_FILENAME = `${FILENAME_PREFIX}_dst_catalog.json`;
 export const DEFAULT_STATE_FILE = 'state.json';
 export const SRC_INPUT_DATA_FILE = `${FILENAME_PREFIX}_src_data`;
 export const SRC_OUTPUT_DATA_FILE = `${FILENAME_PREFIX}_src_output`;
+export const TMP_WIZARD_CONFIG_FILENAME = `tmp_wizard_config.json`;
+export const TMP_SPEC_CONFIG_FILENAME = `tmp_spec.json`;
 
 // Create a pino logger instance
 export const logger = pino(pretty({colorize: true}));
@@ -513,4 +520,175 @@ export function processDstDataByLine(line: string, cfg: FarosConfig): string {
     logger.error(`Line of data: '${line}'; Error: ${error.message}`);
   }
   return state;
+}
+
+/**
+ * Filter out spec output
+ */
+export function processSpecByLine(line: string): AirbyteSpec | undefined {
+  let spec;
+
+  // skip empty lines
+  if (line.trim() === '') {
+    return spec;
+  }
+
+  try {
+    const data = JSON.parse(line);
+    if (data?.type === AirbyteMessageType.SPEC && data?.spec) {
+      spec = data as AirbyteSpec;
+      logger.debug(data);
+    }
+  } catch (error: any) {
+    throw new Error(`Spec data: '${line}'; Error: ${error.message}`);
+  }
+  return spec;
+}
+
+/**
+ * Process the spec json and print out the property descriptions for the user.
+ */
+function schemaToTable(spec: Spec, srcType?: string, dstType?: string): void {
+  const table = new Table({
+    head: ['Property', 'Type', 'Required', 'Values', 'Description'],
+    colWidths: [40, 12, 10, 30, 60],
+    wordWrap: true,
+    wrapOnWordBoundary: false,
+  });
+
+  /**
+   * Take care of nested objects in the config
+   */
+  function addRows(obj: Record<string, any>, prefix = '') {
+    const properties = obj['properties'];
+    const required: string[] = obj['required'] ?? [];
+    Object.entries(properties).forEach(([propertyName, value]: [string, any]) => {
+      const name = prefix ? `↳ ${prefix}${propertyName}` : propertyName;
+      let propValues = '';
+      if (value.default) {
+        propValues = propValues.concat(`Default: ${value.default}\n`);
+      }
+      if (value.const) {
+        propValues = propValues.concat(`Const: ${value.const}\n`);
+      }
+      if (value.enum) {
+        propValues = propValues.concat(`Enum: ${value.enum}\n`);
+      }
+      if (value.examples) {
+        propValues = propValues.concat(`Examples: ${value.examples}\n`);
+      }
+      table.push([
+        name,
+        value.type || 'object',
+        required?.includes(propertyName) ? 'v' : undefined,
+        propValues || '-',
+        value.description || '-',
+      ]);
+
+      // Special handling for source specific configs
+      // Recursively add nested properties with indentation
+      if (propertyName === 'source_specific_configs' && dstType === 'faros') {
+        const srcTypeCfgs = Object.entries(value.oneOf[0].properties)
+          .filter(([k, _v]) => k === srcType)
+          .reduce((acc, [k, v]) => ({...acc, [k]: v}), {});
+
+        const updatedSrcSpecificCfgs = {
+          ...value.oneOf[0],
+          properties: {...srcTypeCfgs},
+        };
+        addRows(updatedSrcSpecificCfgs, `${prefix}  `);
+      } else if (value.properties) {
+        addRows(value, `${prefix}  `);
+      } else if (value.oneOf) {
+        value.oneOf.forEach((option: any, index: number) => {
+          table.push([`↳ ${prefix}Option ${index + 1}: ${option.title || 'Unnamed'}`, 'object', '', '-', '-']);
+          addRows(option, `${prefix}    `);
+        });
+      }
+    });
+  }
+
+  addRows(spec.connectionSpecification);
+  logger.info(`\n` + table.toString());
+}
+
+export async function getWizardConfig(tmpDir: string, cfg: FarosConfig): Promise<void> {
+  // wizard should be an array of two strings: source and destination type
+  const srcInput: string = (cfg.wizard?.[0] ?? '').toLowerCase();
+  const dstInput: string = (cfg.wizard?.[1] ?? 'faros').toLowerCase();
+  logger.debug(`Wizard input source: ${srcInput}, Wizard input destination: ${dstInput}`);
+
+  // map to corresponding source/destination types
+  const sources = Object.keys(airbyteTypes.sources);
+  const destinations = Object.keys(airbyteTypes.destinations);
+
+  const srcType = didYouMean(srcInput, sources);
+  const dstType = didYouMean(dstInput, destinations);
+
+  if (!srcType) {
+    throw new Error(`Source type '${srcInput}' not found. Please provide a valid source type.`);
+  } else if (srcType?.toLowerCase() !== srcInput) {
+    logger.warn(`Source type '${cfg.wizard?.[0]}' not found. Assume and proceed with source type '${srcType}'.`);
+  }
+
+  if (!dstType) {
+    throw new Error(`Destination type '${dstInput}' not found. Please provide a valid destination type.`);
+  } else if (dstType?.toLowerCase() !== dstInput) {
+    logger.warn(
+      `Destination type '${cfg.wizard?.[1]}' not found. Assume and proceed with destination type '${dstType}'.`,
+    );
+  }
+  logger.debug(`Wizard source: ${srcType}, Wizard destination: ${dstType}`);
+
+  // map keys to docker images
+  const srcImage = airbyteTypes.sources[srcType]!.dockerRepo; // TODO: remove non-null assertion
+  const dstImage = airbyteTypes.destinations[dstType]!.dockerRepo;
+  logger.info(`Using source image: ${srcImage}`);
+  logger.info(`Using destination image: ${dstImage}`);
+
+  // docker pull images
+  if (cfg.srcPull && srcImage) {
+    await pullDockerImage(srcImage);
+  }
+  // Pull destination docker image
+  if (cfg.dstPull && dstImage) {
+    await pullDockerImage(dstImage);
+  }
+
+  // getting spec and run wizard autofill
+  // TODO: handle if it's src or dst only
+  const srcSpec = await runSpec(tmpDir, srcImage);
+  await runWizard(tmpDir, srcImage);
+  const srcConfig = JSON.parse(readFileSync(`${tmpDir}/${TMP_WIZARD_CONFIG_FILENAME}`, 'utf-8'));
+
+  const dstSpec = await runSpec(tmpDir, dstImage);
+  await runWizard(tmpDir, dstImage);
+  const dstConfig = JSON.parse(readFileSync(`${tmpDir}/${TMP_WIZARD_CONFIG_FILENAME}`, 'utf-8'));
+
+  // write config to temporary directory config files
+  const genCfg = {
+    src: {image: srcImage, config: srcConfig},
+    dst: {image: dstImage, config: dstConfig},
+  };
+  writeFileSync(CONFIG_FILE, JSON.stringify(genCfg, null, 2));
+
+  logger.info('');
+  logger.info('Source Airbyte Configuration Spec:');
+  logger.flush();
+  schemaToTable(srcSpec.spec);
+  logger.info('');
+  logger.info('Destination Airbyte Configuration Spec:');
+  logger.flush();
+  schemaToTable(dstSpec.spec, srcType, dstType);
+
+  logger.info('✅ Configuration file generated successfully!');
+  logger.info(`📄 File: ${CONFIG_FILE} (saved in the current directory)
+
+    🔹 **Next Steps:**
+      1️⃣ **Open** '${CONFIG_FILE}'
+      2️⃣ **Replace placeholder values** (e.g., "<UPDATE-WITH-YOUR-TOKEN>")
+      3️⃣ **Add additional configurations** (If needed. Check the spec a)
+      4️⃣ **Save the file**
+      5️⃣ **Run CLI command** e.g. './airbyte-local --config-file ${CONFIG_FILE}'
+  `);
 }
