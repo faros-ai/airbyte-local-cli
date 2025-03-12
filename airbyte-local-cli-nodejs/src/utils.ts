@@ -77,18 +77,15 @@ export async function logImageVersion(type: ImageType, image: string | undefined
 
 // Read a file and detect the encoding by checking Byte Order Mark
 function readFile(filePath: string): string {
-  try {
-    const buffer = readFileSync(filePath);
-    const encoding =
-      buffer[0] === 0xff && buffer[1] === 0xfe
-        ? 'utf-16le'
-        : buffer[0] === 0xfe && buffer[1] === 0xff
-          ? 'utf-16be'
-          : 'utf-8';
-    return new TextDecoder(encoding).decode(buffer);
-  } catch (error: any) {
-    throw new Error(`Failed to read file: ${error.message}`);
-  }
+  accessSync(filePath, constants.R_OK);
+  const buffer = readFileSync(filePath);
+  const encoding =
+    buffer[0] === 0xff && buffer[1] === 0xfe
+      ? 'utf-16le'
+      : buffer[0] === 0xfe && buffer[1] === 0xff
+        ? 'utf-16be'
+        : 'utf-8';
+  return new TextDecoder(encoding).decode(buffer);
 }
 
 // Read the config file and covert to AirbyteConfig
@@ -159,7 +156,6 @@ export function loadStateFile(tempDir: string, filePath?: string, connectionName
   // Read the state file and write to temp folder
   // Write an empty state file if the state file hasn't existed yet
   try {
-    accessSync(path, constants.R_OK);
     const stateData = readFile(path);
     logger.info(`Using state file: '${path}'`);
 
@@ -537,7 +533,7 @@ export function processSpecByLine(line: string): AirbyteSpec | undefined {
     const data = JSON.parse(line);
     if (data?.type === AirbyteMessageType.SPEC && data?.spec) {
       spec = data as AirbyteSpec;
-      logger.debug(data);
+      logger.debug(line);
     }
   } catch (error: any) {
     throw new Error(`Spec data: '${line}'; Error: ${error.message}`);
@@ -580,7 +576,7 @@ function schemaToTable(spec: Spec, srcType?: string, dstType?: string): void {
       table.push([
         name,
         value.type || 'object',
-        required?.includes(propertyName) ? 'v' : undefined,
+        required?.includes(propertyName) ? '✅' : undefined,
         propValues || '-',
         value.description || '-',
       ]);
@@ -612,11 +608,11 @@ function schemaToTable(spec: Spec, srcType?: string, dstType?: string): void {
   logger.info(`\n` + table.toString());
 }
 
-export async function getWizardConfig(tmpDir: string, cfg: FarosConfig): Promise<void> {
-  // wizard should be an array of two strings: source and destination type
-  const srcInput: string = (cfg.wizard?.[0] ?? '').toLowerCase();
-  const dstInput: string = (cfg.wizard?.[1] ?? 'faros').toLowerCase();
-  logger.debug(`Wizard input source: ${srcInput}, Wizard input destination: ${dstInput}`);
+export async function generateConfig(tmpDir: string, cfg: FarosConfig): Promise<void> {
+  // should be an array of two strings: source and destination type
+  const srcInput: string = (cfg.generateConfig?.src ?? '').toLowerCase();
+  const dstInput: string = (cfg.generateConfig?.dst ?? 'faros').toLowerCase();
+  logger.debug(`Generated config input source: ${srcInput}; Generated config input destination: ${dstInput}`);
 
   // map to corresponding source/destination types
   const sources = Object.keys(airbyteTypes.sources);
@@ -628,17 +624,19 @@ export async function getWizardConfig(tmpDir: string, cfg: FarosConfig): Promise
   if (!srcType) {
     throw new Error(`Source type '${srcInput}' not found. Please provide a valid source type.`);
   } else if (srcType?.toLowerCase() !== srcInput) {
-    logger.warn(`Source type '${cfg.wizard?.[0]}' not found. Assume and proceed with source type '${srcType}'.`);
+    logger.warn(
+      `Source type '${cfg.generateConfig?.src}' not found. Assume and proceed with source type '${srcType}'.`,
+    );
   }
 
   if (!dstType) {
     throw new Error(`Destination type '${dstInput}' not found. Please provide a valid destination type.`);
   } else if (dstType?.toLowerCase() !== dstInput) {
     logger.warn(
-      `Destination type '${cfg.wizard?.[1]}' not found. Assume and proceed with destination type '${dstType}'.`,
+      `Destination type '${cfg.generateConfig?.dst}' not found. Assume and proceed with destination type '${dstType}'.`,
     );
   }
-  logger.debug(`Wizard source: ${srcType}, Wizard destination: ${dstType}`);
+  logger.debug(`Generated config source: ${srcType}; Generated config destination: ${dstType}`);
 
   // map keys to docker images
   const srcImage = airbyteTypes.sources[srcType]!.dockerRepo; // TODO: remove non-null assertion

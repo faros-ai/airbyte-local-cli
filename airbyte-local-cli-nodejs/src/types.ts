@@ -8,7 +8,7 @@ export interface AirbyteCliContext {
 export interface CliOptions {
   // source and destination config
   configFile?: string;
-  wizard?: any;
+  generateConfig?: any;
 
   // source
   srcImage: string;
@@ -63,7 +63,7 @@ export enum AirbyteConfigInputType {
 export interface FarosConfig {
   src?: AirbyteConfig;
   dst?: AirbyteConfig;
-  wizard?: any;
+  generateConfig?: any;
   srcOutputFile: string | undefined; // if srcOnly is true
   srcInputFile: string | undefined; // if dstOnly is true
   srcCheckConnection: boolean;

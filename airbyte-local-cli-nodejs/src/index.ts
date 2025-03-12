@@ -4,8 +4,8 @@ import {AirbyteCliContext} from './types';
 import {
   cleanUp,
   createTmpDir,
+  generateConfig,
   generateDstStreamPrefix,
-  getWizardConfig,
   ImageType,
   loadStateFile,
   logger,
@@ -27,9 +27,9 @@ export async function main(): Promise<void> {
     // Create temporary directory
     context.tmpDir = createTmpDir();
 
-    // Run wizard
-    if (cfg.wizard) {
-      await getWizardConfig(context.tmpDir, cfg);
+    // Run generate config
+    if (cfg.generateConfig) {
+      await generateConfig(context.tmpDir, cfg);
       return;
     }
 

@@ -27,23 +27,10 @@ function command() {
 
     // Options: Airbyte connector config
     .addOption(
-      new Option('--config-file <path>', 'Airbyte source and destination connector config Json file path').conflicts([
-        'src',
-        'dst',
-        'wizard',
-      ]),
-    )
-    // TODO: @FAI-13889 Finalize the wizard arugments and implementation
-    .addOption(
       new Option(
-        '--wizard <type...>',
-        '"--wizard <source> [destination]". ' +
-          'Run the Airbyte configuration wizard. ' +
-          'It is required to provide source, which means you will have to know ' +
-          'which source data you are pulling from, e.g. Github, Jira, etc. ' +
-          'and the default destination is Faros. ' +
-          'For example, "--wizard github" will pull data from Github and push it to Faros.',
-      ).conflicts(['configFile', 'src', 'dst']),
+        '-c, --config-file <path>',
+        'Airbyte source and destination connector config Json file path',
+      ).conflicts(['src', 'dst']),
     )
     .option('--src <image>', '[Deprecated] Airbyte source Docker image')
     .option('--dst <image>', '[Deprecated] Airbyte destination Docker image')
@@ -90,13 +77,28 @@ function command() {
       }
 
       // Check if Airbyte config is provided
-      if (!opts.configFile && !(opts.src || opts.dst) && !opts.wizard) {
+      if (!opts.configFile && !(opts.src || opts.dst)) {
         cmd.error(
           'Configuration options are missing. Please provide one of the following options: ' +
-            `'--config-file', '--src' and '--dst', or '--wizard' to configure the Airbyte connector.`,
+            `'--config-file', '--src' and '--dst' to configure the Airbyte connector.`,
         );
       }
     });
+
+  // generate-config subcommand
+  cmd
+    .command('generate-config <source> [destination]')
+    .description(
+      'Generate Airbyte configuration templates. ' +
+        'It is required to provide source, which means you will have to know ' +
+        'which source data you are pulling from, e.g. Github, Jira, etc. ' +
+        'and the default destination is Faros. ' +
+        'For example, "--generate-config github" will pull data from Github and push it to Faros.',
+    )
+    .action((source, destination) => {
+      cmd.setOptionValue('generateConfig', {src: source, dst: destination || 'faros'});
+    });
+
   return cmd;
 }
 
@@ -195,8 +197,16 @@ function validateConfigFileInput(config: FarosConfig, inputType: AirbyteConfigIn
  * to get unknown options, to avoid the second parsing updating the options object.
  */
 export function parseAndValidateInputs(argv: string[]): FarosConfig {
+  // Create command line parse program
+  const program = command();
+
+  // Show help if no options or subcommands is given
+  if (!argv.slice(2).length) {
+    program.help();
+  }
+
   // Parse arguments
-  const program = command().parse(argv);
+  program.parse(argv);
 
   // Deep clone the parsed options before parsing the second time to get unknown options
   const options = structuredClone(program.opts());
@@ -222,7 +232,7 @@ export function parseAndValidateInputs(argv: string[]): FarosConfig {
 
   // Convert the cli options to FarosConfig
   const farosConfig: FarosConfig = {
-    wizard: cliOptions.wizard,
+    generateConfig: cliOptions.generateConfig,
     // The default source output file is stdout(`-`) if `srcOnly` is true
     // Take the non-default value if provided with `srcOutputFile` option
     srcOutputFile: cliOptions.srcOnly ? OutputStream.STDOUT : cliOptions.srcOutputFile,

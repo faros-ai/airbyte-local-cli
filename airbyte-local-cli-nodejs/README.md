@@ -152,6 +152,7 @@ We provide some more CLI optional arguments and optional fields in the Airbyte c
 | Option                     | Required | Description                                                                                                |
 | -------------------------- | -------- | ---------------------------------------------------------------------------------------------------------- |
 | `--config-file <path>`     | Yes      | Airbyte source and destination connector config JSON file path                                             |
+| `--generate-config`        |          | Generate Airbyte configuration for first time users                                                        |
 | `-h, --help`               |          | Display usage information                                                                                  |
 | `-v, --version`            |          | Output the current version                                                                                 |
 | `--full-refresh`           |          | Force full_refresh and overwrite mode. This overrides the mode in provided config file                     |
@@ -336,12 +337,12 @@ For arguments `--src ...` and `--dst ...`, they are still supported for user con
 | `--src-catalog-json <json>`      | Unsupported | Airbyte catalog config is now defined in Aribyte configuration file |
 | `--dst-catalog-file <path>`      | Unsupported | Airbyte catalog config is now defined in Aribyte configuration file |
 | `--dst-catalog-json <json>`      | Unsupported | Airbyte catalog config is now defined in Aribyte configuration file |
-| `--src-wizard`                   | Unsupported | Replaced by `--wizard` (WIP)                                        |
-| `--dst-wizard`                   | Unsupported | Replaced by `--wizard` (WIP)                                        |
+| `--src-wizard`                   | Unsupported | Use `--generate-config` instead                                     |
+| `--dst-wizard`                   | Unsupported | Use `--generate-config` instead                                     |
 | `--max-log-size <size>`          | Unsupported | Docker settings are now defined in Aribyte configuration file       |
 | `--max-mem <mem>`                | Unsupported | Docker settings are now defined in Aribyte configuration file       |
 | `--max-cpus <cpus>`              | Unsupported | Docker settings are now defined in Aribyte configuration file       |
 | `--src-docker-options "<string>` | Unsupported | Docker settings are now defined in Aribyte configuration file       |
 | `--dst-docker-options "<string>` | Unsupported | Docker settings are now defined in Aribyte configuration file       |
 | `--k8s-deployment`               | Unsupported | Stop surporting running on local kubernetes cluster                 |
-| `--dst-stream-prefix <prefix>`   | Unsupported | Please use `--connection-name` instead                              |
+| `--dst-stream-prefix <prefix>`   | Unsupported | Use `--connection-name` instead                                     |

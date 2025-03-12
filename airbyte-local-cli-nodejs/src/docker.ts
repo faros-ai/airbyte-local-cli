@@ -482,11 +482,12 @@ export async function runDstSync(tmpDir: string, config: FarosConfig): Promise<v
 
 /**
  * Run the wizard to generate the configuration file.
+ * Utilize the `--autofill` flag to generate the configuration file.
  *
  * Raw docker command:
  * docker run -it --rm \
  *  -v "$tempdir:/configs" "$docker_image" \
- *  airbyte-local-cli-wizard \
+ *  airbyte-local-cli-wizard --autofill \
  *  --json "/configs/$config_filename"
  *  --spec-file "/configs/$spec_filename"
  */
@@ -529,13 +530,13 @@ export async function runWizard(tmpDir: string, image: string): Promise<void> {
     // docker run
     await container.start();
     const res = await container.wait();
-    logger.debug(`Wizard exit code: ${JSON.stringify(res)}`);
+    logger.debug(`Generate config exit code: ${JSON.stringify(res)}`);
 
     if (res.StatusCode !== 0) {
       throw new Error(`Exit with ${JSON.stringify(res)}`);
     }
   } catch (error: any) {
-    throw new Error(`Failed to run wizard: ${error.message ?? JSON.stringify(error)}.`);
+    throw new Error(`Failed to generate config: ${error.message ?? JSON.stringify(error)}.`);
   }
 }
 
