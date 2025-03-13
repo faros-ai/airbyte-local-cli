@@ -608,6 +608,10 @@ function schemaToTable(spec: Spec, srcType?: string, dstType?: string): void {
   logger.info(`\n` + table.toString());
 }
 
+/**
+ * Generate Airbyte configuration files.
+ * Run the spec and wizard to get the configuration spec and autofill the wizard.
+ */
 export async function generateConfig(tmpDir: string, cfg: FarosConfig): Promise<void> {
   // should be an array of two strings: source and destination type
   const srcInput: string = (cfg.generateConfig?.src ?? '').toLowerCase();
@@ -654,7 +658,6 @@ export async function generateConfig(tmpDir: string, cfg: FarosConfig): Promise<
   }
 
   // getting spec and run wizard autofill
-  // TODO: handle if it's src or dst only
   const srcSpec = await runSpec(tmpDir, srcImage);
   await runWizard(tmpDir, srcImage);
   const srcConfig = JSON.parse(readFileSync(`${tmpDir}/${TMP_WIZARD_CONFIG_FILENAME}`, 'utf-8'));
@@ -687,6 +690,5 @@ export async function generateConfig(tmpDir: string, cfg: FarosConfig): Promise<
       2️⃣ **Replace placeholder values** (e.g., "<UPDATE-WITH-YOUR-TOKEN>")
       3️⃣ **Add additional configurations** (If needed. Check the spec a)
       4️⃣ **Save the file**
-      5️⃣ **Run CLI command** e.g. './airbyte-local --config-file ${CONFIG_FILE}'
   `);
 }

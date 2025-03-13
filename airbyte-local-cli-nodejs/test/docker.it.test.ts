@@ -1,9 +1,22 @@
 import {copyFileSync, readFileSync, rmSync, unlinkSync, writeFileSync} from 'node:fs';
 import {Writable} from 'node:stream';
 
-import {checkSrcConnection, pullDockerImage, runDiscoverCatalog, runDstSync, runSrcSync} from '../src/docker';
+import {
+  checkSrcConnection,
+  pullDockerImage,
+  runDiscoverCatalog,
+  runDstSync,
+  runSpec,
+  runSrcSync,
+  runWizard,
+} from '../src/docker';
 import {FarosConfig} from '../src/types';
-import {DST_CONFIG_FILENAME, SRC_OUTPUT_DATA_FILE} from '../src/utils';
+import {
+  DST_CONFIG_FILENAME,
+  SRC_OUTPUT_DATA_FILE,
+  TMP_SPEC_CONFIG_FILENAME,
+  TMP_WIZARD_CONFIG_FILENAME,
+} from '../src/utils';
 
 const defaultConfig: FarosConfig = {
   srcCheckConnection: false,
@@ -25,6 +38,7 @@ beforeAll(async () => {
   await pullDockerImage('farosai/airbyte-example-source');
   await pullDockerImage('farosai/airbyte-faros-graphql-source');
   await pullDockerImage('farosai/airbyte-faros-destination');
+  await pullDockerImage('airbyte/destination-databricks');
 }, 120000);
 
 describe('runDiscoverCatalog', () => {
@@ -172,4 +186,60 @@ describe('runDstSync', () => {
 
     await expect(runDstSync(testTmpDir, testCfg)).rejects.toThrow('Failed to run destination connector');
   }, 60000);
+});
+
+describe('runSpec', () => {
+  const testTmpDir = `${process.cwd()}`;
+  const testSpecfile = `${testTmpDir}/${TMP_SPEC_CONFIG_FILENAME}`;
+
+  afterAll(() => {
+    try {
+      unlinkSync(testSpecfile);
+    } catch (_error) {
+      // ignore
+    }
+  });
+
+  it('should success with faros image', async () => {
+    await expect(runSpec(testTmpDir, 'farosai/airbyte-faros-graphql-source')).resolves.not.toThrow();
+
+    const specData = readFileSync(testSpecfile, 'utf8');
+    expect(JSON.parse(specData).spec).toBeTruthy();
+    expect(specData).toMatchSnapshot();
+  });
+
+  it('should success with airbyte image', async () => {
+    await expect(runSpec(testTmpDir, 'airbyte/destination-databricks')).resolves.not.toThrow();
+
+    const specData = readFileSync(testSpecfile, 'utf8');
+    expect(JSON.parse(specData).spec).toBeTruthy();
+    expect(specData).toMatchSnapshot();
+  });
+});
+
+describe('runWizard', () => {
+  const testTmpDir = `${process.cwd()}/test/resources`;
+  const testWizardfile = `${testTmpDir}/${TMP_WIZARD_CONFIG_FILENAME}`;
+
+  afterAll(() => {
+    try {
+      unlinkSync(testWizardfile);
+    } catch (_error) {
+      // ignore
+    }
+  });
+
+  it('should success with faros image', async () => {
+    await expect(runWizard(testTmpDir, 'farosai/airbyte-faros-graphql-source')).resolves.not.toThrow();
+
+    const cfgData = readFileSync(testWizardfile, 'utf8');
+    expect(cfgData).toMatchSnapshot();
+  });
+
+  it('should success with airbyte image', async () => {
+    await expect(runWizard(testTmpDir, 'airbyte/destination-databricks')).resolves.not.toThrow();
+
+    const cfgData = readFileSync(testWizardfile, 'utf8');
+    expect(cfgData).toMatchSnapshot();
+  });
 });

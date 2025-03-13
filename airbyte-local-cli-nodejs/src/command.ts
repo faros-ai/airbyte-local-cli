@@ -32,10 +32,6 @@ function command() {
         'Airbyte source and destination connector config Json file path',
       ).conflicts(['src', 'dst']),
     )
-    .option('--src <image>', '[Deprecated] Airbyte source Docker image')
-    .option('--dst <image>', '[Deprecated] Airbyte destination Docker image')
-    .option('--src.<key> <value>', '[Deprecated] Add "key": "value" into the source config')
-    .option('--dst.<key> <value>', '[Deprecated] Add "key": "value" into the destination config')
     .option('--full-refresh', 'Force full_refresh and overwrite mode. This overrides the mode in provided config file.')
     .option('--state-file <path>', 'Override state file path for incremental sync')
 
@@ -64,6 +60,12 @@ function command() {
 
     // Options: Cli settings
     .option('--debug', 'Enable debug logging')
+
+    // Options: deprecated options
+    .option('--src <image>', '[Deprecated] Airbyte source Docker image')
+    .option('--dst <image>', '[Deprecated] Airbyte destination Docker image')
+    .option('--src.<key> <value>', '[Deprecated] Add "key": "value" into the source config')
+    .option('--dst.<key> <value>', '[Deprecated] Add "key": "value" into the destination config')
 
     // Options: renamed options
     .addOption(new Option('--check-connection', 'Support for the renamed option').hideHelp())
@@ -95,6 +97,8 @@ function command() {
         'and the default destination is Faros. ' +
         'For example, "--generate-config github" will pull data from Github and push it to Faros.',
     )
+    .allowUnknownOption(false)
+    .allowExcessArguments(false)
     .action((source, destination) => {
       cmd.setOptionValue('generateConfig', {src: source, dst: destination || 'faros'});
     });

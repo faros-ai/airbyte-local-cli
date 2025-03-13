@@ -36,22 +36,6 @@ describe('Check options conflict', () => {
     expect(() => parseAndValidateInputs(argv)).toThrow();
   });
 
-  it('should fail if using both --config-file and --wizard', () => {
-    jest.spyOn(process, 'exit').mockImplementation(() => {
-      throw new Error('process.exit() was called by commander js');
-    });
-    const argv = ['./airbyte-local-cli', 'index.js', '--config-file', 'config-file-path', '--wizard'];
-    expect(() => parseAndValidateInputs(argv)).toThrow();
-  });
-
-  it('should fail if using both --config-file and --wizard', () => {
-    jest.spyOn(process, 'exit').mockImplementation(() => {
-      throw new Error('process.exit() was called by commander js');
-    });
-    const argv = ['./airbyte-local-cli', 'index.js', '--src', 'source-image', '--dst', 'destination-image', '--wizard'];
-    expect(() => parseAndValidateInputs(argv)).toThrow();
-  });
-
   it('should fail if using both --src-only and --src-output-file', () => {
     jest.spyOn(process, 'exit').mockImplementation(() => {
       throw new Error('process.exit() was called by commander js');
@@ -199,15 +183,17 @@ describe('Check src and dst config parsing', () => {
   });
 });
 
-describe('Check wizard option parsing', () => {
-  it('should parse and validate options: wizard', () => {
-    const argv = ['./airbyte-local-cli', 'index.js', '--wizard', 'jira'];
-    expect(() => parseAndValidateInputs(argv)).not.toThrow();
+describe(`Check subcommand 'generate-config'`, () => {
+  it('should parse without destination argument', () => {
+    const argv = ['./airbyte-local-cli', 'index.js', 'generate-config', 'jira'];
+    const cfg = parseAndValidateInputs(argv);
+    expect(cfg.generateConfig).toEqual({src: 'jira', dst: 'faros'});
   });
 
-  it('should parse and validate options: wizard with dst', () => {
-    const argv = ['./airbyte-local-cli', 'index.js', '--wizard', 'jira', 'faros'];
-    expect(() => parseAndValidateInputs(argv)).not.toThrow();
+  it('should parse with destination argument', () => {
+    const argv = ['./airbyte-local-cli', 'index.js', 'generate-config', 'jira', 'other'];
+    const cfg = parseAndValidateInputs(argv);
+    expect(cfg.generateConfig).toEqual({src: 'jira', dst: 'other'});
   });
 });
 

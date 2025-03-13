@@ -481,66 +481,6 @@ export async function runDstSync(tmpDir: string, config: FarosConfig): Promise<v
 }
 
 /**
- * Run the wizard to generate the configuration file.
- * Utilize the `--autofill` flag to generate the configuration file.
- *
- * Raw docker command:
- * docker run -it --rm \
- *  -v "$tempdir:/configs" "$docker_image" \
- *  airbyte-local-cli-wizard --autofill \
- *  --json "/configs/$config_filename"
- *  --spec-file "/configs/$spec_filename"
- */
-const DEFAULT_PLACEHOLDER_WIZARD_IMAGE = 'farosai/airbyte-faros-graphql-source';
-export async function runWizard(tmpDir: string, image: string): Promise<void> {
-  logger.info('Retrieving Airbyte auto generated configuration...');
-
-  if (!image.startsWith('farosai')) {
-    image = DEFAULT_PLACEHOLDER_WIZARD_IMAGE;
-  }
-
-  try {
-    const cmd = [
-      'airbyte-local-cli-wizard',
-      '--autofill',
-      '--json',
-      `/configs/${TMP_WIZARD_CONFIG_FILENAME}`,
-      '--spec-file',
-      `/configs/${TMP_SPEC_CONFIG_FILENAME}`,
-    ];
-    const createOptions: Docker.ContainerCreateOptions = {
-      Image: image,
-      Cmd: cmd,
-      AttachStderr: true,
-      AttachStdout: true,
-      HostConfig: {
-        Binds: [`${tmpDir}:/configs`],
-        AutoRemove: true,
-      },
-      platform: getImagePlatform(image),
-    };
-
-    // Create the Docker container
-    const container = await _docker.createContainer(createOptions);
-
-    // Attach stdout and stderr
-    const outputStream = await container.attach({stream: true, stdout: true, stderr: true});
-    container.modem.demuxStream(outputStream, process.stdout, process.stderr);
-
-    // docker run
-    await container.start();
-    const res = await container.wait();
-    logger.debug(`Generate config exit code: ${JSON.stringify(res)}`);
-
-    if (res.StatusCode !== 0) {
-      throw new Error(`Exit with ${JSON.stringify(res)}`);
-    }
-  } catch (error: any) {
-    throw new Error(`Failed to generate config: ${error.message ?? JSON.stringify(error)}.`);
-  }
-}
-
-/**
  * Run the spec to generate the configuration file.
  *
  * TODO: Check if it's running fine on non faros airbyte images
@@ -606,5 +546,60 @@ export async function runSpec(tmpDir: string, image: string): Promise<AirbyteSpe
     throw new Error(`Exit with ${JSON.stringify(res)}`);
   } catch (error: any) {
     throw new Error(`Failed to run spec: ${error.message ?? JSON.stringify(error)}.`);
+  }
+}
+
+/**
+ * Run the wizard to generate the configuration file.
+ * Utilize the `--autofill` flag to generate the configuration file.
+ *
+ * Raw docker command:
+ * docker run -it --rm \
+ *  -v "$tempdir:/configs" "$docker_image" \
+ *  airbyte-local-cli-wizard --autofill \
+ *  --json "/configs/$config_filename"
+ *  --spec-file "/configs/$spec_filename"
+ */
+const DEFAULT_PLACEHOLDER_WIZARD_IMAGE = 'farosai/airbyte-faros-graphql-source';
+export async function runWizard(tmpDir: string, image: string): Promise<void> {
+  logger.info('Retrieving Airbyte auto generated configuration...');
+
+  try {
+    const cmd = ['airbyte-local-cli-wizard', '--autofill', '--json', `/configs/${TMP_WIZARD_CONFIG_FILENAME}`];
+
+    // if the image is not managed by faors, use the default placeholder image and pass in the spec file
+    if (!image.startsWith('farosai')) {
+      image = DEFAULT_PLACEHOLDER_WIZARD_IMAGE;
+      cmd.push('--spec-file', `/configs/${TMP_SPEC_CONFIG_FILENAME}`);
+    }
+    const createOptions: Docker.ContainerCreateOptions = {
+      Image: image,
+      Cmd: cmd,
+      AttachStderr: true,
+      AttachStdout: true,
+      HostConfig: {
+        Binds: [`${tmpDir}:/configs`],
+        AutoRemove: true,
+      },
+      platform: getImagePlatform(image),
+    };
+
+    // Create the Docker container
+    const container = await _docker.createContainer(createOptions);
+
+    // Attach stdout and stderr
+    const outputStream = await container.attach({stream: true, stdout: true, stderr: true});
+    container.modem.demuxStream(outputStream, process.stdout, process.stderr);
+
+    // docker run
+    await container.start();
+    const res = await container.wait();
+    logger.debug(`Generate config exit code: ${JSON.stringify(res)}`);
+
+    if (res.StatusCode !== 0) {
+      throw new Error(`Exit with ${JSON.stringify(res)}`);
+    }
+  } catch (error: any) {
+    throw new Error(`Failed to generate config: ${error.message ?? JSON.stringify(error)}.`);
   }
 }
