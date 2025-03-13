@@ -103,7 +103,7 @@ Run the command to generate the template
 
 Note: Both source and destination inputs are case insensitive and tolerate a bit of typos.
 
-After running the command, you should see `🔹 **Next Steps:**` instructions showing up in your terminal. Follow the instructions to run the sync!
+After running the command, you should see `🔹 **Next Steps:**` instructions showing up in your terminal. Follow the steps to complete the config.
 
 #### Step 2b. Craft your own configuration
 
@@ -195,7 +195,6 @@ We provide some more CLI optional arguments and optional fields in the Airbyte c
 | Option                     | Required | Description                                                                                                |
 | -------------------------- | -------- | ---------------------------------------------------------------------------------------------------------- |
 | `-c, --config-file <path>` | Yes      | Airbyte source and destination connector config JSON file path                                             |
-| `--generate-config`        |          | Generate Airbyte configuration for first time users                                                        |
 | `-h, --help`               |          | Display usage information                                                                                  |
 | `-v, --version`            |          | Output the current version                                                                                 |
 | `--full-refresh`           |          | Force full_refresh and overwrite mode. This overrides the mode in provided config file                     |
