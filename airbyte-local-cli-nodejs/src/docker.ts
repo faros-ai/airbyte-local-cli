@@ -553,6 +553,9 @@ export async function runSpec(tmpDir: string, image: string): Promise<AirbyteSpe
  * Run the wizard to generate the configuration file.
  * Utilize the `--autofill` flag to generate the configuration file.
  *
+ * Always use the placeholder image for the wizard.
+ * This allows us to generate configs for any source connectors.
+ *
  * Raw docker command:
  * docker run -it --rm \
  *  -v "$tempdir:/configs" "$docker_image" \
@@ -565,15 +568,16 @@ export async function runWizard(tmpDir: string, image: string): Promise<void> {
   logger.info('Retrieving Airbyte auto generated configuration...');
 
   try {
-    const cmd = ['airbyte-local-cli-wizard', '--autofill', '--json', `/configs/${TMP_WIZARD_CONFIG_FILENAME}`];
-
-    // if the image is not managed by faors, use the default placeholder image and pass in the spec file
-    if (!image.startsWith('farosai')) {
-      image = DEFAULT_PLACEHOLDER_WIZARD_IMAGE;
-      cmd.push('--spec-file', `/configs/${TMP_SPEC_CONFIG_FILENAME}`);
-    }
+    const cmd = [
+      'airbyte-local-cli-wizard',
+      '--autofill',
+      '--json',
+      `/configs/${TMP_WIZARD_CONFIG_FILENAME}`,
+      '--spec-file',
+      `/configs/${TMP_SPEC_CONFIG_FILENAME}`,
+    ];
     const createOptions: Docker.ContainerCreateOptions = {
-      Image: image,
+      Image: DEFAULT_PLACEHOLDER_WIZARD_IMAGE,
       Cmd: cmd,
       AttachStderr: true,
       AttachStdout: true,

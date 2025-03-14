@@ -99,8 +99,10 @@ function command() {
     )
     .allowUnknownOption(false)
     .allowExcessArguments(false)
-    .action((source, destination) => {
+    .option('-s, --silent', 'Do not print out the configuration tables')
+    .action((source, destination, opts: any) => {
       cmd.setOptionValue('generateConfig', {src: source, dst: destination || 'faros'});
+      cmd.setOptionValue('silent', opts.silent);
     });
 
   return cmd;
@@ -237,6 +239,7 @@ export function parseAndValidateInputs(argv: string[]): FarosConfig {
   // Convert the cli options to FarosConfig
   const farosConfig: FarosConfig = {
     generateConfig: cliOptions.generateConfig,
+    silent: cliOptions.silent ?? false,
     // The default source output file is stdout(`-`) if `srcOnly` is true
     // Take the non-default value if provided with `srcOutputFile` option
     srcOutputFile: cliOptions.srcOnly ? OutputStream.STDOUT : cliOptions.srcOutputFile,

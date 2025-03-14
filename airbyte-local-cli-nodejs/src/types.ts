@@ -8,7 +8,6 @@ export interface AirbyteCliContext {
 export interface CliOptions {
   // source and destination config
   configFile?: string;
-  generateConfig?: any;
 
   // source
   srcImage: string;
@@ -35,6 +34,10 @@ export interface CliOptions {
 
   // logging
   debug?: boolean;
+
+  // generate config
+  generateConfig?: any;
+  silent?: boolean;
 
   // deprecated
   checkConnection?: boolean; // use srcCheckConnection instead
@@ -63,7 +66,6 @@ export enum AirbyteConfigInputType {
 export interface FarosConfig {
   src?: AirbyteConfig;
   dst?: AirbyteConfig;
-  generateConfig?: any;
   srcOutputFile: string | undefined; // if srcOnly is true
   srcInputFile: string | undefined; // if dstOnly is true
   srcCheckConnection: boolean;
@@ -77,6 +79,10 @@ export interface FarosConfig {
   keepContainers: boolean;
   logLevel: string;
   debug: boolean;
+
+  // generate config
+  generateConfig?: any;
+  silent: boolean;
 
   // internal use
   dstStreamPrefix?: string;

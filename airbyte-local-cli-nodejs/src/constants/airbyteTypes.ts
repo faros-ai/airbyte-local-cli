@@ -1,4 +1,4 @@
-// TODO: dynamically pull it from docker hub
+// TODO: @FAI-15621 dynamically mappings for source and destination
 
 interface AirbyteTypes {
   destinations: {
@@ -35,9 +35,6 @@ export const airbyteTypes: AirbyteTypes = {
     agileaccelerator: {
       dockerRepo: 'farosai/airbyte-agileaccelerator-source',
     },
-    airtable: {
-      dockerRepo: 'farosai/airbyte-airtable-source',
-    },
     asana: {
       dockerRepo: 'farosai/airbyte-asana-source',
     },
@@ -71,17 +68,11 @@ export const airbyteTypes: AirbyteTypes = {
     clickup: {
       dockerRepo: 'farosai/airbyte-clickup-source',
     },
-    Datadog: {
-      dockerRepo: 'farosai/airbyte-datadog-source',
-    },
     datadog: {
       dockerRepo: 'farosai/airbyte-datadog-source',
     },
     docker: {
       dockerRepo: 'farosai/airbyte-docker-source',
-    },
-    'faros-feeds': {
-      dockerRepo: 'farosai/airbyte-faros-feeds-source',
     },
     'faros-graphdoctor': {
       dockerRepo: 'farosai/airbyte-faros-graphdoctor-source',
@@ -166,6 +157,72 @@ export const airbyteTypes: AirbyteTypes = {
     },
     bigquery: {
       dockerRepo: 'airbyte/source-bigquery',
+    },
+
+    // Feeds sources
+    changeset: {
+      dockerRepo: 'farosai/airbyte-faros-feeds-source',
+    },
+    codedeploy: {
+      dockerRepo: 'farosai/airbyte-faros-feeds-source',
+    },
+    dockerci: {
+      dockerRepo: 'farosai/airbyte-faros-feeds-source',
+    },
+    sentryci: {
+      dockerRepo: 'farosai/airbyte-faros-feeds-source',
+    },
+    travisci: {
+      dockerRepo: 'farosai/airbyte-faros-feeds-source',
+    },
+    'mock-data': {
+      dockerRepo: 'farosai/airbyte-faros-feeds-source',
+    },
+    'org-identity': {
+      dockerRepo: 'farosai/airbyte-faros-feeds-source',
+    },
+    'org-import': {
+      dockerRepo: 'farosai/airbyte-faros-feeds-source',
+    },
+    'org-ownership': {
+      dockerRepo: 'farosai/airbyte-faros-feeds-source',
+    },
+    'team-bootstrap': {
+      dockerRepo: 'farosai/airbyte-faros-feeds-source',
+    },
+    sonarqube: {
+      dockerRepo: 'farosai/airbyte-faros-feeds-source',
+    },
+    clubhouse: {
+      dockerRepo: 'farosai/airbyte-faros-feeds-source',
+    },
+    transform: {
+      dockerRepo: 'farosai/airbyte-faros-feeds-source',
+    },
+    gitlab: {
+      dockerRepo: 'farosai/airbyte-faros-feeds-source',
+    },
+
+    // Sources not in Poseidon config.json
+    buildkite: {
+      dockerRepo: 'farosai/airbyte-buildkite-source',
+    },
+    'customer-io': {
+      dockerRepo: 'farosai/airbyte-customer-io-source',
+    },
+    files: {
+      dockerRepo: 'farosai/airbyte-files-source',
+    },
+    'gitlab-ci': {
+      dockerRepo: 'farosai/airbyte-gitlab-ci-source',
+    },
+    zephyr: {
+      dockerRepo: 'farosai/airbyte-zephyr-source',
+    },
+
+    // doesn't take wizard flag
+    airtable: {
+      dockerRepo: 'farosai/airbyte-airtable-source',
     },
   },
 };

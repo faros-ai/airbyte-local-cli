@@ -552,6 +552,15 @@ function schemaToTable(spec: Spec, srcType?: string, dstType?: string): void {
     wrapOnWordBoundary: false,
   });
 
+  function formatValue(v: any) {
+    if (Array.isArray(v)) {
+      return v.join(', ');
+    } else if (typeof v === 'object' && v !== null) {
+      return JSON.stringify(v);
+    }
+    return v;
+  }
+
   /**
    * Take care of nested objects in the config
    */
@@ -562,20 +571,20 @@ function schemaToTable(spec: Spec, srcType?: string, dstType?: string): void {
       const name = prefix ? `↳ ${prefix}${propertyName}` : propertyName;
       let propValues = '';
       if (value.default) {
-        propValues = propValues.concat(`Default: ${value.default}\n`);
+        propValues += `Default: ${formatValue(value.default)}\n`;
       }
       if (value.const) {
-        propValues = propValues.concat(`Const: ${value.const}\n`);
+        propValues += `Const: ${formatValue(value.const)}\n`;
       }
       if (value.enum) {
-        propValues = propValues.concat(`Enum: ${value.enum}\n`);
+        propValues += `Enum: ${formatValue(value.enum)}\n`;
       }
       if (value.examples) {
-        propValues = propValues.concat(`Examples: ${value.examples}\n`);
+        propValues += `Examples: ${formatValue(value.examples)}\n`;
       }
       table.push([
         name,
-        value.type || 'object',
+        formatValue(value.type) || 'object',
         required?.includes(propertyName) ? '✅' : undefined,
         propValues || '-',
         value.description || '-',
@@ -673,14 +682,16 @@ export async function generateConfig(tmpDir: string, cfg: FarosConfig): Promise<
   };
   writeFileSync(CONFIG_FILE, JSON.stringify(genCfg, null, 2));
 
-  logger.info('');
-  logger.info('Source Airbyte Configuration Spec:');
-  logger.flush();
-  schemaToTable(srcSpec.spec);
-  logger.info('');
-  logger.info('Destination Airbyte Configuration Spec:');
-  logger.flush();
-  schemaToTable(dstSpec.spec, srcType, dstType);
+  if (!cfg.silent) {
+    logger.info('');
+    logger.info('Source Airbyte Configuration Spec:');
+    logger.flush();
+    schemaToTable(srcSpec.spec);
+    logger.info('');
+    logger.info('Destination Airbyte Configuration Spec:');
+    logger.flush();
+    schemaToTable(dstSpec.spec, srcType, dstType);
+  }
 
   logger.info('✅ Configuration file generated successfully!');
   logger.info(`📄 File: ${CONFIG_FILE} (saved in the current directory)
