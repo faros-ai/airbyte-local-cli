@@ -13,6 +13,7 @@ const defaultConfig = {
   keepContainers: false,
   logLevel: 'info',
   debug: false,
+  silent: false,
 };
 
 afterEach(() => {

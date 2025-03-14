@@ -32,6 +32,7 @@ const defaultConfig: FarosConfig = {
   connectionName: undefined,
   srcOutputFile: undefined,
   srcInputFile: undefined,
+  silent: false,
 };
 
 beforeAll(async () => {
@@ -218,28 +219,29 @@ describe('runSpec', () => {
 });
 
 describe('runWizard', () => {
-  const testTmpDir = `${process.cwd()}/test/resources`;
-  const testWizardfile = `${testTmpDir}/${TMP_WIZARD_CONFIG_FILENAME}`;
+  const testTmpDirGraphql = `${process.cwd()}/test/resources/dockerIt_runWizard_graphql`;
+  const testTmpDirDatabricks = `${process.cwd()}/test/resources/dockerIt_runWizard_databricks`;
 
   afterAll(() => {
     try {
-      unlinkSync(testWizardfile);
+      unlinkSync(`${testTmpDirGraphql}/${TMP_WIZARD_CONFIG_FILENAME}`);
+      unlinkSync(`${testTmpDirDatabricks}/${TMP_WIZARD_CONFIG_FILENAME}`);
     } catch (_error) {
       // ignore
     }
   });
 
   it('should success with faros image', async () => {
-    await expect(runWizard(testTmpDir, 'farosai/airbyte-faros-graphql-source')).resolves.not.toThrow();
+    await expect(runWizard(testTmpDirGraphql, 'farosai/airbyte-faros-graphql-source')).resolves.not.toThrow();
 
-    const cfgData = readFileSync(testWizardfile, 'utf8');
+    const cfgData = readFileSync(`${testTmpDirGraphql}/${TMP_WIZARD_CONFIG_FILENAME}`, 'utf8');
     expect(cfgData).toMatchSnapshot();
   });
 
   it('should success with airbyte image', async () => {
-    await expect(runWizard(testTmpDir, 'airbyte/destination-databricks')).resolves.not.toThrow();
+    await expect(runWizard(testTmpDirDatabricks, 'airbyte/destination-databricks')).resolves.not.toThrow();
 
-    const cfgData = readFileSync(testWizardfile, 'utf8');
+    const cfgData = readFileSync(`${testTmpDirDatabricks}/${TMP_WIZARD_CONFIG_FILENAME}`, 'utf8');
     expect(cfgData).toMatchSnapshot();
   });
 });
