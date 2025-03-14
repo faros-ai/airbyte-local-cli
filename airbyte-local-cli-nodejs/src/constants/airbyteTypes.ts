@@ -35,6 +35,9 @@ export const airbyteTypes: AirbyteTypes = {
     agileaccelerator: {
       dockerRepo: 'farosai/airbyte-agileaccelerator-source',
     },
+    airtable: {
+      dockerRepo: 'farosai/airbyte-airtable-source',
+    },
     asana: {
       dockerRepo: 'farosai/airbyte-asana-source',
     },
@@ -218,11 +221,6 @@ export const airbyteTypes: AirbyteTypes = {
     },
     zephyr: {
       dockerRepo: 'farosai/airbyte-zephyr-source',
-    },
-
-    // doesn't take wizard flag
-    airtable: {
-      dockerRepo: 'farosai/airbyte-airtable-source',
     },
   },
 };

@@ -562,7 +562,7 @@ function schemaToTable(spec: Spec, srcType?: string, dstType?: string): void {
   }
 
   /**
-   * Take care of nested objects in the config
+   * Traverse the spec object and add rows to the table
    */
   function addRows(obj: Record<string, any>, prefix = '') {
     const properties = obj['properties'];
@@ -590,8 +590,7 @@ function schemaToTable(spec: Spec, srcType?: string, dstType?: string): void {
         value.description || '-',
       ]);
 
-      // Special handling for source specific configs
-      // Recursively add nested properties with indentation
+      // source_specific_configs: special handling in faros destination
       if (propertyName === 'source_specific_configs' && dstType === 'faros') {
         const srcTypeCfgs = Object.entries(value.oneOf[0].properties)
           .filter(([k, _v]) => k === srcType)
@@ -602,9 +601,20 @@ function schemaToTable(spec: Spec, srcType?: string, dstType?: string): void {
           properties: {...srcTypeCfgs},
         };
         addRows(updatedSrcSpecificCfgs, `${prefix}  `);
-      } else if (value.properties) {
+      }
+      // feed_cfg: special handling in faros feeds source
+      else if (propertyName === 'feed_cfg') {
+        const feedCfg = value.oneOf.filter((option: any) => option?.title === srcType);
+        if (feedCfg?.length > 0) {
+          addRows(feedCfg.pop(), `${prefix}  `);
+        }
+      }
+      // properties
+      else if (value.properties) {
         addRows(value, `${prefix}  `);
-      } else if (value.oneOf) {
+      }
+      // oneOf: traverse each property in the oneOf array
+      else if (value.oneOf) {
         value.oneOf.forEach((option: any, index: number) => {
           table.push([`↳ ${prefix}Option ${index + 1}: ${option.title || 'Unnamed'}`, 'object', '', '-', '-']);
           addRows(option, `${prefix}    `);
@@ -686,7 +696,7 @@ export async function generateConfig(tmpDir: string, cfg: FarosConfig): Promise<
     logger.info('');
     logger.info('Source Airbyte Configuration Spec:');
     logger.flush();
-    schemaToTable(srcSpec.spec);
+    schemaToTable(srcSpec.spec, srcType);
     logger.info('');
     logger.info('Destination Airbyte Configuration Spec:');
     logger.flush();
