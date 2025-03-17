@@ -1,0 +1,102 @@
+{
+  "spec":{
+     "documentationUrl":"https://docs.faros.ai",
+     "connectionSpecification":{
+        "$schema":"http://json-schema.org/draft-07/schema#",
+        "title":"GraphQL Spec",
+        "type":"object",
+        "required":[
+           "api_key",
+           "graph"
+        ],
+        "additionalProperties":true,
+        "properties":{
+           "api_url":{
+              "order":0,
+              "type":"string",
+              "title":"API URL",
+              "description":"The Faros API URL.",
+              "default":"https://prod.api.faros.ai",
+              "examples":[
+                 "https://prod.api.faros.ai"
+              ]
+           },
+           "api_key":{
+              "order":1,
+              "title":"API Key",
+              "type":"string",
+              "description":"The Faros API key to use to access the API.",
+              "airbyte_secret":true
+           },
+           "graph":{
+              "order":2,
+              "type":"string",
+              "title":"Graph name",
+              "description":"The graph name."
+           },
+           "query":{
+              "order":4,
+              "type":"string",
+              "title":"GraphQL query",
+              "description":"The query to execute.",
+              "multiline":true
+           },
+           "models_filter":{
+              "order":5,
+              "type":"array",
+              "items":{
+                 "type":"string"
+              },
+              "title":"Models filter",
+              "description":"Only query the following models and skip everything else."
+           },
+           "page_size":{
+              "order":6,
+              "type":"integer",
+              "title":"Page Size",
+              "description":"Page size to use when paginating through query results.",
+              "default":100
+           },
+           "result_model":{
+              "order":7,
+              "type":"string",
+              "title":"Result model",
+              "description":"Where to place each of the query results in their corresponding output records. E.g Nested - { vcs { pullRequests { nodes: [<record>] } } }, Flat - { vcs_PullRequest: <record> }",
+              "default":"Nested",
+              "enum":[
+                 "Nested",
+                 "Flat"
+              ]
+           },
+           "bucket_id":{
+              "order":10,
+              "type":"integer",
+              "title":"Bucket Number",
+              "description":"Bucket number for this source to determine which portion of models to pull. Use it when distributing the load between multiple sources. Cannot be used in combination with 'GraphQL query'. Please note that V1 graphs do not support opening multiple revisions at once, so only use buckets if writing to a V2 graph on the destination, or not writing at all.",
+              "default":1
+           },
+           "bucket_total":{
+              "order":11,
+              "type":"integer",
+              "title":"Total Number of Buckets",
+              "description":"Total number of buckets to distribute models across. Use it when distributing the load between multiple sources. Cannot be used in combination with 'GraphQL query'. Please note that V1 graphs do not support opening multiple revisions at once, so only use buckets if writing to a V2 graph on the destination, or not writing at all.",
+              "default":1
+           },
+           "debug":{
+              "order":1000,
+              "type":"boolean",
+              "title":"Debug",
+              "description":"Enable debug mode",
+              "default":false
+           },
+           "faros_source_id":{
+              "order":1001,
+              "type":"string",
+              "title":"The source ID",
+              "description":"The ID of the source (aka account)"
+           }
+        }
+     }
+  },
+  "type":"SPEC"
+}

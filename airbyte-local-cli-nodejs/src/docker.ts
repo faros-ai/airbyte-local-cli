@@ -9,6 +9,7 @@ import {
   AirbyteConnectionStatus,
   AirbyteConnectionStatusMessage,
   AirbyteMessageType,
+  AirbyteSpec,
   FarosConfig,
 } from './types';
 import {
@@ -18,10 +19,13 @@ import {
   logger,
   OutputStream,
   processDstDataByLine,
+  processSpecByLine,
   processSrcDataByLine,
   SRC_CATALOG_FILENAME,
   SRC_CONFIG_FILENAME,
   SRC_OUTPUT_DATA_FILE,
+  TMP_SPEC_CONFIG_FILENAME,
+  TMP_WIZARD_CONFIG_FILENAME,
 } from './utils';
 
 // Constants
@@ -81,6 +85,16 @@ export async function inspectDockerImage(image: string): Promise<{digest: string
 }
 
 /**
+ * Use 'linux/amd64' plaform for farosai images.
+ */
+function getImagePlatform(image: string): string | undefined {
+  if (image?.startsWith('farosai')) {
+    return 'linux/amd64';
+  }
+  return undefined;
+}
+
+/**
  * Spinning up a docker container to check the source connection.
  * `docker run --rm -v "$tempdir:/configs" $src_docker_options "$src_docker_image"
  *      check --config "/configs/$src_config_filename"`
@@ -104,7 +118,7 @@ export async function checkSrcConnection(tmpDir: string, image: string, srcConfi
         Binds: [`${tmpDir}:/configs`],
         AutoRemove: true,
       },
-      platform: 'linux/amd64',
+      platform: getImagePlatform(image),
     };
 
     // create a writable stream to capture the output
@@ -161,7 +175,7 @@ export async function runDiscoverCatalog(tmpDir: string, image: string | undefin
         Binds: [`${tmpDir}:/configs`],
         AutoRemove: true,
       },
-      platform: 'linux/amd64',
+      platform: getImagePlatform(image),
     };
 
     // create a writable stream to capture the output
@@ -251,7 +265,7 @@ export async function runSrcSync(tmpDir: string, config: FarosConfig): Promise<v
       Cmd: cmd,
       AttachStdout: true,
       AttachStderr: true,
-      platform: 'linux/amd64',
+      platform: getImagePlatform(config.src.image),
       Env: [`LOG_LEVEL=${config.logLevel}`, ...(config.src?.dockerOptions?.additionalOptions?.Env || [])],
       HostConfig: {
         // Defautl host config: can be overridden by users
@@ -371,7 +385,7 @@ export async function runDstSync(tmpDir: string, config: FarosConfig): Promise<v
       AttachStdin: true,
       OpenStdin: true,
       StdinOnce: true,
-      platform: 'linux/amd64',
+      platform: getImagePlatform(config.dst.image),
       Env: [`LOG_LEVEL=${config.logLevel}`, ...(config.dst?.dockerOptions?.additionalOptions?.Env || [])],
       HostConfig: {
         // Defautl host config: can be overridden by users
@@ -463,5 +477,135 @@ export async function runDstSync(tmpDir: string, config: FarosConfig): Promise<v
     }
   } catch (error: any) {
     throw new Error(`Failed to run destination connector: ${error.message ?? JSON.stringify(error)}`);
+  }
+}
+
+/**
+ * Run the spec to generate the configuration file.
+ *
+ * TODO: Check if it's running fine on non faros airbyte images
+ *
+ * Raw docker command:
+ * docker run -it --rm "$docker_image" spec
+ */
+export async function runSpec(tmpDir: string, image: string): Promise<AirbyteSpec> {
+  logger.info('Retrieving Airbyte configuration spec...');
+
+  try {
+    const createOptions: Docker.ContainerCreateOptions = {
+      Image: image,
+      Cmd: ['spec'],
+      AttachStderr: true,
+      AttachStdout: true,
+      HostConfig: {
+        Binds: [`${tmpDir}:/configs`],
+        AutoRemove: true,
+      },
+      platform: getImagePlatform(image),
+    };
+
+    // create a writable stream to capture the spec
+    let buffer = '';
+    const specs: AirbyteSpec[] = [];
+    const containerOutputStream = new Writable({
+      write(chunk, _encoding, callback) {
+        buffer += chunk.toString();
+        const lines = buffer.split('\n');
+        buffer = lines.pop() ?? '';
+        lines.forEach((line: string) => {
+          const maybeSpec = processSpecByLine(line);
+          if (maybeSpec) {
+            specs.push(maybeSpec);
+          }
+        });
+        callback();
+      },
+    });
+
+    // Create the Docker container
+    const container = await _docker.createContainer(createOptions);
+
+    // Attach stdout and stderr
+    const outputStream = await container.attach({stream: true, stdout: true, stderr: true});
+    container.modem.demuxStream(outputStream, containerOutputStream, process.stderr);
+
+    // docker run
+    await container.start();
+    const res = await container.wait();
+    logger.debug(`Spec exit code: ${JSON.stringify(res)}`);
+
+    // write spec to the file
+    if (res.StatusCode === 0 && specs.length > 0) {
+      const spec = specs.pop();
+      writeFileSync(`${tmpDir}/${TMP_SPEC_CONFIG_FILENAME}`, JSON.stringify(spec));
+      if (spec?.type === AirbyteMessageType.SPEC) {
+        return spec;
+      }
+      throw new Error(`Unexpected spec: ${JSON.stringify(spec)}`);
+    }
+    throw new Error(`Exit with ${JSON.stringify(res)}`);
+  } catch (error: any) {
+    throw new Error(`Failed to run spec: ${error.message ?? JSON.stringify(error)}.`);
+  }
+}
+
+/**
+ * Run the wizard to generate the configuration file.
+ * Utilize the `--autofill` flag to generate the configuration file.
+ *
+ * Always use the placeholder image for the wizard.
+ * This allows us to generate configs for any source connectors.
+ *
+ * Raw docker command:
+ * docker run -it --rm \
+ *  -v "$tempdir:/configs" "$docker_image" \
+ *  airbyte-local-cli-wizard --autofill \
+ *  --json "/configs/$config_filename"
+ *  --spec-file "/configs/$spec_filename"
+ */
+const DEFAULT_PLACEHOLDER_WIZARD_IMAGE = 'farosai/airbyte-faros-graphql-source';
+export async function runWizard(tmpDir: string, image: string): Promise<void> {
+  logger.info('Retrieving Airbyte auto generated configuration...');
+
+  await pullDockerImage(DEFAULT_PLACEHOLDER_WIZARD_IMAGE);
+
+  try {
+    const cmd = [
+      'airbyte-local-cli-wizard',
+      '--autofill',
+      '--json',
+      `/configs/${TMP_WIZARD_CONFIG_FILENAME}`,
+      '--spec-file',
+      `/configs/${TMP_SPEC_CONFIG_FILENAME}`,
+    ];
+    const createOptions: Docker.ContainerCreateOptions = {
+      Image: DEFAULT_PLACEHOLDER_WIZARD_IMAGE,
+      Cmd: cmd,
+      AttachStderr: true,
+      AttachStdout: true,
+      HostConfig: {
+        Binds: [`${tmpDir}:/configs`],
+        AutoRemove: true,
+      },
+      platform: getImagePlatform(image),
+    };
+
+    // Create the Docker container
+    const container = await _docker.createContainer(createOptions);
+
+    // Attach stdout and stderr
+    const outputStream = await container.attach({stream: true, stdout: true, stderr: true});
+    container.modem.demuxStream(outputStream, process.stdout, process.stderr);
+
+    // docker run
+    await container.start();
+    const res = await container.wait();
+    logger.debug(`Generate config exit code: ${JSON.stringify(res)}`);
+
+    if (res.StatusCode !== 0) {
+      throw new Error(`Exit with ${JSON.stringify(res)}`);
+    }
+  } catch (error: any) {
+    throw new Error(`Failed to generate config: ${error.message ?? JSON.stringify(error)}.`);
   }
 }

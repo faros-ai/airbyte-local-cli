@@ -9,7 +9,7 @@ injectApiKey() {
 }
 BeforeAll 'injectApiKey'
 
-Describe 'Cli options validation'
+Describe 'Cli argv validation'
   # Option conflict failures
   It 'fails if using both --config-file and --src'
     airbyte_local_test() {
@@ -18,7 +18,7 @@ Describe 'Cli options validation'
         --src 'farosai/airbyte-servicenow-source'
     }
     When call airbyte_local_test
-    The output should include "option '--config-file <path>' cannot be used with option '--src <image>'"
+    The output should include "option '-c, --config-file <path>' cannot be used with option '--src <image>'"
     The status should equal 1
   End
   It 'fails if using both --config-file and --dst'
@@ -28,28 +28,7 @@ Describe 'Cli options validation'
         --dst 'farosai/airbyte-faros-destination'
     }
     When call airbyte_local_test
-    The output should include "option '--config-file <path>' cannot be used with option '--dst <image>'"
-    The status should equal 1
-  End
-  It 'fails if using both --config-file and --wizard'
-    airbyte_local_test() {
-      ./airbyte-local \
-        --config-file 'some_test_path' \
-        --wizard github
-    }
-    When call airbyte_local_test
-    The output should include "option '--config-file <path>' cannot be used with option '--wizard <src> [dst]'"
-    The status should equal 1
-  End
-  It 'fails if using both --src/--dst and --wizard'
-    airbyte_local_test() {
-      ./airbyte-local \
-        --src 'farosai/airbyte-servicenow-source' \
-        --dst 'farosai/airbyte-faros-destination' \
-        --wizard github
-    }
-    When call airbyte_local_test
-    The output should include "option '--wizard <src> [dst]' cannot be used with option '--src <image>'"
+    The output should include "option '-c, --config-file <path>' cannot be used with option '--dst <image>'"
     The status should equal 1
   End
   It 'fails if using both --src-only and --src-output-file'
@@ -90,6 +69,24 @@ Describe 'Cli options validation'
     }
     When call airbyte_local_test
     The output should include "option '--dst-only <path>' cannot be used with option '--src-check-connection'"
+    The status should equal 1
+  End
+
+  # Check for unknown options
+  It 'fails if generate-config has not source input'
+    airbyte_local_test() {
+      ./airbyte-local generate-config
+    }
+    When call airbyte_local_test
+    The output should include "missing required argument 'source'"
+    The status should equal 1
+  End
+  It 'fails if generate-config not source found'
+    airbyte_local_test() {
+      ./airbyte-local generate-config foo
+    }
+    When call airbyte_local_test
+    The output should include "Source type 'foo' not found. Please provide a valid source type."
     The status should equal 1
   End
 
@@ -135,6 +132,17 @@ Describe 'Validate temporary directory and files creation'
     The output should include "Temporary directory created"
     # both src and dst images are invalid so errors are expected
     The status should equal 1
+  End
+End
+
+Describe 'Generate config'
+  It 'should create temporary directory'
+    airbyte_local_test() {
+      ./airbyte-local generate-config github
+    }
+    When call airbyte_local_test
+    The output should include "Configuration file generated successfully"
+    The status should equal 0
   End
 End
 

@@ -4,6 +4,7 @@ import {AirbyteCliContext} from './types';
 import {
   cleanUp,
   createTmpDir,
+  generateConfig,
   generateDstStreamPrefix,
   ImageType,
   loadStateFile,
@@ -19,10 +20,20 @@ export async function main(): Promise<void> {
   try {
     // Parse and validate cli arguments
     const cfg = parseAndValidateInputs(process.argv);
+
+    // Prerequisites check: docker
     await checkDockerInstalled();
 
-    // Create temporary directory, load state file, write config and catalog to files
+    // Create temporary directory
     context.tmpDir = createTmpDir();
+
+    // Run generate config
+    if (cfg.generateConfig) {
+      await generateConfig(context.tmpDir, cfg);
+      return;
+    }
+
+    // Generate dst stream prefix and load state file
     generateDstStreamPrefix(cfg);
     cfg.stateFile = loadStateFile(context.tmpDir, cfg?.stateFile, cfg?.connectionName);
 

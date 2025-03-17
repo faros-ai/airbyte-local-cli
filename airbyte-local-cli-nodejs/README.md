@@ -8,6 +8,8 @@ CLI for running Airbyte sources & destinations locally.
   - [Prerequisites](#prerequisites)
   - [Step 1. Install](#step-1-install)
   - [Step 2. Create an Airbyte Configuration File](#step-2-create-an-airbyte-configuration-file)
+    - [Step 2a. Auto Generate Configuration Templates](#step-2a-auto-generate-configuration-templates)
+    - [Step 2b. Craft your own configuration](#step-2b-craft-your-own-configuration)
   - [Step 3. Run it!](#step-3-run-it)
 - [Advanced Settings](#advanced-settings)
   - [CLI Arguments](#cli-arguments)
@@ -46,6 +48,7 @@ Here is the steps of downloading the CLI on MacOS. Linux should have very simila
 wget -O airbyte-local.zip https://github.com/faros-ai/airbyte-local-cli/releases/download/v0.0.1-beta.6/airbyte-local-macos-arm64.zip | unzip -o airbyte-local.zip
 
 # run `--help` or `--version` to check if the CLI is installed correctly
+./airbyte-local # this shows the help manual
 ./airbyte-local --help
 ./airbyte-local --version
 ```
@@ -59,6 +62,7 @@ Invoke-WebRequest -Uri "https://github.com/faros-ai/airbyte-local-cli/releases/d
 Expand-Archive -Path "airbyte-local-win-x64.zip" -DestinationPath . -Force
 
 # run `--help` or `--version` to check if the CLI is installed correctly
+.\airbyte-local
 .\airbyte-local --help
 .\airbyte-local --version
 
@@ -66,7 +70,44 @@ Expand-Archive -Path "airbyte-local-win-x64.zip" -DestinationPath . -Force
 
 ### Step 2. Create an Airbyte Configuration File
 
-The CLI uses arguement `--config-file` to take the airybte configuration in a JSON file format.
+First of all, you will have to know where you want to pull data from and where you want to push data to.
+For example, pulling data from Github and pushing data to Faros AI.
+
+Then, there're two options you can go to create the config file.
+
+a. Auto Generate Configuration Templates:
+This is recommended for first-time users. It helps you to start with a template to update the Airbyte configs. (Go to Step 2a)
+
+b. Craft your own configuration: This is for users that are familiar with Airbyte configurations and are looking for a finer tune on the configs. (Go to Step 2b)
+
+#### Step 2a. Auto Generate Configuration Templates
+
+You can utilize the `generate-config` subcommand to bootstrap your Airbyte config.
+It's required to provide the Airbyte source, which means you will have to know which source data you are pulling from, e.g. Github, Jira, etc. For the Airbtye destination, it is set to Faros by default, i.e. pushing the data to Faros.
+
+By running this subcommand, it prints out both Airbyte source and deestination configuration tables in the terminal for your reference.
+And it generates a template config file `faros_airbyte_cli_config.json` in the current directory. The template config file only includes requried configs. If you need additional configs, please refer to the configuration tables and update the config file.
+
+Run the command to generate the template
+
+```sh
+# ./airbyte-local generate-config <source> [destination]
+
+# ex: Pull data from Github and push to Faros
+./airbyte-local generate-config github
+./airbyte-local generate-config github faros
+
+# ex: Pull data from Jira and push to Faros
+./airbyte-local generate-config jira
+```
+
+Note: Both source and destination inputs are case insensitive and tolerate a bit of typos.
+
+After running the command, you should see `🔹 **Next Steps:**` instructions showing up in your terminal. Follow the steps to complete the config.
+
+#### Step 2b. Craft your own configuration
+
+The CLI uses arguement `--config-file` (`-c` for short) to take the airybte configuration in a JSON file format.
 
 JSON Schema
 
@@ -120,7 +161,7 @@ Assuming you want to pull data from Github org `my-org` by using GitHub PAT and 
 }
 ```
 
-Save it as `myTestFarosConfig.json`. \
+Save it as `faros_airbyte_cli_config.json`. \
 In most cases, you always have to provide Faros API key and workspace under `src.config` and `dst.config.edition_configs`.
 
 More resources you can find it in [Faros Documantation](https://docs.faros.ai/), e.g. instructions to create GitHub PAT and what permission you need for the PAT, etc.
@@ -130,13 +171,15 @@ More resources you can find it in [Faros Documantation](https://docs.faros.ai/),
 #### Linux/MacOS
 
 ```sh
-./airbyte-local --config-file 'myTestFarosConfig.json'
+./airbyte-local --config-file 'faros_airbyte_cli_config.json'
+./airbyte-local -c 'faros_airbyte_cli_config.json'
 ```
 
 #### Windows (Powershell)
 
 ```ps1
-./airbyte-local --config-file 'myTestFarosConfig.json'
+.\airbyte-local --config-file 'faros_airbyte_cli_config.json'
+.\airbyte-local -c 'faros_airbyte_cli_config.json'
 ```
 
 The logs should indicate the process of the data sync. \
@@ -151,7 +194,7 @@ We provide some more CLI optional arguments and optional fields in the Airbyte c
 
 | Option                     | Required | Description                                                                                                |
 | -------------------------- | -------- | ---------------------------------------------------------------------------------------------------------- |
-| `--config-file <path>`     | Yes      | Airbyte source and destination connector config JSON file path                                             |
+| `-c, --config-file <path>` | Yes      | Airbyte source and destination connector config JSON file path                                             |
 | `-h, --help`               |          | Display usage information                                                                                  |
 | `-v, --version`            |          | Output the current version                                                                                 |
 | `--full-refresh`           |          | Force full_refresh and overwrite mode. This overrides the mode in provided config file                     |
@@ -336,12 +379,12 @@ For arguments `--src ...` and `--dst ...`, they are still supported for user con
 | `--src-catalog-json <json>`      | Unsupported | Airbyte catalog config is now defined in Aribyte configuration file |
 | `--dst-catalog-file <path>`      | Unsupported | Airbyte catalog config is now defined in Aribyte configuration file |
 | `--dst-catalog-json <json>`      | Unsupported | Airbyte catalog config is now defined in Aribyte configuration file |
-| `--src-wizard`                   | Unsupported | Replaced by `--wizard` (WIP)                                        |
-| `--dst-wizard`                   | Unsupported | Replaced by `--wizard` (WIP)                                        |
+| `--src-wizard`                   | Unsupported | Use `--generate-config` instead                                     |
+| `--dst-wizard`                   | Unsupported | Use `--generate-config` instead                                     |
 | `--max-log-size <size>`          | Unsupported | Docker settings are now defined in Aribyte configuration file       |
 | `--max-mem <mem>`                | Unsupported | Docker settings are now defined in Aribyte configuration file       |
 | `--max-cpus <cpus>`              | Unsupported | Docker settings are now defined in Aribyte configuration file       |
 | `--src-docker-options "<string>` | Unsupported | Docker settings are now defined in Aribyte configuration file       |
 | `--dst-docker-options "<string>` | Unsupported | Docker settings are now defined in Aribyte configuration file       |
 | `--k8s-deployment`               | Unsupported | Stop surporting running on local kubernetes cluster                 |
-| `--dst-stream-prefix <prefix>`   | Unsupported | Please use `--connection-name` instead                              |
+| `--dst-stream-prefix <prefix>`   | Unsupported | Use `--connection-name` instead                                     |

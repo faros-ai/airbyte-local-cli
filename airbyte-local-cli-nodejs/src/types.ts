@@ -8,7 +8,6 @@ export interface AirbyteCliContext {
 export interface CliOptions {
   // source and destination config
   configFile?: string;
-  wizard?: object;
 
   // source
   srcImage: string;
@@ -35,6 +34,10 @@ export interface CliOptions {
 
   // logging
   debug?: boolean;
+
+  // generate config
+  generateConfig?: any;
+  silent?: boolean;
 
   // deprecated
   checkConnection?: boolean; // use srcCheckConnection instead
@@ -76,6 +79,10 @@ export interface FarosConfig {
   keepContainers: boolean;
   logLevel: string;
   debug: boolean;
+
+  // generate config
+  generateConfig?: any;
+  silent: boolean;
 
   // internal use
   dstStreamPrefix?: string;
@@ -145,4 +152,19 @@ export interface AirbyteConfiguredStream {
 }
 export interface AirbyteConfiguredCatalog {
   streams: AirbyteConfiguredStream[];
+}
+
+export interface Spec {
+  documentationUrl?: string;
+  changelogUrl?: string;
+  connectionSpecification: Dictionary<any>;
+  supportsIncremental?: boolean;
+  supportsNormalization?: boolean;
+  supportsDBT?: boolean;
+  supported_destination_sync_modes?: DestinationSyncMode[];
+}
+
+export class AirbyteSpec implements AirbyteMessage {
+  readonly type: AirbyteMessageType = AirbyteMessageType.SPEC;
+  constructor(readonly spec: Spec) {}
 }

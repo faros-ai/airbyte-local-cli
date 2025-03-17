@@ -50,7 +50,9 @@
     "typescript": "~5.6.3"
   },
   "dependencies": {
-    "commander": "^12.1.0",
+    "cli-table3": "^0.6.5",
+    "commander": "^13.1.0",
+    "didyoumean2": "^7.0.4",
     "dockerode": "^4.0.2",
     "lodash": "^4.17.21",
     "pino": "^9.6.0",

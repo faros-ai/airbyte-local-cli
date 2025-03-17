@@ -62,6 +62,7 @@ const testConfig: FarosConfig = {
   connectionName: undefined,
   srcOutputFile: undefined,
   srcInputFile: undefined,
+  silent: false,
 };
 
 describe('parseConfigFile', () => {
