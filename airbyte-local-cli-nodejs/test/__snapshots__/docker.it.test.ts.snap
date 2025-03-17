@@ -130,6 +130,6 @@ exports[`runWizard should success with airbyte image 1`] = `
 exports[`runWizard should success with faros image 1`] = `
 "{
   "api_key": "<UPDATE_YOUR_CREDENTIAL>",
-  "graph": "<UPDATE_THIS_VALUE>"
+  "graph": "default"
 }"
 `;
