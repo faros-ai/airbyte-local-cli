@@ -8,7 +8,7 @@ CLI for running Airbyte sources & destinations locally.
   - [Prerequisites](#prerequisites)
   - [Step 1. Install](#step-1-install)
   - [Step 2. Create an Airbyte Configuration File](#step-2-create-an-airbyte-configuration-file)
-    - [Step 2a. Auto Generate Configuration Templates](#step-2a-auto-generate-configuration-templates)
+    - [Step 2a. Auto Generate Configuration Templates (Experimental)](#step-2a-auto-generate-configuration-templates-experimental)
     - [Step 2b. Craft your own configuration](#step-2b-craft-your-own-configuration)
   - [Step 3. Run it!](#step-3-run-it)
 - [Advanced Settings](#advanced-settings)
@@ -80,10 +80,11 @@ This is recommended for first-time users. It helps you to start with a template 
 
 b. Craft your own configuration: This is for users that are familiar with Airbyte configurations and are looking for a finer tune on the configs. (Go to Step 2b)
 
-#### Step 2a. Auto Generate Configuration Templates
+#### Step 2a. Auto Generate Configuration Templates (Experimental)
 
 You can utilize the `generate-config` subcommand to bootstrap your Airbyte config.
 It's required to provide the Airbyte source, which means you will have to know which source data you are pulling from, e.g. Github, Jira, etc. For the Airbtye destination, it is set to Faros by default, i.e. pushing the data to Faros.
+Currently we only support for Faros managed Airbyte source and destinations. We plan to support non Faros managed in the future.
 
 By running this subcommand, it prints out both Airbyte source and deestination configuration tables in the terminal for your reference.
 And it generates a template config file `faros_airbyte_cli_config.json` in the current directory. The template config file only includes requried configs. If you need additional configs, please refer to the configuration tables and update the config file.
@@ -99,6 +100,9 @@ Run the command to generate the template
 
 # ex: Pull data from Jira and push to Faros
 ./airbyte-local generate-config jira
+
+# suppress printing out the configuration tables
+./airbyte-local generate-config -s jira
 ```
 
 Note: Both source and destination inputs are case insensitive and tolerate a bit of typos.
