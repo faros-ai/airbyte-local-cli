@@ -709,7 +709,7 @@ export async function generateConfig(tmpDir: string, cfg: FarosConfig): Promise<
     🔹 **Next Steps:**
       1️⃣ **Open** '${CONFIG_FILE}'
       2️⃣ **Replace placeholder values** (e.g., "<UPDATE-WITH-YOUR-TOKEN>")
-      3️⃣ **Add additional configurations** (If needed. Check the spec a)
+      3️⃣ **Add additional configurations** (If needed. Check the spec above)
       4️⃣ **Save the file**
   `);
 }
