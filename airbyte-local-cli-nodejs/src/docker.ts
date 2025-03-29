@@ -1,5 +1,5 @@
 import {createReadStream, createWriteStream, writeFileSync} from 'node:fs';
-import {Writable} from 'node:stream';
+import {PassThrough, Writable} from 'node:stream';
 
 import Docker from 'dockerode';
 
@@ -230,7 +230,7 @@ export async function runDiscoverCatalog(tmpDir: string, image: string | undefin
  *    --catalog "/configs/$src_catalog_filename" \
  *    --state "/configs/$src_state_filename"
  */
-export async function runSrcSync(tmpDir: string, config: FarosConfig): Promise<void> {
+export async function runSrcSync(tmpDir: string, config: FarosConfig, srcOutputStream?: Writable): Promise<void> {
   logger.info('Running source connector...');
 
   if (!config.src?.image) {
@@ -289,10 +289,18 @@ export async function runSrcSync(tmpDir: string, config: FarosConfig): Promise<v
     const container = await _docker.createContainer(createOptions);
 
     // Create a writable stream for the processed output data
-    // If srcOutputFile is not configured, write to the intermediate output file
-    const srcOutputFilePath = config.srcOutputFile ?? `${tmpDir}/${SRC_OUTPUT_DATA_FILE}`;
-    const srcOutputStream =
-      config.srcOutputFile === OutputStream.STDOUT ? process.stdout : createWriteStream(srcOutputFilePath);
+    const outputStream =
+      srcOutputStream ??
+      (config.srcOutputFile && config.srcOutputFile !== OutputStream.STDOUT.valueOf()
+        ? createWriteStream(config.srcOutputFile)
+        : process.stdout);
+
+    // Close the output stream when the container is finished
+    if (srcOutputStream) {
+      outputStream.on('finish', () => {
+        srcOutputStream.end();
+      });
+    }
 
     // create a writable stream to capture the stdout
     let buffer = '';
@@ -302,7 +310,7 @@ export async function runSrcSync(tmpDir: string, config: FarosConfig): Promise<v
         const lines = buffer.split('\n');
         buffer = lines.pop() ?? '';
         lines.forEach((line: string) => {
-          processSrcDataByLine(line, srcOutputStream, config);
+          processSrcDataByLine(line, outputStream, config);
         });
         callback();
       },
@@ -318,6 +326,11 @@ export async function runSrcSync(tmpDir: string, config: FarosConfig): Promise<v
     // Wait for the container to finish
     const res = await container.wait();
     logger.debug(`Source connector exit code: ${JSON.stringify(res)}`);
+
+    // Close the output stream
+    if (srcOutputStream || config?.srcOutputFile !== OutputStream.STDOUT.valueOf()) {
+      outputStream.end();
+    }
 
     if (res.StatusCode === 0) {
       logger.info('Source connector completed.');
@@ -349,7 +362,7 @@ export async function runSrcSync(tmpDir: string, config: FarosConfig): Promise<v
  *   --catalog "/configs/$dst_catalog_filename"
  *
  */
-export async function runDstSync(tmpDir: string, config: FarosConfig): Promise<void> {
+export async function runDstSync(tmpDir: string, config: FarosConfig, srcPassThrough?: PassThrough): Promise<void> {
   logger.info('Running destination connector...');
 
   if (!config.dst?.image) {
@@ -450,7 +463,7 @@ export async function runDstSync(tmpDir: string, config: FarosConfig): Promise<v
     container.modem.demuxStream(outputStream, containerOutputStream, process.stderr);
 
     // Create a readable stream from the src output file and pipe it to the container stdin
-    const inputStream = createReadStream(`${tmpDir}/${SRC_OUTPUT_DATA_FILE}`);
+    const inputStream = srcPassThrough ?? createReadStream(`${tmpDir}/${SRC_OUTPUT_DATA_FILE}`);
     const stdinStream = await container.attach({stream: true, hijack: true, stdin: true});
     inputStream.pipe(stdinStream);
 

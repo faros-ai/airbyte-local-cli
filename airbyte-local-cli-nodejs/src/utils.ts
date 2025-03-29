@@ -12,7 +12,7 @@ import {
 import {tmpdir} from 'node:os';
 import {sep} from 'node:path';
 import readline from 'node:readline';
-import {pipeline, Transform, Writable} from 'node:stream';
+import {PassThrough, pipeline, Transform, Writable} from 'node:stream';
 import {promisify} from 'node:util';
 
 import Table from 'cli-table3';
@@ -345,6 +345,28 @@ export async function writeCatalog(tmpDir: string, config: FarosConfig): Promise
   logger.debug(`Source catalog: ${JSON.stringify(srcCatalog)}`);
   logger.debug(`Destination catalog: ${JSON.stringify(dstCatalog)}`);
   logger.debug(`Airbyte catalog files written to: ${srcCatalogFilePath}, ${dstCatalogFilePath}`);
+}
+
+/**
+ * Set up a pass through stream for piping data between source and destination.
+ */
+export function setupStreams(): {srcOutputStream: Writable; passThrough: PassThrough} {
+  logger.debug('Created a pass through stream for piping data between source and destination.');
+
+  const passThrough = new PassThrough();
+  const srcOutputStream = new Writable({
+    write: (chunk, _encoding, callback) => {
+      passThrough.write(chunk.toString());
+      callback();
+    },
+  });
+
+  // close the pass through stream when the source output stream is finished
+  srcOutputStream.on('finish', () => {
+    passThrough.end();
+  });
+
+  return {passThrough, srcOutputStream};
 }
 
 /**

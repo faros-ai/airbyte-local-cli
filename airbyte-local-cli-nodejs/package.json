@@ -1,12 +1,13 @@
 {
   "name": "@faros-ai/airbyte-local-cli-nodejs",
-  "version": "0.0.1-beta.8",
+  "version": "0.0.1",
   "description": "Airbyte local cli node js version",
   "private": true,
   "packageManager": "^npm@10.8.2",
   "scripts": {
     "version": "node -p \"'export const CLI_VERSION = \\'' + require('./package.json').version + '\\';'\" > src/version.ts",
     "bump-beta": "npm version prerelease --preid=beta ",
+    "bump": "npm version ",
     "build": "tsc -p src",
     "lint": "./scripts/lint",
     "lint-fix": "npm run lint -- --fix",
