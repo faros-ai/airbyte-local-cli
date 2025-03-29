@@ -22,7 +22,7 @@ import {FarosConfig} from '../src/types';
 import {
   DST_CONFIG_FILENAME,
   OutputStream,
-  setupStream,
+  setupStreams,
   SRC_OUTPUT_DATA_FILE,
   TMP_SPEC_CONFIG_FILENAME,
   TMP_WIZARD_CONFIG_FILENAME,
@@ -104,7 +104,7 @@ describe('runSrcSync', () => {
   });
 
   it('should success', async () => {
-    const {passThrough, srcOutputStream} = setupStream();
+    const {passThrough, srcOutputStream} = setupStreams();
     const writeStream = createWriteStream(`${testTmpDir}/${SRC_OUTPUT_DATA_FILE}`);
     passThrough.pipe(writeStream);
 

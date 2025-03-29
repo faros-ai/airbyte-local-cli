@@ -350,7 +350,7 @@ export async function writeCatalog(tmpDir: string, config: FarosConfig): Promise
 /**
  * Set up a pass through stream for piping data between source and destination.
  */
-export function setupStream(): {srcOutputStream: Writable; passThrough: PassThrough} {
+export function setupStreams(): {srcOutputStream: Writable; passThrough: PassThrough} {
   logger.debug('Created a pass through stream for piping data between source and destination.');
 
   const passThrough = new PassThrough();

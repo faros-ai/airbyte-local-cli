@@ -11,7 +11,7 @@ import {
   logger,
   logImageVersion,
   processSrcInputFile,
-  setupStream,
+  setupStreams,
   writeCatalog,
   writeConfig,
 } from './utils';
@@ -64,7 +64,7 @@ export async function main(): Promise<void> {
       await logImageVersion(ImageType.DST, cfg.dst?.image);
 
       // Set up writing stream between source and destination
-      const streams = setupStream();
+      const streams = setupStreams();
 
       // run connectors in parallel
       const srcSyncPromise = runSrcSync(tmpDir, cfg, streams?.srcOutputStream);
