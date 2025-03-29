@@ -328,7 +328,9 @@ export async function runSrcSync(tmpDir: string, config: FarosConfig, srcOutputS
     logger.debug(`Source connector exit code: ${JSON.stringify(res)}`);
 
     // Close the output stream
-    outputStream.end();
+    if (srcOutputStream) {
+      outputStream.end();
+    }
 
     if (res.StatusCode === 0) {
       logger.info('Source connector completed.');

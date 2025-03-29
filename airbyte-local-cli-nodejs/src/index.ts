@@ -64,11 +64,11 @@ export async function main(): Promise<void> {
       await logImageVersion(ImageType.DST, cfg.dst?.image);
 
       // Set up writing stream between source and destination
-      const {passThrough, srcOutputStream} = setupStream();
+      const streams = setupStream();
 
       // run connectors in parallel
-      const srcSyncPromise = runSrcSync(tmpDir, cfg, srcOutputStream);
-      const dstSyncPromise = runDstSync(tmpDir, cfg, passThrough);
+      const srcSyncPromise = runSrcSync(tmpDir, cfg, streams?.srcOutputStream);
+      const dstSyncPromise = runDstSync(tmpDir, cfg, streams?.passThrough);
       await Promise.all([srcSyncPromise, dstSyncPromise]);
     }
     // If srcOutputFile is provided, run src only
