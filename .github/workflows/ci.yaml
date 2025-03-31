@@ -176,7 +176,7 @@ jobs:
     steps:
       - name: MacOS Code Sign
         working-directory: airbyte-local-cli-nodejs/out/pkg
-        if: runner.os == 'macos-latest'
+        if: matrix.os == 'macos-latest'
         run: |
           security find-identity -p codesigning -v
           codesign -h
