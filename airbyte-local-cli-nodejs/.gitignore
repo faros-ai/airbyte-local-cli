@@ -9,7 +9,7 @@ node_modules/
 target/
 .env
 !*.json
-out/pkg
+!out/pkg/entitlements.plist
 *airbyte-local
 test/exec/resources
 tmp/
