@@ -174,7 +174,46 @@ jobs:
     permissions:
       contents: write
     steps:
-      - name: Import certificate
+      - name: Check out
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v2
+        with:
+          node-version: 20.x
+
+      - name: Install
+        working-directory: airbyte-local-cli-nodejs
+        shell: bash
+        run: |
+          npm ci --no-audit --no-fund
+          npm run version
+
+      - name: Package for Platform
+        working-directory: airbyte-local-cli-nodejs
+        shell: bash
+        run: |
+          if [ "${{ matrix.os }}" == 'ubuntu-latest' ]; then
+            TARGET="linuxstatic-x64"
+            BINARY_NAME="linux-x64"
+          elif [ "${{ matrix.os }}" == 'ubuntu-24.04-arm' ]; then
+            TARGET="linuxstatic-arm64"
+            BINARY_NAME="linux-arm64"
+          elif [ "${{ matrix.os }}" == 'macos-13' ]; then
+            TARGET="macos-x64"
+            BINARY_NAME=$TARGET
+          elif [ "${{ matrix.os }}" == 'macos-latest' ]; then
+            TARGET="macos-arm64"
+            BINARY_NAME=$TARGET
+          elif [ "${{ matrix.os }}" == 'windows-latest' ]; then
+            TARGET="win-x64"
+            BINARY_NAME=$TARGET
+          fi
+
+          echo "BINARY_NAME=$BINARY_NAME" >> $GITHUB_ENV
+          npm run pkg -- --target $TARGET
+
+      - name: MacOS - Import certificate
         if: matrix.os == 'macos-latest'
         uses: apple-actions/import-codesign-certs@v3
         env:
@@ -184,72 +223,32 @@ jobs:
           p12-file-base64: ${{ secrets.MACOS_CERTIFICATE }}
           p12-password: ${{ secrets.MACOS_CERT_PASSWORD }}
       
-      - name: Check code sign
-        # working-directory: airbyte-local-cli-nodejs/out/pkg
+      - name: MacOS - Code sign
+        working-directory: airbyte-local-cli-nodejs/out/pkg
         if: matrix.os == 'macos-latest'
         run: |
           security find-identity -v -p codesigning
+          codesign --force --verbose --timestamp --options runtime \
+            --entitlements entitlements.plist \
+            --sign "Developer ID Application: Faros AI, Inc. (2HJ5CL7QY4)" airbyte-local
 
-          # codesign --force --verbose --timestamp --options runtime \
-          #   --entitlements entitlements.plist \
-          #   --sign "Developer ID Application: Faros AI, Inc. (2HJ5CL7QY4)" airbyte-local
+      - name: Compress Linux/MacOS binaries
+        working-directory: airbyte-local-cli-nodejs/out/pkg
+        if: runner.os != 'Windows'
+        run: |
+          zip airbyte-local-${BINARY_NAME}.zip airbyte-local
 
-      # - name: Check out
-      #   uses: actions/checkout@v4
+      - name: Compress Windows binaries
+        working-directory: airbyte-local-cli-nodejs/out/pkg
+        if: runner.os == 'Windows'
+        run: |
+          Compress-Archive -Path airbyte-local.exe -DestinationPath airbyte-local-win-x64.zip
 
-      # - name: Set up Node
-      #   uses: actions/setup-node@v2
-      #   with:
-      #     node-version: 20.x
-
-      # - name: Install
-      #   working-directory: airbyte-local-cli-nodejs
-      #   shell: bash
-      #   run: |
-      #     npm ci --no-audit --no-fund
-      #     npm run version
-
-      # - name: Package for Platform
-      #   working-directory: airbyte-local-cli-nodejs
-      #   shell: bash
-      #   run: |
-      #     if [ "${{ matrix.os }}" == 'ubuntu-latest' ]; then
-      #       TARGET="linuxstatic-x64"
-      #       BINARY_NAME="linux-x64"
-      #     elif [ "${{ matrix.os }}" == 'ubuntu-24.04-arm' ]; then
-      #       TARGET="linuxstatic-arm64"
-      #       BINARY_NAME="linux-arm64"
-      #     elif [ "${{ matrix.os }}" == 'macos-13' ]; then
-      #       TARGET="macos-x64"
-      #       BINARY_NAME=$TARGET
-      #     elif [ "${{ matrix.os }}" == 'macos-latest' ]; then
-      #       TARGET="macos-arm64"
-      #       BINARY_NAME=$TARGET
-      #     elif [ "${{ matrix.os }}" == 'windows-latest' ]; then
-      #       TARGET="win-x64"
-      #       BINARY_NAME=$TARGET
-      #     fi
-
-      #     echo "BINARY_NAME=$BINARY_NAME" >> $GITHUB_ENV
-      #     npm run pkg -- --target $TARGET
-
-      # - name: Compress Linux/MacOS binaries
-      #   working-directory: airbyte-local-cli-nodejs/out/pkg
-      #   if: runner.os != 'Windows'
-      #   run: |
-      #     zip airbyte-local-${BINARY_NAME}.zip airbyte-local
-
-      # - name: Compress Windows binaries
-      #   working-directory: airbyte-local-cli-nodejs/out/pkg
-      #   if: runner.os == 'Windows'
-      #   run: |
-      #     Compress-Archive -Path airbyte-local.exe -DestinationPath airbyte-local-win-x64.zip
-
-      # - name: Upload binaries
-      #   uses: actions/upload-artifact@v4
-      #   with:
-      #     name: release_${{ env.BINARY_NAME }}
-      #     path: airbyte-local-cli-nodejs/out/pkg/airbyte-local-${{ env.BINARY_NAME }}.zip
+      - name: Upload binaries
+        uses: actions/upload-artifact@v4
+        with:
+          name: release_${{ env.BINARY_NAME }}
+          path: airbyte-local-cli-nodejs/out/pkg/airbyte-local-${{ env.BINARY_NAME }}.zip
 
   # release:
   #   name: Release
