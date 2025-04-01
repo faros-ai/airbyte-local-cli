@@ -216,9 +216,6 @@ jobs:
       - name: MacOS - Import certificate
         if: matrix.os == 'macos-latest'
         uses: apple-actions/import-codesign-certs@v3
-        env:
-          MACOS_CERTIFICATE: ${{ secrets.MACOS_CERTIFICATE }}
-          MACOS_CERT_PASSWORD: ${{ secrets.MACOS_CERT_PASSWORD }}
         with: 
           p12-file-base64: ${{ secrets.MACOS_CERTIFICATE }}
           p12-password: ${{ secrets.MACOS_CERT_PASSWORD }}
@@ -249,6 +246,15 @@ jobs:
         if: runner.os == 'Windows'
         run: |
           Compress-Archive -Path airbyte-local.exe -DestinationPath airbyte-local-win-x64.zip
+
+      - name: MacOS - Notary
+        if: matrix.os == 'macos-latest'
+        uses: GuillaumeFalourd/notary-tools@v1
+        with:
+          product_path: "airbyte-local-cli-nodejs/out/pkg/airbyte-local-macos-arm64.zip"
+          apple_id: ${{ secrets.APPLE_ID }}
+          password: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+          team_id: ${{ secrets.APPLE_TEAM_ID }}
 
       - name: Upload binaries
         uses: actions/upload-artifact@v4
