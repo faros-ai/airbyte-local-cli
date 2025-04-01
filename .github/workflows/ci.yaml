@@ -227,10 +227,16 @@ jobs:
         working-directory: airbyte-local-cli-nodejs/out/pkg
         if: matrix.os == 'macos-latest'
         run: |
-          security find-identity -v -p codesigning
+          # check the identity exists
+          security find-identity -v -p codesigning 
+          
+          # codesign the binary
           codesign --force --verbose --timestamp --options runtime \
             --entitlements entitlements.plist \
             --sign "Developer ID Application: Faros AI, Inc. (2HJ5CL7QY4)" airbyte-local
+
+          # check the codesigning result
+          codesign -dvvv airbyte-local
 
       - name: Compress Linux/MacOS binaries
         working-directory: airbyte-local-cli-nodejs/out/pkg
