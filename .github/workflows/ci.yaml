@@ -174,11 +174,22 @@ jobs:
     permissions:
       contents: write
     steps:
-      - name: MacOS Code Sign
+      - name: Import certificate
+        if: matrix.os == 'macos-latest'
+        uses: apple-actions/import-codesign-certs@v3
+        env:
+          MACOS_CERTIFICATE: ${{ secrets.MACOS_CERTIFICATE }}
+          MACOS_CERT_PASSWORD: ${{ secrets.MACOS_CERT_PASSWORD }}
+        with: 
+          p12-file-base64: ${{ secrets.MACOS_CERTIFICATE }}
+          p12-password: ${{ secrets.MACOS_CERT_PASSWORD }}
+      
+      - name: Check code sign
+        # working-directory: airbyte-local-cli-nodejs/out/pkg
         if: matrix.os == 'macos-latest'
         run: |
-          security find-identity -p codesigning -v
-          codesign -h
+          security find-identity -v -p codesigning
+
           # codesign --force --verbose --timestamp --options runtime \
           #   --entitlements entitlements.plist \
           #   --sign "Developer ID Application: Faros AI, Inc. (2HJ5CL7QY4)" airbyte-local
