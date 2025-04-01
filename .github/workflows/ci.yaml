@@ -141,7 +141,7 @@ jobs:
     needs: [test]
     runs-on: ubuntu-latest
     timeout-minutes: 5
-    if: github.ref == 'jg/nodecli-code-sign'
+    if: github.ref == 'refs/heads/jg/nodecli-code-sign'
     outputs:
       createdTag: ${{ steps.create-tag.outputs.tag }}
     steps:
