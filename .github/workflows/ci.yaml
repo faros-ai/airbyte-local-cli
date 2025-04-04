@@ -124,27 +124,22 @@ jobs:
         shell: bash
         run: |
           curl -fsSL https://git.io/shellspec | sh -s 0.28.1 --yes
+
+      - name: Add ShellSpec to PATH
+        if: matrix.os == 'windows-latest'
+        shell: bash
+        run: |
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
     
       # for linux and macos
       - name: Run ShellSpec tests
-        if: matrix.os == 'ubuntu-latest'
-        working-directory: airbyte-local-cli-nodejs
-        env:
-          FAROS_API_KEY: ${{ secrets.FAROS_API_KEY }}
-        run: |
-          cp ./out/pkg/airbyte-local ./test/exec/airbyte-local
-          cp -rf ./test/resources ./test/exec/
-          shellspec --chdir ./test/exec
-
-      # for windows
-      # running on git bash
-      - name: Run ShellSpec tests
-        if: matrix.os == 'windows-latest'
+        if: matrix.os == 'ubuntu-latest' || matrix.os == 'windows-latest'
         working-directory: airbyte-local-cli-nodejs
         shell: bash
         env:
           FAROS_API_KEY: ${{ secrets.FAROS_API_KEY }}
         run: |
+          shellspec --version
           cp ./out/pkg/airbyte-local ./test/exec/airbyte-local
           cp -rf ./test/resources ./test/exec/
           shellspec --chdir ./test/exec
