@@ -1,5 +1,26 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
+exports[`generateConfig should succeed 1`] = `
+"{
+  "src": {
+    "image": "farosai/airbyte-faros-graphql-source",
+    "config": {
+      "foo": "bar"
+    }
+  },
+  "dst": {
+    "image": "farosai/airbyte-faros-destination",
+    "config": {
+      "edition_configs": {
+        "api_key": "<UPDATE_YOUR_FAROS_API_KEY>",
+        "edition": "cloud"
+      }
+    }
+  }
+}
+"
+`;
+
 exports[`generateConfig should succeed with static configs 1`] = `
 "{
   "src": {
