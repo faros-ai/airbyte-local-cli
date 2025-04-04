@@ -54,8 +54,8 @@ export const staticAirbyteConfig: StaticAirbyteConfig = {
       config: {
         url: 'https://<UPDATE_YOUR_DOMAIN>.atlassian.net',
         authentication: {
-          password: '<UPDATE_YOUR_JIRA_USER_EMAIL>',
-          username: '<UPDATE_YOUR_JIRA_TOKEN>',
+          username: '<UPDATE_YOUR_JIRA_USER_EMAIL>',
+          password: '<UPDATE_YOUR_JIRA_TOKEN>',
         },
       },
     },
@@ -78,8 +78,8 @@ export const staticAirbyteConfig: StaticAirbyteConfig = {
       config: {
         feed_cfg: {
           feed_name: 'buildkite-feed',
-          organization: '<UPDATE-BUILDKITE-ORG>',
           token: '<UPDATE_BUILDKITE_TOKEN>',
+          organization: '<UPDATE-BUILDKITE-ORG>',
         },
       },
     },
