@@ -125,9 +125,23 @@ jobs:
       #  - macos: doesn't have docker by default in the github runner. Too much work to configure and Macos syntax should be relatively the same as linux
       #  - windows: TODO
       ##
+      # for linux and macos
       - name: Run ShellSpec tests
         if: matrix.os == 'ubuntu-latest'
         working-directory: airbyte-local-cli-nodejs
+        env:
+          FAROS_API_KEY: ${{ secrets.FAROS_API_KEY }}
+        run: |
+          cp ./out/pkg/airbyte-local ./test/exec/airbyte-local
+          cp -rf ./test/resources ./test/exec/
+          shellspec --chdir ./test/exec
+
+      # for windows
+      # running on git bash
+      - name: Run ShellSpec tests
+        if: matrix.os == 'windows-latest'
+        working-directory: airbyte-local-cli-nodejs
+        shell: bash
         env:
           FAROS_API_KEY: ${{ secrets.FAROS_API_KEY }}
         run: |
