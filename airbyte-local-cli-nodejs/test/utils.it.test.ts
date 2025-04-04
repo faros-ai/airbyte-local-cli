@@ -440,4 +440,16 @@ describe('generateConfig', () => {
     const resultCfg = readFileSync(CONFIG_FILE, 'utf8');
     expect(resultCfg).toMatchSnapshot();
   });
+
+  it('should fail with invalid config', async () => {
+    const testGenCfg = {
+      ...testConfig,
+      generateConfig: {
+        src: 'foobar',
+      },
+    };
+    await expect(generateConfig('tmp-dummpy', testGenCfg)).rejects.toThrow(
+      `Source type 'foobar' not found. Please provide a valid source type.`,
+    );
+  });
 });
