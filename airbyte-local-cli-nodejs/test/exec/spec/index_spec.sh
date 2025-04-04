@@ -144,6 +144,14 @@ Describe 'Generate config'
     The output should include "Configuration file generated successfully"
     The status should equal 0
   End
+  It 'should create temporary directory'
+    airbyte_local_test() {
+      ./airbyte-local generate-config faros-graphql
+    }
+    When call airbyte_local_test
+    The output should include "Configuration file generated successfully"
+    The status should equal 0
+  End
 End
 
 Describe 'Stream prefix'

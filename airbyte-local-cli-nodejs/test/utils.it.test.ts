@@ -1,7 +1,7 @@
 import {chmodSync, existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 
-import {runDiscoverCatalog} from '../src/docker';
+import {runDiscoverCatalog, runSpec, runWizard} from '../src/docker';
 import {FarosConfig, SyncMode} from '../src/types';
 import {
   checkDockerInstalled,
@@ -10,6 +10,7 @@ import {
   createTmpDir,
   DST_CATALOG_FILENAME,
   DST_CONFIG_FILENAME,
+  generateConfig,
   loadStateFile,
   parseConfigFile,
   processSrcInputFile,
@@ -393,6 +394,62 @@ describe('processSrcInputFile', () => {
     };
     await expect(processSrcInputFile(tmpDir, cfg)).rejects.toThrow(
       'Failed to process the source input file: EACCES: permission denied,',
+    );
+  });
+});
+
+describe('generateConfig', () => {
+  const tmpDir = `${process.cwd()}/test/resources`;
+  const testWizardFile = `${tmpDir}/tmp_wizard_config.json`;
+
+  afterAll(() => {
+    rmSync(CONFIG_FILE, {force: true});
+    rmSync(testWizardFile, {force: true});
+  });
+
+  it('should succeed', async () => {
+    (runSpec as jest.Mock).mockResolvedValue({});
+    (runWizard as jest.Mock).mockResolvedValue({});
+    writeFileSync(testWizardFile, JSON.stringify({foo: 'bar'}));
+
+    const testGenCfg = {
+      ...testConfig,
+      silent: true,
+      generateConfig: {
+        src: 'faros-graphql',
+        dst: 'faros',
+      },
+    };
+    await expect(generateConfig(tmpDir, testGenCfg)).resolves.not.toThrow();
+
+    const resultCfg = readFileSync(CONFIG_FILE, 'utf8');
+    expect(resultCfg).toMatchSnapshot();
+  });
+
+  it('should succeed with static configs', async () => {
+    const testGenCfg = {
+      ...testConfig,
+      silent: true,
+      generateConfig: {
+        src: 'github',
+        dst: 'faros',
+      },
+    };
+    await expect(generateConfig('tmp-dummpy', testGenCfg)).resolves.not.toThrow();
+
+    const resultCfg = readFileSync(CONFIG_FILE, 'utf8');
+    expect(resultCfg).toMatchSnapshot();
+  });
+
+  it('should fail with invalid config', async () => {
+    const testGenCfg = {
+      ...testConfig,
+      generateConfig: {
+        src: 'foobar',
+      },
+    };
+    await expect(generateConfig('tmp-dummpy', testGenCfg)).rejects.toThrow(
+      `Source type 'foobar' not found. Please provide a valid source type.`,
     );
   });
 });
