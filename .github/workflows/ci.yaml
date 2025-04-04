@@ -113,18 +113,18 @@ jobs:
         run: |
           ./airbyte-local --help
 
-      - name: Install ShellSpec
-        if: matrix.os == 'ubuntu-latest'
-        shell: bash
-        run: |
-          curl -fsSL https://git.io/shellspec | sh -s 0.28.1 --yes
-    
       ## 
       # Run ShellSpec tests
       #  - linux: run on x64 but not arm64 as we don't have arm64 aibtye images
       #  - macos: doesn't have docker by default in the github runner. Too much work to configure and Macos syntax should be relatively the same as linux
       #  - windows: TODO
       ##
+      - name: Install ShellSpec
+        if: matrix.os == 'ubuntu-latest' || matrix.os == 'windows-latest'
+        shell: bash
+        run: |
+          curl -fsSL https://git.io/shellspec | sh -s 0.28.1 --yes
+    
       # for linux and macos
       - name: Run ShellSpec tests
         if: matrix.os == 'ubuntu-latest'
