@@ -113,24 +113,33 @@ jobs:
         run: |
           ./airbyte-local --help
 
-      - name: Install ShellSpec
-        if: matrix.os == 'ubuntu-latest'
-        shell: bash
-        run: |
-          curl -fsSL https://git.io/shellspec | sh -s 0.28.1 --yes
-    
       ## 
       # Run ShellSpec tests
       #  - linux: run on x64 but not arm64 as we don't have arm64 aibtye images
       #  - macos: doesn't have docker by default in the github runner. Too much work to configure and Macos syntax should be relatively the same as linux
       #  - windows: TODO
       ##
+      - name: Install ShellSpec
+        if: matrix.os == 'ubuntu-latest' || matrix.os == 'windows-latest'
+        shell: bash
+        run: |
+          curl -fsSL https://git.io/shellspec | sh -s 0.28.1 --yes
+
+      - name: Add ShellSpec to PATH
+        if: matrix.os == 'windows-latest'
+        shell: bash
+        run: |
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
+    
+      # for linux and macos
       - name: Run ShellSpec tests
-        if: matrix.os == 'ubuntu-latest'
+        if: matrix.os == 'ubuntu-latest' || matrix.os == 'windows-latest'
         working-directory: airbyte-local-cli-nodejs
+        shell: bash
         env:
           FAROS_API_KEY: ${{ secrets.FAROS_API_KEY }}
         run: |
+          shellspec --version
           cp ./out/pkg/airbyte-local ./test/exec/airbyte-local
           cp -rf ./test/resources ./test/exec/
           shellspec --chdir ./test/exec
