@@ -21,6 +21,7 @@ import {isNil, omitBy} from 'lodash';
 import pino from 'pino';
 import pretty from 'pino-pretty';
 
+import {staticAirbyteConfig} from './constants/airbyteConfig';
 import {airbyteTypes} from './constants/airbyteTypes';
 import {inspectDockerImage, pullDockerImage, runDiscoverCatalog, runSpec, runWizard} from './docker';
 import {
@@ -660,8 +661,8 @@ export async function generateConfig(tmpDir: string, cfg: FarosConfig): Promise<
   logger.debug(`Generated config input source: ${srcInput}; Generated config input destination: ${dstInput}`);
 
   // map to corresponding source/destination types
-  const sources = Object.keys(airbyteTypes.sources);
-  const destinations = Object.keys(airbyteTypes.destinations);
+  const sources = Object.keys(staticAirbyteConfig.sources).concat(Object.keys(airbyteTypes.sources));
+  const destinations = Object.keys(staticAirbyteConfig.destinations).concat(Object.keys(airbyteTypes.destinations));
 
   const srcType = didYouMean(srcInput, sources);
   const dstType = didYouMean(dstInput, destinations);
@@ -683,9 +684,21 @@ export async function generateConfig(tmpDir: string, cfg: FarosConfig): Promise<
   }
   logger.debug(`Generated config source: ${srcType}; Generated config destination: ${dstType}`);
 
+  // check if source and destination are static
+  let staticSrcConfig: any;
+  let staticDstConfig: any;
+  if (srcType in staticAirbyteConfig.sources) {
+    logger.debug(`Source type '${srcType}' is static.`);
+    staticSrcConfig = staticAirbyteConfig.sources[srcType];
+  }
+  if (dstType in staticAirbyteConfig.destinations) {
+    logger.debug(`Destination type '${dstType}' is static.`);
+    staticDstConfig = staticAirbyteConfig.destinations[dstType];
+  }
+
   // map keys to docker images
-  const srcImage = airbyteTypes.sources[srcType]!.dockerRepo; // TODO: remove non-null assertion
-  const dstImage = airbyteTypes.destinations[dstType]!.dockerRepo;
+  const srcImage = staticSrcConfig?.image ?? airbyteTypes.sources[srcType]!.dockerRepo;
+  const dstImage = staticDstConfig?.image ?? airbyteTypes.destinations[dstType]!.dockerRepo;
   logger.info(`Using source image: ${srcImage}`);
   logger.info(`Using destination image: ${dstImage}`);
 
@@ -693,27 +706,34 @@ export async function generateConfig(tmpDir: string, cfg: FarosConfig): Promise<
   if (cfg.srcPull && srcImage) {
     await pullDockerImage(srcImage);
   }
-  // Pull destination docker image
   if (cfg.dstPull && dstImage) {
     await pullDockerImage(dstImage);
   }
 
-  // getting spec and run wizard autofill
+  // getting spec
   const srcSpec = await runSpec(tmpDir, srcImage);
-  await runWizard(tmpDir, srcImage);
-  const srcConfig = JSON.parse(readFileSync(`${tmpDir}/${TMP_WIZARD_CONFIG_FILENAME}`, 'utf-8'));
-
   const dstSpec = await runSpec(tmpDir, dstImage);
-  await runWizard(tmpDir, dstImage);
-  const dstConfig = JSON.parse(readFileSync(`${tmpDir}/${TMP_WIZARD_CONFIG_FILENAME}`, 'utf-8'));
+
+  // run wizard if not static
+  let srcWizardConfig;
+  let dstWizardConfig;
+  if (!staticSrcConfig) {
+    await runWizard(tmpDir, srcImage);
+    srcWizardConfig = JSON.parse(readFileSync(`${tmpDir}/${TMP_WIZARD_CONFIG_FILENAME}`, 'utf-8'));
+  }
+  if (!staticDstConfig) {
+    await runWizard(tmpDir, dstImage);
+    dstWizardConfig = JSON.parse(readFileSync(`${tmpDir}/${TMP_WIZARD_CONFIG_FILENAME}`, 'utf-8'));
+  }
 
   // write config to temporary directory config files
   const genCfg = {
-    src: {image: srcImage, config: srcConfig},
-    dst: {image: dstImage, config: dstConfig},
+    src: staticSrcConfig ?? {image: srcImage, config: srcWizardConfig},
+    dst: staticDstConfig ?? {image: dstImage, config: dstWizardConfig},
   };
   writeFileSync(CONFIG_FILE, JSON.stringify(genCfg, null, 2) + '\n');
 
+  // print out spec tables
   if (!cfg.silent) {
     logger.info('');
     logger.info('Source Airbyte Configuration Spec:');

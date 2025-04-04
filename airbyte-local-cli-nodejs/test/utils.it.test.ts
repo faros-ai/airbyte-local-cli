@@ -10,6 +10,7 @@ import {
   createTmpDir,
   DST_CATALOG_FILENAME,
   DST_CONFIG_FILENAME,
+  generateConfig,
   loadStateFile,
   parseConfigFile,
   processSrcInputFile,
@@ -394,5 +395,26 @@ describe('processSrcInputFile', () => {
     await expect(processSrcInputFile(tmpDir, cfg)).rejects.toThrow(
       'Failed to process the source input file: EACCES: permission denied,',
     );
+  });
+});
+
+describe('generateConfig', () => {
+  afterEach(() => {
+    rmSync(CONFIG_FILE, {force: true});
+  });
+
+  it('should succeed with static configs', async () => {
+    const testAirbyteConfig = {
+      ...testConfig,
+      silent: true,
+      generateConfig: {
+        src: 'github',
+        dst: 'faros',
+      },
+    } as FarosConfig;
+    await expect(generateConfig('tmp-dummpy', testAirbyteConfig)).resolves.not.toThrow();
+
+    const resultCfg = readFileSync(CONFIG_FILE, 'utf8');
+    expect(resultCfg).toMatchSnapshot();
   });
 });

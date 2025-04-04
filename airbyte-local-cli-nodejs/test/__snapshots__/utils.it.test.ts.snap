@@ -1,5 +1,33 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
+exports[`generateConfig should succeed with static configs 1`] = `
+"{
+  "src": {
+    "image": "farosai/airbyte-github-source",
+    "config": {
+      "authentication": {
+        "type": "token",
+        "personal_access_token": "<UPDATE_YOUR_GITHUB_TOKEN>"
+      },
+      "organizations": [
+        "<UPDATE_MY_ORG_1>",
+        "<UPDATE_MY_ORG_2>"
+      ]
+    }
+  },
+  "dst": {
+    "image": "farosai/airbyte-faros-destination",
+    "config": {
+      "edition_configs": {
+        "api_key": "<UPDATE_YOUR_FAROS_API_KEY>",
+        "edition": "cloud"
+      }
+    }
+  }
+}
+"
+`;
+
 exports[`parseConfigFile should parse utf16 encoding 1`] = `
 {
   "dst": {
