@@ -710,17 +710,16 @@ export async function generateConfig(tmpDir: string, cfg: FarosConfig): Promise<
     await pullDockerImage(dstImage);
   }
 
-  // getting spec
-  const srcSpec = await runSpec(tmpDir, srcImage);
-  const dstSpec = await runSpec(tmpDir, dstImage);
-
-  // run wizard if not static
+  // run spec and wizard if not static
   let srcWizardConfig;
   let dstWizardConfig;
+  const srcSpec = await runSpec(tmpDir, srcImage);
   if (!staticSrcConfig) {
     await runWizard(tmpDir, srcImage);
     srcWizardConfig = JSON.parse(readFileSync(`${tmpDir}/${TMP_WIZARD_CONFIG_FILENAME}`, 'utf-8'));
   }
+
+  const dstSpec = await runSpec(tmpDir, dstImage);
   if (!staticDstConfig) {
     await runWizard(tmpDir, dstImage);
     dstWizardConfig = JSON.parse(readFileSync(`${tmpDir}/${TMP_WIZARD_CONFIG_FILENAME}`, 'utf-8'));

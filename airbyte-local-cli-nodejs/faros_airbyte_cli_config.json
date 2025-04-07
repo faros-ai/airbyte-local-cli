@@ -1,0 +1,18 @@
+{
+  "src": {
+    "image": "farosai/airbyte-faros-graphql-source",
+    "config": {
+      "api_key": "<UPDATE_YOUR_CREDENTIAL>",
+      "graph": "default"
+    }
+  },
+  "dst": {
+    "image": "farosai/airbyte-faros-destination",
+    "config": {
+      "edition_configs": {
+        "api_key": "<UPDATE_YOUR_FAROS_API_KEY>",
+        "edition": "cloud"
+      }
+    }
+  }
+}
