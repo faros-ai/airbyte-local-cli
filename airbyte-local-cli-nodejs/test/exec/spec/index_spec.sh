@@ -136,17 +136,17 @@ Describe 'Validate temporary directory and files creation'
 End
 
 Describe 'Generate config'
-  It 'should create temporary directory'
+  It 'should succeed'
     airbyte_local_test() {
-      ./airbyte-local generate-config github
+      ./airbyte-local generate-config faros-graphql
     }
     When call airbyte_local_test
     The output should include "Configuration file generated successfully"
     The status should equal 0
   End
-  It 'should create temporary directory'
+  It 'should succeed with static config'
     airbyte_local_test() {
-      ./airbyte-local generate-config faros-graphql
+      ./airbyte-local generate-config github
     }
     When call airbyte_local_test
     The output should include "Configuration file generated successfully"
