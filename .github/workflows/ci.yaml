@@ -22,7 +22,7 @@ jobs:
       - name: Set up Node
         uses: actions/setup-node@v4
         with:
-          node-version: 20.x
+          node-version: 22.x
 
       - name: Install
         working-directory: airbyte-local-cli-nodejs
@@ -81,7 +81,7 @@ jobs:
       - name: Set up Node
         uses: actions/setup-node@v4
         with:
-          node-version: 20.x
+          node-version: 22.x
 
       - name: Install and Build
         working-directory: airbyte-local-cli-nodejs
@@ -179,7 +179,7 @@ jobs:
       - name: Set up Node
         uses: actions/setup-node@v2
         with:
-          node-version: 20.x
+          node-version: 22.x
 
       - name: Install
         working-directory: airbyte-local-cli-nodejs
