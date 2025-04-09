@@ -189,13 +189,27 @@ describe(`Check subcommand 'generate-config'`, () => {
   it('should parse without destination argument', () => {
     const argv = ['./airbyte-local-cli', 'index.js', 'generate-config', 'jira'];
     const cfg = parseAndValidateInputs(argv);
-    expect(cfg.generateConfig).toEqual({src: 'jira', dst: 'faros'});
+    expect(cfg.generateConfig).toEqual({src: 'jira'});
   });
 
   it('should parse with destination argument', () => {
     const argv = ['./airbyte-local-cli', 'index.js', 'generate-config', 'jira', 'other'];
     const cfg = parseAndValidateInputs(argv);
     expect(cfg.generateConfig).toEqual({src: 'jira', dst: 'other'});
+  });
+
+  it('should parse with silent option', () => {
+    const argv = ['./airbyte-local-cli', 'index.js', 'generate-config', '--silent', 'jira'];
+    const cfg = parseAndValidateInputs(argv);
+    expect(cfg.silent).toEqual(true);
+    expect(cfg.generateConfig).toEqual({src: 'jira'});
+  });
+
+  it('should parse with silent option', () => {
+    const argv = ['./airbyte-local-cli', 'index.js', 'generate-config', '--image', 'jira-image'];
+    const cfg = parseAndValidateInputs(argv);
+    expect(cfg.image).toEqual(true);
+    expect(cfg.generateConfig).toEqual({src: 'jira-image'});
   });
 });
 
@@ -282,5 +296,20 @@ describe('Check other options', () => {
       srcInputFile: 'test_src_input_file',
       srcPull: false,
     });
+  });
+});
+
+describe('Check unknown options', () => {
+  it('should throw error for unknown options', () => {
+    const argv = ['./airbyte-local-cli', 'index.js', '--unknown-option'];
+    expect(() => parseAndValidateInputs(argv)).toThrow('Unknown option: --unknown-option');
+  });
+
+  it('should throw error for unknown options for generate-config', () => {
+    jest.spyOn(process, 'exit').mockImplementation(() => {
+      throw new Error('process.exit() was called by commander js');
+    });
+    const argv = ['./airbyte-local-cli', 'index.js', 'generate-config', '--unknown-option'];
+    expect(() => parseAndValidateInputs(argv)).toThrow('process.exit() was called by commander js');
   });
 });

@@ -723,10 +723,10 @@ export async function generateConfig(tmpDir: string, cfg: FarosConfig): Promise<
   }
 
   // docker pull images
-  if (cfg.srcPull && srcImage) {
+  if (cfg.srcPull) {
     await pullDockerImage(srcImage);
   }
-  if (cfg.dstPull && dstImage) {
+  if (cfg.dstPull) {
     await pullDockerImage(dstImage);
   }
 

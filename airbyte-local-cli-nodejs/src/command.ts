@@ -108,7 +108,7 @@ function command() {
         'ex: "./airbyte-local generate-config --image farosai/airbyte-github-custom-source "',
     )
     .action((source, destination, opts: any) => {
-      cmd.setOptionValue('generateConfig', {src: source, dst: destination || 'faros'});
+      cmd.setOptionValue('generateConfig', {src: source, dst: destination});
       cmd.setOptionValue('silent', opts.silent);
       cmd.setOptionValue('image', opts.image);
     });
@@ -226,14 +226,16 @@ export function parseAndValidateInputs(argv: string[]): FarosConfig {
   const options = structuredClone(program.opts());
   logger.debug(`Options: ${JSON.stringify(options)}`);
 
-  // Check for unknown options
+  // Check for unknown options only if it's not `generateConfig`
   // Note: calling `parseOptions` parsing again will have side effects and update the options object
-  const unknown = program.parseOptions(argv).unknown;
-  unknown.forEach((u) => {
-    if (u.startsWith('--') && !u.startsWith('--src.') && !u.startsWith('--dst.')) {
-      throw new Error(`Unknown option: ${u}`);
-    }
-  });
+  if (!options['generateConfig']) {
+    const unknown = program.parseOptions(argv).unknown;
+    unknown.forEach((u) => {
+      if (u.startsWith('--') && !u.startsWith('--src.') && !u.startsWith('--dst.')) {
+        throw new Error(`Unknown option: ${u}`);
+      }
+    });
+  }
 
   // convert the options to CliOptions
   const cliOptions = convertToCliOptions(options);

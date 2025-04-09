@@ -580,6 +580,7 @@ const DEFAULT_PLACEHOLDER_WIZARD_IMAGE = 'farosai/airbyte-faros-graphql-source';
 export async function runWizard(tmpDir: string, image: string): Promise<void> {
   logger.info('Retrieving Airbyte auto generated configuration...');
 
+  logger.info(`Pulling placeholder image to generate configuration...`);
   await pullDockerImage(DEFAULT_PLACEHOLDER_WIZARD_IMAGE);
 
   try {
