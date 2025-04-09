@@ -29,7 +29,6 @@ import {
   SRC_CATALOG_FILENAME,
   SRC_CONFIG_FILENAME,
   SRC_OUTPUT_DATA_FILE,
-  TMP_WIZARD_CONFIG_FILENAME,
 } from './constants/constants';
 import {inspectDockerImage, pullDockerImage, runDiscoverCatalog, runSpec, runWizard} from './docker';
 import {logger} from './logger';
@@ -586,10 +585,6 @@ export async function generateConfig(tmpDir: string, cfg: FarosConfig): Promise<
   let srcType;
   let dstType;
 
-  // for spec
-  let srcSpec;
-  let dstSpec;
-
   // for result config
   let srcConfig;
   let dstConfig;
@@ -659,22 +654,14 @@ export async function generateConfig(tmpDir: string, cfg: FarosConfig): Promise<
     await pullDockerImage(dstImage);
   }
 
-  // run spec if the config is not generated and it's not suppressed
-  if (!cfg.silent) {
-    srcSpec = await runSpec(tmpDir, srcImage);
-  }
   // run wizard if the config is not generated
+  const srcSpec = await runSpec(srcImage);
   if (!srcConfig) {
-    await runWizard(tmpDir, srcImage);
-    srcConfig = JSON.parse(readFileSync(`${tmpDir}/${TMP_WIZARD_CONFIG_FILENAME}`, 'utf-8'));
+    srcConfig = await runWizard(tmpDir, srcImage, srcSpec);
   }
-
-  if (!cfg.silent) {
-    dstSpec = await runSpec(tmpDir, dstImage);
-  }
+  const dstSpec = await runSpec(dstImage);
   if (!dstConfig) {
-    await runWizard(tmpDir, dstImage);
-    dstConfig = JSON.parse(readFileSync(`${tmpDir}/${TMP_WIZARD_CONFIG_FILENAME}`, 'utf-8'));
+    dstConfig = await runWizard(tmpDir, dstImage, dstSpec);
   }
 
   // write config to temporary directory config files

@@ -24,7 +24,7 @@ import {
   runSrcSync,
   runWizard,
 } from '../src/docker';
-import {FarosConfig, OutputStream} from '../src/types';
+import {AirbyteSpec, FarosConfig, OutputStream} from '../src/types';
 import {setupStreams} from '../src/utils';
 
 const defaultConfig: FarosConfig = {
@@ -253,58 +253,44 @@ describe('runDstSync', () => {
 });
 
 describe('runSpec', () => {
-  const testTmpDir = `${process.cwd()}`;
-  const testSpecfile = `${testTmpDir}/${TMP_SPEC_CONFIG_FILENAME}`;
-
-  afterAll(() => {
-    try {
-      unlinkSync(testSpecfile);
-    } catch (_error) {
-      // ignore
-    }
-  });
-
   it('should success with faros image', async () => {
-    await expect(runSpec(testTmpDir, 'farosai/airbyte-faros-graphql-source')).resolves.not.toThrow();
-
-    const specData = readFileSync(testSpecfile, 'utf8');
-    expect(JSON.parse(specData).spec).toBeTruthy();
-    expect(specData).toMatchSnapshot();
+    const result = await runSpec('farosai/airbyte-faros-graphql-source');
+    expect(result.spec).toBeTruthy();
+    expect(result).toMatchSnapshot();
   });
 
   it('should success with airbyte image', async () => {
-    await expect(runSpec(testTmpDir, 'airbyte/destination-databricks')).resolves.not.toThrow();
-
-    const specData = readFileSync(testSpecfile, 'utf8');
-    expect(JSON.parse(specData).spec).toBeTruthy();
-    expect(specData).toMatchSnapshot();
+    const result = await runSpec('airbyte/destination-databricks');
+    expect(result.spec).toBeTruthy();
+    expect(result).toMatchSnapshot();
   });
 });
 
 describe('runWizard', () => {
-  const testTmpDirGraphql = `${process.cwd()}/test/resources/dockerIt_runWizard_graphql`;
-  const testTmpDirDatabricks = `${process.cwd()}/test/resources/dockerIt_runWizard_databricks`;
+  const testTmpDir = `${process.cwd()}/test/resources`;
 
   afterAll(() => {
     try {
-      unlinkSync(`${testTmpDirGraphql}/${TMP_WIZARD_CONFIG_FILENAME}`);
-      unlinkSync(`${testTmpDirDatabricks}/${TMP_WIZARD_CONFIG_FILENAME}`);
+      unlinkSync(`${testTmpDir}/${TMP_WIZARD_CONFIG_FILENAME}`);
+      unlinkSync(`${testTmpDir}/${TMP_SPEC_CONFIG_FILENAME}`);
     } catch (_error) {
       // ignore
     }
   });
 
   it('should success with faros image', async () => {
-    await expect(runWizard(testTmpDirGraphql, 'farosai/airbyte-faros-graphql-source')).resolves.not.toThrow();
-
-    const cfgData = readFileSync(`${testTmpDirGraphql}/${TMP_WIZARD_CONFIG_FILENAME}`, 'utf8');
+    const spec = readFileSync(`${process.cwd()}/test/resources/graphql_spec.json`, 'utf8');
+    const cfgData = await runWizard(
+      testTmpDir,
+      'farosai/airbyte-faros-graphql-source',
+      JSON.parse(spec) as AirbyteSpec,
+    );
     expect(cfgData).toMatchSnapshot();
   });
 
   it('should success with airbyte image', async () => {
-    await expect(runWizard(testTmpDirDatabricks, 'airbyte/destination-databricks')).resolves.not.toThrow();
-
-    const cfgData = readFileSync(`${testTmpDirDatabricks}/${TMP_WIZARD_CONFIG_FILENAME}`, 'utf8');
+    const spec = readFileSync(`${process.cwd()}/test/resources/databricks_spec.json`, 'utf8');
+    const cfgData = await runWizard(testTmpDir, 'airbyte/destination-databricks', JSON.parse(spec) as AirbyteSpec);
     expect(cfgData).toMatchSnapshot();
   });
 });

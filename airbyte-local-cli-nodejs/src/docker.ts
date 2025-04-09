@@ -1,4 +1,4 @@
-import {createReadStream, createWriteStream, writeFileSync} from 'node:fs';
+import {createReadStream, createWriteStream, readFileSync, writeFileSync} from 'node:fs';
 import {PassThrough, Writable} from 'node:stream';
 
 import Docker from 'dockerode';
@@ -567,7 +567,7 @@ export async function runDstSync(tmpDir: string, config: FarosConfig, srcPassThr
  * Raw docker command:
  * docker run -it --rm "$docker_image" spec
  */
-export async function runSpec(tmpDir: string, image: string): Promise<AirbyteSpec> {
+export async function runSpec(image: string): Promise<AirbyteSpec> {
   logger.info('Retrieving Airbyte configuration spec...');
 
   try {
@@ -577,7 +577,6 @@ export async function runSpec(tmpDir: string, image: string): Promise<AirbyteSpe
       AttachStderr: true,
       AttachStdout: true,
       HostConfig: {
-        Binds: [`${tmpDir}:/configs`],
         AutoRemove: true,
       },
       platform: getImagePlatform(image),
@@ -616,7 +615,6 @@ export async function runSpec(tmpDir: string, image: string): Promise<AirbyteSpe
     // write spec to the file
     if (res.StatusCode === 0 && specs.length > 0) {
       const spec = specs.pop();
-      writeFileSync(`${tmpDir}/${TMP_SPEC_CONFIG_FILENAME}`, JSON.stringify(spec));
       if (spec?.type === AirbyteMessageType.SPEC) {
         return spec;
       }
@@ -643,11 +641,14 @@ export async function runSpec(tmpDir: string, image: string): Promise<AirbyteSpe
  *  --spec-file "/configs/$spec_filename"
  */
 const DEFAULT_PLACEHOLDER_WIZARD_IMAGE = 'farosai/airbyte-faros-graphql-source';
-export async function runWizard(tmpDir: string, image: string): Promise<void> {
+export async function runWizard(tmpDir: string, image: string, spec: AirbyteSpec): Promise<any> {
   logger.info('Retrieving Airbyte auto generated configuration...');
 
   logger.info(`Pulling placeholder image to generate configuration...`);
   await pullDockerImage(DEFAULT_PLACEHOLDER_WIZARD_IMAGE);
+
+  // Write the spec to a file
+  writeFileSync(`${tmpDir}/${TMP_SPEC_CONFIG_FILENAME}`, JSON.stringify(spec));
 
   try {
     const cmd = [
@@ -685,6 +686,8 @@ export async function runWizard(tmpDir: string, image: string): Promise<void> {
     if (res.StatusCode !== 0) {
       throw new Error(`Exit with ${JSON.stringify(res)}`);
     }
+    const resultConfig = JSON.parse(readFileSync(`${tmpDir}/${TMP_WIZARD_CONFIG_FILENAME}`, 'utf-8'));
+    return resultConfig;
   } catch (error: any) {
     throw new Error(`Failed to generate config: ${error.message ?? JSON.stringify(error)}.`);
   }
