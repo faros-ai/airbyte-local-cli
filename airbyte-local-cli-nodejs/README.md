@@ -84,7 +84,10 @@ b. Craft your own configuration: This is for users that are familiar with Airbyt
 
 You can utilize the `generate-config` subcommand to bootstrap your Airbyte config.
 It's required to provide the Airbyte source, which means you will have to know which source data you are pulling from, e.g. Github, Jira, etc. For the Airbtye destination, it is set to Faros by default, i.e. pushing the data to Faros.
-Currently we only support for Faros managed Airbyte source and destinations. We plan to support non Faros managed in the future.
+For users convenience, the CLI will try the best to guess the source and destiantion from your inputs. It handles some extend of typos and is case insensitive.
+If you found out the CLI cannot correctly guess the correct source/destination, or you want to use your own images that are not managed by Faros, you can use the option `--image` to let the CLI know you want to work on specific images.
+Then it will stop guessing and take your exact input image(s) to generate Airbyte configurations.
+Same, the default destination image is set to Faros, i.e. `farosai/airbyte-faros-destination`.
 
 By running this subcommand, it prints out both Airbyte source and deestination configuration tables in the terminal for your reference.
 And it generates a template config file `faros_airbyte_cli_config.json` in the current directory. The template config file only includes requried configs. If you need additional configs, please refer to the configuration tables and update the config file.
@@ -94,15 +97,20 @@ Run the command to generate the template
 ```sh
 # ./airbyte-local generate-config <source> [destination]
 
-# ex: Pull data from Github and push to Faros
+# Ex: Pull data from Github and push to Faros
 ./airbyte-local generate-config github
 ./airbyte-local generate-config github faros
 
-# ex: Pull data from Jira and push to Faros
+# Ex: Pull data from Jira and push to Faros
 ./airbyte-local generate-config jira
 
-# suppress printing out the configuration tables
+# Suppress printing out the configuration tables
 ./airbyte-local generate-config -s jira
+
+# Use your own custom images
+./airbyte-local generate-config --image farosai/airbyte-github-custom-source
+./airbyte-local generate-config -s --image farosai/airbyte-github-custom-source
+./airbyte-local generate-config --image farosai/airbyte-github-custom-source farosai/airbyte-custom-destination
 ```
 
 Note: Both source and destination inputs are case insensitive and tolerate a bit of typos.

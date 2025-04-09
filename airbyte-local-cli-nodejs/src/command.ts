@@ -95,12 +95,18 @@ function command() {
         'It is required to provide source, which means you will have to know ' +
         'which source data you are pulling from, e.g. Github, Jira, etc. ' +
         'and the default destination is Faros. ' +
-        'For example, "--generate-config github" will pull data from Github and push it to Faros.',
+        'For example, "./airbyte-local generate-config github" will pull data from Github and push it to Faros. ' +
+        'If you want to use custom images, please use option "--image" and provide the images ' +
+        '(source is required and destination is optional).',
     )
     .allowUnknownOption(false)
     .allowExcessArguments(false)
     .option('-s, --silent', 'Do not print out the configuration tables')
-    .option('--image', 'Indicate that the provided source and destination are custom image(s).')
+    .option(
+      '--image',
+      'Indicate that the provided source and destination are custom image(s), ' +
+        'ex: "./airbyte-local generate-config --image farosai/airbyte-github-custom-source "',
+    )
     .action((source, destination, opts: any) => {
       cmd.setOptionValue('generateConfig', {src: source, dst: destination || 'faros'});
       cmd.setOptionValue('silent', opts.silent);
