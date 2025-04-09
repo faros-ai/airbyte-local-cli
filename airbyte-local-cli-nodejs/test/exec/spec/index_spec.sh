@@ -107,7 +107,7 @@ Describe 'Cli argv validation'
       ./airbyte-local generate-config --unknown-option foo
     }
     When call airbyte_local_test
-    The output should include "unknown option: --unknown-option"
+    The output should include "unknown option '--unknown-option'"
     The status should equal 1
   End
 
