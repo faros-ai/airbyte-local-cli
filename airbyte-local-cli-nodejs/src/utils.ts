@@ -586,17 +586,20 @@ export async function generateConfig(tmpDir: string, cfg: FarosConfig): Promise<
   let srcType;
   let dstType;
 
-  // for static configs
-  let staticSrcConfig: any;
-  let staticDstConfig: any;
+  // for spec
+  let srcSpec;
+  let dstSpec;
+
+  // for result config
+  let srcConfig;
+  let dstConfig;
 
   // if the user inputs are custom images
   if (cfg.image) {
     srcImage = cfg.generateConfig?.src;
     dstImage = cfg.generateConfig?.dst ?? 'farosai/airbyte-faros-destination';
-    logger.debug(`Generated config input source: ${srcImage}; Generated config input destination: ${dstImage}`);
   }
-  // if the user inputs are static types
+  // if the user inputs are recognized types
   else {
     // should be an array of two strings: source and destination type
     const srcInput: string = (cfg.generateConfig?.src ?? '').toLowerCase();
@@ -631,19 +634,22 @@ export async function generateConfig(tmpDir: string, cfg: FarosConfig): Promise<
     // check if source and destination are static (pre-defined)
     if (srcType in staticAirbyteConfig.sources) {
       logger.debug(`Source type '${srcType}' is static.`);
-      staticSrcConfig = staticAirbyteConfig.sources[srcType];
+      srcImage = staticAirbyteConfig.sources[srcType]?.image;
+      srcConfig = staticAirbyteConfig.sources[srcType]?.config;
+    } else {
+      srcImage = airbyteTypes.sources[srcType]!.dockerRepo;
     }
     if (dstType in staticAirbyteConfig.destinations) {
       logger.debug(`Destination type '${dstType}' is static.`);
-      staticDstConfig = staticAirbyteConfig.destinations[dstType];
+      dstImage = staticAirbyteConfig.destinations[dstType]?.image;
+      dstConfig = staticAirbyteConfig.destinations[dstType]?.config;
+    } else {
+      dstImage = airbyteTypes.destinations[dstType]!.dockerRepo;
     }
-
-    // map keys to docker images
-    srcImage = staticSrcConfig?.image ?? airbyteTypes.sources[srcType]!.dockerRepo;
-    dstImage = staticDstConfig?.image ?? airbyteTypes.destinations[dstType]!.dockerRepo;
-    logger.info(`Using source image: ${srcImage}`);
-    logger.info(`Using destination image: ${dstImage}`);
   }
+
+  logger.info(`Using source image: ${srcImage}`);
+  logger.info(`Using destination image: ${dstImage}`);
 
   // docker pull images
   if (cfg.srcPull) {
@@ -653,25 +659,28 @@ export async function generateConfig(tmpDir: string, cfg: FarosConfig): Promise<
     await pullDockerImage(dstImage);
   }
 
-  // run spec and wizard if not static
-  let srcWizardConfig;
-  let dstWizardConfig;
-  const srcSpec = await runSpec(tmpDir, srcImage);
-  if (!staticSrcConfig) {
+  // run spec if the config is not generated and it's not suppressed
+  if (!cfg.silent) {
+    srcSpec = await runSpec(tmpDir, srcImage);
+  }
+  // run wizard if the config is not generated
+  if (!srcConfig) {
     await runWizard(tmpDir, srcImage);
-    srcWizardConfig = JSON.parse(readFileSync(`${tmpDir}/${TMP_WIZARD_CONFIG_FILENAME}`, 'utf-8'));
+    srcConfig = JSON.parse(readFileSync(`${tmpDir}/${TMP_WIZARD_CONFIG_FILENAME}`, 'utf-8'));
   }
 
-  const dstSpec = await runSpec(tmpDir, dstImage);
-  if (!staticDstConfig) {
+  if (!cfg.silent) {
+    dstSpec = await runSpec(tmpDir, dstImage);
+  }
+  if (!dstConfig) {
     await runWizard(tmpDir, dstImage);
-    dstWizardConfig = JSON.parse(readFileSync(`${tmpDir}/${TMP_WIZARD_CONFIG_FILENAME}`, 'utf-8'));
+    dstConfig = JSON.parse(readFileSync(`${tmpDir}/${TMP_WIZARD_CONFIG_FILENAME}`, 'utf-8'));
   }
 
   // write config to temporary directory config files
   const genCfg = {
-    src: staticSrcConfig ?? {image: srcImage, config: srcWizardConfig},
-    dst: staticDstConfig ?? {image: dstImage, config: dstWizardConfig},
+    src: {image: srcImage, config: srcConfig},
+    dst: {image: dstImage, config: dstConfig},
   };
   writeFileSync(CONFIG_FILE, JSON.stringify(genCfg, null, 2) + '\n');
 
