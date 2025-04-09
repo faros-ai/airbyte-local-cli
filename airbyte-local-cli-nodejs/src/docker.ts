@@ -361,13 +361,6 @@ export async function runSrcSync(tmpDir: string, config: FarosConfig, srcOutputS
         ? createWriteStream(config.srcOutputFile)
         : process.stdout);
 
-    // Close the output stream when the container is finished
-    if (srcOutputStream) {
-      outputStream.on('finish', () => {
-        srcOutputStream.end();
-      });
-    }
-
     // create a writable stream to capture the stdout
     let buffer = '';
     const containerOutputStream = new Writable({
@@ -392,11 +385,6 @@ export async function runSrcSync(tmpDir: string, config: FarosConfig, srcOutputS
     // Wait for the container to finish
     const res = await container.wait();
     logger.debug(`Source connector exit code: ${JSON.stringify(res)}`);
-
-    // Close the output stream
-    if (srcOutputStream || config?.srcOutputFile !== OutputStream.STDOUT.valueOf()) {
-      outputStream.end();
-    }
 
     if (res.StatusCode === 0) {
       logger.info('Source connector completed.');
