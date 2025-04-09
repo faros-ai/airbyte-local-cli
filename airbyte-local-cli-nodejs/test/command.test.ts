@@ -14,6 +14,7 @@ const defaultConfig = {
   logLevel: 'info',
   debug: false,
   silent: false,
+  image: false,
 };
 
 afterEach(() => {

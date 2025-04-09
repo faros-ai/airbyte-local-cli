@@ -655,52 +655,72 @@ function schemaToTable(spec: Spec, srcType?: string, dstType?: string): void {
  * Run the spec and wizard to get the configuration spec and autofill the wizard.
  */
 export async function generateConfig(tmpDir: string, cfg: FarosConfig): Promise<void> {
-  // should be an array of two strings: source and destination type
-  const srcInput: string = (cfg.generateConfig?.src ?? '').toLowerCase();
-  const dstInput: string = (cfg.generateConfig?.dst ?? 'faros').toLowerCase();
-  logger.debug(`Generated config input source: ${srcInput}; Generated config input destination: ${dstInput}`);
+  // for images
+  let srcImage;
+  let dstImage;
 
-  // map to corresponding source/destination types
-  const sources = Object.keys(staticAirbyteConfig.sources).concat(Object.keys(airbyteTypes.sources));
-  const destinations = Object.keys(staticAirbyteConfig.destinations).concat(Object.keys(airbyteTypes.destinations));
+  // for non image inputs
+  let srcType;
+  let dstType;
 
-  const srcType = didYouMean(srcInput, sources);
-  const dstType = didYouMean(dstInput, destinations);
-
-  if (!srcType) {
-    throw new Error(`Source type '${srcInput}' not found. Please provide a valid source type.`);
-  } else if (srcType?.toLowerCase() !== srcInput) {
-    logger.warn(
-      `Source type '${cfg.generateConfig?.src}' not found. Assume and proceed with source type '${srcType}'.`,
-    );
-  }
-
-  if (!dstType) {
-    throw new Error(`Destination type '${dstInput}' not found. Please provide a valid destination type.`);
-  } else if (dstType?.toLowerCase() !== dstInput) {
-    logger.warn(
-      `Destination type '${cfg.generateConfig?.dst}' not found. Assume and proceed with destination type '${dstType}'.`,
-    );
-  }
-  logger.debug(`Generated config source: ${srcType}; Generated config destination: ${dstType}`);
-
-  // check if source and destination are static
+  // for static configs
   let staticSrcConfig: any;
   let staticDstConfig: any;
-  if (srcType in staticAirbyteConfig.sources) {
-    logger.debug(`Source type '${srcType}' is static.`);
-    staticSrcConfig = staticAirbyteConfig.sources[srcType];
-  }
-  if (dstType in staticAirbyteConfig.destinations) {
-    logger.debug(`Destination type '${dstType}' is static.`);
-    staticDstConfig = staticAirbyteConfig.destinations[dstType];
-  }
 
-  // map keys to docker images
-  const srcImage = staticSrcConfig?.image ?? airbyteTypes.sources[srcType]!.dockerRepo;
-  const dstImage = staticDstConfig?.image ?? airbyteTypes.destinations[dstType]!.dockerRepo;
-  logger.info(`Using source image: ${srcImage}`);
-  logger.info(`Using destination image: ${dstImage}`);
+  // if the user inputs are custom images
+  if (cfg.image) {
+    srcImage = cfg.generateConfig?.src;
+    dstImage = cfg.generateConfig?.dst ?? 'farosai/airbyte-faros-destination';
+    logger.debug(`Generated config input source: ${srcImage}; Generated config input destination: ${dstImage}`);
+  }
+  // if the user inputs are static types
+  else {
+    // should be an array of two strings: source and destination type
+    const srcInput: string = (cfg.generateConfig?.src ?? '').toLowerCase();
+    const dstInput: string = (cfg.generateConfig?.dst ?? 'faros').toLowerCase();
+    logger.debug(`Generated config input source: ${srcInput}; Generated config input destination: ${dstInput}`);
+
+    // map to corresponding source/destination types
+    const sources = Object.keys(staticAirbyteConfig.sources).concat(Object.keys(airbyteTypes.sources));
+    const destinations = Object.keys(staticAirbyteConfig.destinations).concat(Object.keys(airbyteTypes.destinations));
+
+    srcType = didYouMean(srcInput, sources);
+    dstType = didYouMean(dstInput, destinations);
+
+    if (!srcType) {
+      throw new Error(`Source type '${srcInput}' not found. Please provide a valid source type.`);
+    } else if (srcType?.toLowerCase() !== srcInput) {
+      logger.warn(
+        `Source type '${cfg.generateConfig?.src}' not found. Assume and proceed with source type '${srcType}'.`,
+      );
+    }
+
+    if (!dstType) {
+      throw new Error(`Destination type '${dstInput}' not found. Please provide a valid destination type.`);
+    } else if (dstType?.toLowerCase() !== dstInput) {
+      logger.warn(
+        `Destination type '${cfg.generateConfig?.dst}' not found.` +
+          `Assume and proceed with destination type '${dstType}'.`,
+      );
+    }
+    logger.debug(`Generated config source: ${srcType}; Generated config destination: ${dstType}`);
+
+    // check if source and destination are static (pre-defined)
+    if (srcType in staticAirbyteConfig.sources) {
+      logger.debug(`Source type '${srcType}' is static.`);
+      staticSrcConfig = staticAirbyteConfig.sources[srcType];
+    }
+    if (dstType in staticAirbyteConfig.destinations) {
+      logger.debug(`Destination type '${dstType}' is static.`);
+      staticDstConfig = staticAirbyteConfig.destinations[dstType];
+    }
+
+    // map keys to docker images
+    srcImage = staticSrcConfig?.image ?? airbyteTypes.sources[srcType]!.dockerRepo;
+    dstImage = staticDstConfig?.image ?? airbyteTypes.destinations[dstType]!.dockerRepo;
+    logger.info(`Using source image: ${srcImage}`);
+    logger.info(`Using destination image: ${dstImage}`);
+  }
 
   // docker pull images
   if (cfg.srcPull && srcImage) {

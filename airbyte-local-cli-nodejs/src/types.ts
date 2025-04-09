@@ -39,6 +39,7 @@ export interface CliOptions {
   // generate config
   generateConfig?: any;
   silent?: boolean;
+  image?: boolean;
 
   // deprecated
   checkConnection?: boolean; // use srcCheckConnection instead
@@ -84,6 +85,7 @@ export interface FarosConfig {
   // generate config
   generateConfig?: any;
   silent: boolean;
+  image: boolean;
 
   // internal use
   dstStreamPrefix?: string;

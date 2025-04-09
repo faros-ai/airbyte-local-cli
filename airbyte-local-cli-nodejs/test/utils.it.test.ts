@@ -64,6 +64,7 @@ const testConfig: FarosConfig = {
   srcOutputFile: undefined,
   srcInputFile: undefined,
   silent: false,
+  image: false,
 };
 
 describe('parseConfigFile', () => {
@@ -436,6 +437,25 @@ describe('generateConfig', () => {
       },
     };
     await expect(generateConfig('tmp-dummpy', testGenCfg)).resolves.not.toThrow();
+
+    const resultCfg = readFileSync(CONFIG_FILE, 'utf8');
+    expect(resultCfg).toMatchSnapshot();
+  });
+
+  it('should succeed with image inputs', async () => {
+    (runSpec as jest.Mock).mockResolvedValue({});
+    (runWizard as jest.Mock).mockResolvedValue({});
+    writeFileSync(testWizardFile, JSON.stringify({foo: 'bar'}));
+
+    const testGenCfg = {
+      ...testConfig,
+      silent: true,
+      image: true,
+      generateConfig: {
+        src: 'farosai/airbyte-faros-graphql-source',
+      },
+    };
+    await expect(generateConfig(tmpDir, testGenCfg)).resolves.not.toThrow();
 
     const resultCfg = readFileSync(CONFIG_FILE, 'utf8');
     expect(resultCfg).toMatchSnapshot();

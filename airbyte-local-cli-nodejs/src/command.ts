@@ -100,9 +100,11 @@ function command() {
     .allowUnknownOption(false)
     .allowExcessArguments(false)
     .option('-s, --silent', 'Do not print out the configuration tables')
+    .option('--image', 'Indicate that the provided source and destination are custom image(s).')
     .action((source, destination, opts: any) => {
       cmd.setOptionValue('generateConfig', {src: source, dst: destination || 'faros'});
       cmd.setOptionValue('silent', opts.silent);
+      cmd.setOptionValue('image', opts.image);
     });
 
   return cmd;
@@ -240,6 +242,7 @@ export function parseAndValidateInputs(argv: string[]): FarosConfig {
   const farosConfig: FarosConfig = {
     generateConfig: cliOptions.generateConfig,
     silent: cliOptions.silent ?? false,
+    image: cliOptions.image ?? false,
     // The default source output file is stdout(`-`) if `srcOnly` is true
     // Take the non-default value if provided with `srcOutputFile` option
     srcOutputFile: cliOptions.srcOnly ? OutputStream.STDOUT : cliOptions.srcOutputFile,

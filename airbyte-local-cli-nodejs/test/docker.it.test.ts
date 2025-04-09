@@ -43,6 +43,7 @@ const defaultConfig: FarosConfig = {
   srcOutputFile: undefined,
   srcInputFile: undefined,
   silent: false,
+  image: false,
 };
 
 beforeAll(async () => {
