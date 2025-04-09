@@ -412,8 +412,7 @@ describe('generateConfig', () => {
 
   it('should succeed', async () => {
     (runSpec as jest.Mock).mockResolvedValue({});
-    (runWizard as jest.Mock).mockResolvedValue({});
-    writeFileSync(testWizardFile, JSON.stringify({foo: 'bar'}));
+    (runWizard as jest.Mock).mockResolvedValue({foo: 'bar'});
 
     const testGenCfg = {
       ...testConfig,
@@ -446,8 +445,7 @@ describe('generateConfig', () => {
 
   it('should succeed with image inputs', async () => {
     (runSpec as jest.Mock).mockResolvedValue({});
-    (runWizard as jest.Mock).mockResolvedValue({});
-    writeFileSync(testWizardFile, JSON.stringify({foo: 'bar'}));
+    (runWizard as jest.Mock).mockResolvedValue({foo: 'bar'});
 
     const testGenCfg = {
       ...testConfig,
