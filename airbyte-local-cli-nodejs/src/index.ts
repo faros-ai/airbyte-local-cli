@@ -1,14 +1,13 @@
 import {parseAndValidateInputs} from './command';
 import {checkDockerInstalled, checkSrcConnection, pullDockerImage, runDstSync, runSrcSync} from './docker';
-import {AirbyteCliContext} from './types';
+import {logger} from './logger';
+import {AirbyteCliContext, ImageType} from './types';
 import {
   cleanUp,
   createTmpDir,
   generateConfig,
   generateDstStreamPrefix,
-  ImageType,
   loadStateFile,
-  logger,
   logImageVersion,
   processSrcInputFile,
   setupStreams,

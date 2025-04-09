@@ -1,22 +1,24 @@
 import {chmodSync, existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 
+import {
+  CONFIG_FILE,
+  DST_CATALOG_FILENAME,
+  DST_CONFIG_FILENAME,
+  SRC_CATALOG_FILENAME,
+  SRC_CONFIG_FILENAME,
+  SRC_OUTPUT_DATA_FILE,
+} from '../src/constants/constants';
 import {runDiscoverCatalog, runSpec, runWizard} from '../src/docker';
 import {FarosConfig, SyncMode} from '../src/types';
 import {
   checkDockerInstalled,
   cleanUp,
-  CONFIG_FILE,
   createTmpDir,
-  DST_CATALOG_FILENAME,
-  DST_CONFIG_FILENAME,
   generateConfig,
   loadStateFile,
   parseConfigFile,
   processSrcInputFile,
-  SRC_CATALOG_FILENAME,
-  SRC_CONFIG_FILENAME,
-  SRC_OUTPUT_DATA_FILE,
   writeCatalog,
   writeConfig,
 } from '../src/utils';

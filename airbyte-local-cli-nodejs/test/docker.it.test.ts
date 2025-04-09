@@ -10,6 +10,12 @@ import {
 import {PassThrough, Writable} from 'node:stream';
 
 import {
+  DST_CONFIG_FILENAME,
+  SRC_OUTPUT_DATA_FILE,
+  TMP_SPEC_CONFIG_FILENAME,
+  TMP_WIZARD_CONFIG_FILENAME,
+} from '../src/constants/constants';
+import {
   checkSrcConnection,
   pullDockerImage,
   runDiscoverCatalog,
@@ -18,15 +24,8 @@ import {
   runSrcSync,
   runWizard,
 } from '../src/docker';
-import {FarosConfig} from '../src/types';
-import {
-  DST_CONFIG_FILENAME,
-  OutputStream,
-  setupStreams,
-  SRC_OUTPUT_DATA_FILE,
-  TMP_SPEC_CONFIG_FILENAME,
-  TMP_WIZARD_CONFIG_FILENAME,
-} from '../src/utils';
+import {FarosConfig, OutputStream} from '../src/types';
+import {setupStreams} from '../src/utils';
 
 const defaultConfig: FarosConfig = {
   srcCheckConnection: false,

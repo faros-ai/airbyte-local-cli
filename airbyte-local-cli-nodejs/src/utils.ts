@@ -18,49 +18,35 @@ import {promisify} from 'node:util';
 import Table from 'cli-table3';
 import didYouMean from 'didyoumean2';
 import {isNil, omitBy} from 'lodash';
-import pino from 'pino';
-import pretty from 'pino-pretty';
 
 import {staticAirbyteConfig} from './constants/airbyteConfig';
 import {airbyteTypes} from './constants/airbyteTypes';
+import {
+  CONFIG_FILE,
+  DEFAULT_STATE_FILE,
+  DST_CATALOG_FILENAME,
+  DST_CONFIG_FILENAME,
+  SRC_CATALOG_FILENAME,
+  SRC_CONFIG_FILENAME,
+  SRC_OUTPUT_DATA_FILE,
+  TMP_WIZARD_CONFIG_FILENAME,
+} from './constants/constants';
 import {inspectDockerImage, pullDockerImage, runDiscoverCatalog, runSpec, runWizard} from './docker';
+import {logger} from './logger';
 import {
   AirbyteCatalog,
   AirbyteCliContext,
   AirbyteConfig,
   AirbyteConfiguredCatalog,
   AirbyteMessageType,
-  AirbyteSpec,
   AirbyteStream,
   DestinationSyncMode,
   FarosConfig,
+  ImageType,
+  OutputStream,
   Spec,
   SyncMode,
 } from './types';
-
-// constants
-export enum OutputStream {
-  STDERR = 'STDERR',
-  STDOUT = 'STDOUT',
-}
-export enum ImageType {
-  SRC = 'source',
-  DST = 'destination',
-}
-export const FILENAME_PREFIX = 'faros_airbyte_cli';
-export const CONFIG_FILE = `${FILENAME_PREFIX}_config.json`;
-export const SRC_CONFIG_FILENAME = `${FILENAME_PREFIX}_src_config.json`;
-export const DST_CONFIG_FILENAME = `${FILENAME_PREFIX}_dst_config.json`;
-export const SRC_CATALOG_FILENAME = `${FILENAME_PREFIX}_src_catalog.json`;
-export const DST_CATALOG_FILENAME = `${FILENAME_PREFIX}_dst_catalog.json`;
-export const DEFAULT_STATE_FILE = 'state.json';
-export const SRC_INPUT_DATA_FILE = `${FILENAME_PREFIX}_src_data`;
-export const SRC_OUTPUT_DATA_FILE = `${FILENAME_PREFIX}_src_output`;
-export const TMP_WIZARD_CONFIG_FILENAME = `tmp_wizard_config.json`;
-export const TMP_SPEC_CONFIG_FILENAME = `tmp_spec.json`;
-
-// Create a pino logger instance
-export const logger = pino(pretty({colorize: true}));
 
 export function updateLogLevel(debug: boolean | undefined): void {
   logger.level = debug ? 'debug' : 'info';
@@ -298,7 +284,7 @@ export function writeConfig(tmpDir: string, config: FarosConfig): void {
   // write config to temporary directory config files
   logger.debug(`Writing Airbyte config to files...`);
   const srcConfigFilePath = `${tmpDir}${sep}${SRC_CONFIG_FILENAME}`;
-  const dstConfigFilePath = `${tmpDir}${sep}${FILENAME_PREFIX}_dst_config.json`;
+  const dstConfigFilePath = `${tmpDir}${sep}${DST_CONFIG_FILENAME}`;
   writeFileSync(srcConfigFilePath, JSON.stringify(airbyteConfig.src.config ?? {}));
   writeFileSync(dstConfigFilePath, JSON.stringify(airbyteConfig.dst.config ?? {}));
   logger.debug(`Source config: ${JSON.stringify(airbyteConfig.src.config ?? {})}`);
@@ -311,8 +297,8 @@ export function writeConfig(tmpDir: string, config: FarosConfig): void {
  */
 export async function writeCatalog(tmpDir: string, config: FarosConfig): Promise<void> {
   logger.debug(`Writing Airbyte catalog to files...`);
-  const srcCatalogFilePath = `${tmpDir}${sep}${FILENAME_PREFIX}_src_catalog.json`;
-  const dstCatalogFilePath = `${tmpDir}${sep}${FILENAME_PREFIX}_dst_catalog.json`;
+  const srcCatalogFilePath = `${tmpDir}${sep}${SRC_CATALOG_FILENAME}`;
+  const dstCatalogFilePath = `${tmpDir}${sep}${DST_CATALOG_FILENAME}`;
   let srcCatalog: AirbyteConfiguredCatalog;
   let dstCatalog: AirbyteConfiguredCatalog;
 
@@ -387,6 +373,7 @@ export function setupStreams(): {srcOutputStream: Writable; passThrough: PassThr
  *  jq_src_msg="\"${GREEN}[SRC]: \" + ${JQ_TIMESTAMP} + \" - \" + ."
  *
  */
+
 export function processSrcDataByLine(line: string, outputStream: Writable, cfg: FarosConfig): void {
   // Reformat the JSON message
   function formatSrcMsg(json: any): string {
@@ -422,6 +409,7 @@ export function processSrcDataByLine(line: string, outputStream: Writable, cfg: 
         }
       }
     }
+
     // RECORD and STATE type messages: write to output file
     else {
       if (data?.record?.stream && cfg.dstStreamPrefix) {
@@ -497,71 +485,6 @@ export function generateDstStreamPrefix(cfg: FarosConfig): void {
       logger.debug(`Using destination stream prefix: ${cfg.dstStreamPrefix}`);
     }
   }
-}
-
-export function processDstDataByLine(line: string, cfg: FarosConfig): string {
-  // reformat the JSON message
-  function formatDstMsg(json: any): string {
-    return `[DST] - ${JSON.stringify(json)}`;
-  }
-
-  let state = '';
-
-  // skip empty lines
-  if (line.trim() === '') {
-    return state;
-  }
-
-  try {
-    const data = JSON.parse(line);
-
-    if (data?.type === AirbyteMessageType.STATE && data?.state?.data) {
-      state = JSON.stringify(data.state.data);
-      logger.debug(formatDstMsg(data));
-    }
-    if (cfg.rawMessages) {
-      process.stdout.write(`${line}\n`);
-    } else {
-      if (data?.type === AirbyteMessageType.LOG && data?.log?.level !== 'INFO') {
-        if (data?.log?.level === 'ERROR') {
-          logger.error(formatDstMsg(data));
-        } else if (data?.log?.level === 'WARN') {
-          logger.warn(formatDstMsg(data));
-        } else if (data?.log?.level === 'DEBUG') {
-          logger.debug(formatDstMsg(data));
-        }
-      } else {
-        logger.info(formatDstMsg(data));
-      }
-    }
-  } catch (error: any) {
-    // log as errors but not throw it
-    logger.error(`Line of data: '${line}'; Error: ${error.message}`);
-  }
-  return state;
-}
-
-/**
- * Filter out spec output
- */
-export function processSpecByLine(line: string): AirbyteSpec | undefined {
-  let spec;
-
-  // skip empty lines
-  if (line.trim() === '') {
-    return spec;
-  }
-
-  try {
-    const data = JSON.parse(line);
-    if (data?.type === AirbyteMessageType.SPEC && data?.spec) {
-      spec = data as AirbyteSpec;
-      logger.debug(line);
-    }
-  } catch (error: any) {
-    throw new Error(`Spec data: '${line}'; Error: ${error.message}`);
-  }
-  return spec;
 }
 
 /**

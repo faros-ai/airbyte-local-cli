@@ -1,7 +1,9 @@
 import {Command, Option} from 'commander';
 
-import {AirbyteConfig, AirbyteConfigInputType, CliOptions, FarosConfig} from './types';
-import {CONFIG_FILE, logger, OutputStream, parseConfigFile, updateLogLevel} from './utils';
+import {CONFIG_FILE} from './constants/constants';
+import {logger} from './logger';
+import {AirbyteConfig, AirbyteConfigInputType, CliOptions, FarosConfig, OutputStream} from './types';
+import {parseConfigFile, updateLogLevel} from './utils';
 import {CLI_VERSION} from './version';
 
 // Command line program

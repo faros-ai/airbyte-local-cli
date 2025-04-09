@@ -4,6 +4,17 @@ import {PassThrough, Writable} from 'node:stream';
 import Docker from 'dockerode';
 
 import {
+  DEFAULT_STATE_FILE,
+  DST_CATALOG_FILENAME,
+  DST_CONFIG_FILENAME,
+  SRC_CATALOG_FILENAME,
+  SRC_CONFIG_FILENAME,
+  SRC_OUTPUT_DATA_FILE,
+  TMP_SPEC_CONFIG_FILENAME,
+  TMP_WIZARD_CONFIG_FILENAME,
+} from './constants/constants';
+import {logger} from './logger';
+import {
   AirbyteCatalog,
   AirbyteCatalogMessage,
   AirbyteConnectionStatus,
@@ -11,22 +22,9 @@ import {
   AirbyteMessageType,
   AirbyteSpec,
   FarosConfig,
-} from './types';
-import {
-  DEFAULT_STATE_FILE,
-  DST_CATALOG_FILENAME,
-  DST_CONFIG_FILENAME,
-  logger,
   OutputStream,
-  processDstDataByLine,
-  processSpecByLine,
-  processSrcDataByLine,
-  SRC_CATALOG_FILENAME,
-  SRC_CONFIG_FILENAME,
-  SRC_OUTPUT_DATA_FILE,
-  TMP_SPEC_CONFIG_FILENAME,
-  TMP_WIZARD_CONFIG_FILENAME,
-} from './utils';
+} from './types';
+import {processSrcDataByLine} from './utils';
 
 // Constants
 const DEFAULT_MAX_LOG_SIZE = '10m';
@@ -210,6 +208,74 @@ export async function runDiscoverCatalog(tmpDir: string, image: string | undefin
   } catch (error: any) {
     throw new Error(`Failed to discover catalog: ${error.message ?? JSON.stringify(error)}.`);
   }
+}
+
+/**
+ * Process the destination output.
+ */
+export function processDstDataByLine(line: string, cfg: FarosConfig): string {
+  // reformat the JSON message
+  function formatDstMsg(json: any): string {
+    return `[DST] - ${JSON.stringify(json)}`;
+  }
+
+  let state = '';
+
+  // skip empty lines
+  if (line.trim() === '') {
+    return state;
+  }
+
+  try {
+    const data = JSON.parse(line);
+
+    if (data?.type === AirbyteMessageType.STATE && data?.state?.data) {
+      state = JSON.stringify(data.state.data);
+      logger.debug(formatDstMsg(data));
+    }
+    if (cfg.rawMessages) {
+      process.stdout.write(`${line}\n`);
+    } else {
+      if (data?.type === AirbyteMessageType.LOG && data?.log?.level !== 'INFO') {
+        if (data?.log?.level === 'ERROR') {
+          logger.error(formatDstMsg(data));
+        } else if (data?.log?.level === 'WARN') {
+          logger.warn(formatDstMsg(data));
+        } else if (data?.log?.level === 'DEBUG') {
+          logger.debug(formatDstMsg(data));
+        }
+      } else {
+        logger.info(formatDstMsg(data));
+      }
+    }
+  } catch (error: any) {
+    // log as errors but not throw it
+    logger.error(`Line of data: '${line}'; Error: ${error.message}`);
+  }
+  return state;
+}
+/**
+ * Filter out spec output
+ */
+
+export function processSpecByLine(line: string): AirbyteSpec | undefined {
+  let spec;
+
+  // skip empty lines
+  if (line.trim() === '') {
+    return spec;
+  }
+
+  try {
+    const data = JSON.parse(line);
+    if (data?.type === AirbyteMessageType.SPEC && data?.spec) {
+      spec = data as AirbyteSpec;
+      logger.debug(line);
+    }
+  } catch (error: any) {
+    throw new Error(`Spec data: '${line}'; Error: ${error.message}`);
+  }
+  return spec;
 }
 
 /**

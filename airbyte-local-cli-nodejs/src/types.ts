@@ -91,6 +91,15 @@ export interface FarosConfig {
   dstStreamPrefix?: string;
 }
 
+export enum OutputStream {
+  STDERR = 'STDERR',
+  STDOUT = 'STDOUT',
+}
+export enum ImageType {
+  SRC = 'source',
+  DST = 'destination',
+}
+
 /**
  * Copy types from faros-ai/airtype-connectors
  * https://github.com/faros-ai/airbyte-connectors/blob/main/faros-airbyte-cdk/src/protocol.ts
