@@ -86,7 +86,7 @@ You can utilize the `generate-config` subcommand to bootstrap your Airbyte confi
 It's required to provide the Airbyte source, which means you will have to know which source data you are pulling from, e.g. Github, Jira, etc. For the Airbtye destination, it is set to Faros by default, i.e. pushing the data to Faros.
 For users convenience, the CLI will attempt to guess the source and destination from your inputs. It handles some typos and is case insensitive.
 If the CLI cannot correctly guess the correct source/destination, or you want to use your own images that are not managed by Faros, you can use the option `--image` to specify your images.
-Then it will stop guessing and take your exact input image(s) to generate Airbyte configurations.
+The CLI will use your exact input image(s) to generate Airbyte configurations.
 Same, the default destination image is set to Faros, i.e. `farosai/airbyte-faros-destination`.
 
 By running this subcommand, it prints out both Airbyte source and deestination configuration tables in the terminal for your reference.
