@@ -295,13 +295,6 @@ export async function runSrcSync(tmpDir: string, config: FarosConfig, srcOutputS
         ? createWriteStream(config.srcOutputFile)
         : process.stdout);
 
-    // Close the output stream when the container is finished
-    if (srcOutputStream) {
-      outputStream.on('finish', () => {
-        srcOutputStream.end();
-      });
-    }
-
     // create a writable stream to capture the stdout
     let buffer = '';
     const containerOutputStream = new Writable({

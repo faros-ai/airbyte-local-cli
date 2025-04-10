@@ -1,6 +1,6 @@
 {
   "name": "@faros-ai/airbyte-local-cli-nodejs",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "description": "Airbyte local cli node js version",
   "private": true,
   "packageManager": "^npm@10.8.2",
@@ -28,16 +28,16 @@
     "url": "https://github.com/faros-ai/airbyte-local-cli/issues"
   },
   "engines": {
-    "node": ">=20.0.0"
+    "node": ">=22.0.0"
   },
   "main": "lib/",
   "devDependencies": {
-    "@tsconfig/node20": "^20.1.4",
+    "@tsconfig/node22": "^22.0.1",
     "@tsconfig/strictest": "^2.0.5",
-    "@types/dockerode": "^3.3.32",
+    "@types/dockerode": "^3.3.37",
     "@types/jest": "^29.5.14",
     "@types/lodash": "^4.17.14",
-    "@types/node": "^20.17.6",
+    "@types/node": "^22.14.0",
     "@typescript-eslint/eslint-plugin": "^8.19.1",
     "@typescript-eslint/parser": "^8.13.0",
     "@yao-pkg/pkg": "^6.3.2",
