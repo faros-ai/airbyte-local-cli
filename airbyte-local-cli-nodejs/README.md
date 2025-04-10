@@ -87,7 +87,7 @@ It's required to provide the Airbyte source, which means you will have to know w
 For users convenience, the CLI will attempt to guess the source and destination from your inputs. It handles some typos and is case insensitive.
 If the CLI cannot correctly guess the correct source/destination, or you want to use your own images that are not managed by Faros, you can use the option `--image` to specify your images.
 The CLI will use your exact input image(s) to generate Airbyte configurations.
-Same, the default destination image is set to Faros, i.e. `farosai/airbyte-faros-destination`.
+The default destination image is set to Faros, i.e. `farosai/airbyte-faros-destination`.
 
 By running this subcommand, it prints out both Airbyte source and deestination configuration tables in the terminal for your reference.
 And it generates a template config file `faros_airbyte_cli_config.json` in the current directory. The template config file only includes requried configs. If you need additional configs, please refer to the configuration tables and update the config file.
