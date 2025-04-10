@@ -121,6 +121,40 @@ describe('runSrcSync', () => {
     expect(outputWithoutTS.join('\n')).toMatchSnapshot();
   });
 
+  it('should wait for write to complete', async () => {
+    const passThrough = new PassThrough();
+    const srcOutputStream = new Writable({
+      async write(chunk, _encoding, callback) {
+        // Sleep for 2 second to simulate a slow stream
+        await new Promise<void>((resolve) => {
+          setTimeout(resolve, 2000);
+        });
+
+        passThrough.write(chunk.toString());
+        callback();
+      },
+    });
+    srcOutputStream.on('finish', () => {
+      passThrough.end();
+    });
+
+    // Write the output to a file
+    const writeStream = createWriteStream(`${testTmpDir}/${SRC_OUTPUT_DATA_FILE}`);
+    passThrough.pipe(writeStream);
+
+    await expect(runSrcSync(testTmpDir, testCfg, srcOutputStream)).resolves.not.toThrow();
+
+    // Replace timestamp and version for snapshot comparison
+    const output = readFileSync(`${testTmpDir}/${SRC_OUTPUT_DATA_FILE}`, 'utf8');
+    const outputWithoutTS = output.split('\n').map((line) => {
+      return line
+        .replace(/"timestamp":\d+/g, '"timestamp":***')
+        .replace(/"sourceVersion":"[\w.-]+"/g, '"sourceVersion":***')
+        .replace(/Source version: [\w.-]+/g, 'Source version: ***');
+    });
+    expect(outputWithoutTS.join('\n')).toMatchSnapshot();
+  });
+
   it('should success with specified output file', async () => {
     await expect(
       runSrcSync(testTmpDir, {...testCfg, srcOutputFile: `${testTmpDir}/${SRC_OUTPUT_DATA_FILE}`}),
