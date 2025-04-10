@@ -1,7 +1,7 @@
 # WIP: Airbyte CLI Rewrite
 
 ```sh
-nvm use           # Use Node v20
+nvm use           # Use Node v22
 npm run build     # Build src
 npm run lint      # Check formatting
 npm run bundle    # Bundle typescripts source codes to a single Javascript file
