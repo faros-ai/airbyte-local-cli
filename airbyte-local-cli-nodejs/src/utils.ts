@@ -18,49 +18,34 @@ import {promisify} from 'node:util';
 import Table from 'cli-table3';
 import didYouMean from 'didyoumean2';
 import {isNil, omitBy} from 'lodash';
-import pino from 'pino';
-import pretty from 'pino-pretty';
 
 import {staticAirbyteConfig} from './constants/airbyteConfig';
 import {airbyteTypes} from './constants/airbyteTypes';
+import {
+  CONFIG_FILE,
+  DEFAULT_STATE_FILE,
+  DST_CATALOG_FILENAME,
+  DST_CONFIG_FILENAME,
+  SRC_CATALOG_FILENAME,
+  SRC_CONFIG_FILENAME,
+  SRC_OUTPUT_DATA_FILE,
+} from './constants/constants';
 import {inspectDockerImage, pullDockerImage, runDiscoverCatalog, runSpec, runWizard} from './docker';
+import {logger} from './logger';
 import {
   AirbyteCatalog,
   AirbyteCliContext,
   AirbyteConfig,
   AirbyteConfiguredCatalog,
   AirbyteMessageType,
-  AirbyteSpec,
   AirbyteStream,
   DestinationSyncMode,
   FarosConfig,
+  ImageType,
+  OutputStream,
   Spec,
   SyncMode,
 } from './types';
-
-// constants
-export enum OutputStream {
-  STDERR = 'STDERR',
-  STDOUT = 'STDOUT',
-}
-export enum ImageType {
-  SRC = 'source',
-  DST = 'destination',
-}
-export const FILENAME_PREFIX = 'faros_airbyte_cli';
-export const CONFIG_FILE = `${FILENAME_PREFIX}_config.json`;
-export const SRC_CONFIG_FILENAME = `${FILENAME_PREFIX}_src_config.json`;
-export const DST_CONFIG_FILENAME = `${FILENAME_PREFIX}_dst_config.json`;
-export const SRC_CATALOG_FILENAME = `${FILENAME_PREFIX}_src_catalog.json`;
-export const DST_CATALOG_FILENAME = `${FILENAME_PREFIX}_dst_catalog.json`;
-export const DEFAULT_STATE_FILE = 'state.json';
-export const SRC_INPUT_DATA_FILE = `${FILENAME_PREFIX}_src_data`;
-export const SRC_OUTPUT_DATA_FILE = `${FILENAME_PREFIX}_src_output`;
-export const TMP_WIZARD_CONFIG_FILENAME = `tmp_wizard_config.json`;
-export const TMP_SPEC_CONFIG_FILENAME = `tmp_spec.json`;
-
-// Create a pino logger instance
-export const logger = pino(pretty({colorize: true}));
 
 export function updateLogLevel(debug: boolean | undefined): void {
   logger.level = debug ? 'debug' : 'info';
@@ -298,7 +283,7 @@ export function writeConfig(tmpDir: string, config: FarosConfig): void {
   // write config to temporary directory config files
   logger.debug(`Writing Airbyte config to files...`);
   const srcConfigFilePath = `${tmpDir}${sep}${SRC_CONFIG_FILENAME}`;
-  const dstConfigFilePath = `${tmpDir}${sep}${FILENAME_PREFIX}_dst_config.json`;
+  const dstConfigFilePath = `${tmpDir}${sep}${DST_CONFIG_FILENAME}`;
   writeFileSync(srcConfigFilePath, JSON.stringify(airbyteConfig.src.config ?? {}));
   writeFileSync(dstConfigFilePath, JSON.stringify(airbyteConfig.dst.config ?? {}));
   logger.debug(`Source config: ${JSON.stringify(airbyteConfig.src.config ?? {})}`);
@@ -311,8 +296,8 @@ export function writeConfig(tmpDir: string, config: FarosConfig): void {
  */
 export async function writeCatalog(tmpDir: string, config: FarosConfig): Promise<void> {
   logger.debug(`Writing Airbyte catalog to files...`);
-  const srcCatalogFilePath = `${tmpDir}${sep}${FILENAME_PREFIX}_src_catalog.json`;
-  const dstCatalogFilePath = `${tmpDir}${sep}${FILENAME_PREFIX}_dst_catalog.json`;
+  const srcCatalogFilePath = `${tmpDir}${sep}${SRC_CATALOG_FILENAME}`;
+  const dstCatalogFilePath = `${tmpDir}${sep}${DST_CATALOG_FILENAME}`;
   let srcCatalog: AirbyteConfiguredCatalog;
   let dstCatalog: AirbyteConfiguredCatalog;
 
@@ -387,6 +372,7 @@ export function setupStreams(): {srcOutputStream: Writable; passThrough: PassThr
  *  jq_src_msg="\"${GREEN}[SRC]: \" + ${JQ_TIMESTAMP} + \" - \" + ."
  *
  */
+
 export function processSrcDataByLine(line: string, outputStream: Writable, cfg: FarosConfig): void {
   // Reformat the JSON message
   function formatSrcMsg(json: any): string {
@@ -422,6 +408,7 @@ export function processSrcDataByLine(line: string, outputStream: Writable, cfg: 
         }
       }
     }
+
     // RECORD and STATE type messages: write to output file
     else {
       if (data?.record?.stream && cfg.dstStreamPrefix) {
@@ -497,71 +484,6 @@ export function generateDstStreamPrefix(cfg: FarosConfig): void {
       logger.debug(`Using destination stream prefix: ${cfg.dstStreamPrefix}`);
     }
   }
-}
-
-export function processDstDataByLine(line: string, cfg: FarosConfig): string {
-  // reformat the JSON message
-  function formatDstMsg(json: any): string {
-    return `[DST] - ${JSON.stringify(json)}`;
-  }
-
-  let state = '';
-
-  // skip empty lines
-  if (line.trim() === '') {
-    return state;
-  }
-
-  try {
-    const data = JSON.parse(line);
-
-    if (data?.type === AirbyteMessageType.STATE && data?.state?.data) {
-      state = JSON.stringify(data.state.data);
-      logger.debug(formatDstMsg(data));
-    }
-    if (cfg.rawMessages) {
-      process.stdout.write(`${line}\n`);
-    } else {
-      if (data?.type === AirbyteMessageType.LOG && data?.log?.level !== 'INFO') {
-        if (data?.log?.level === 'ERROR') {
-          logger.error(formatDstMsg(data));
-        } else if (data?.log?.level === 'WARN') {
-          logger.warn(formatDstMsg(data));
-        } else if (data?.log?.level === 'DEBUG') {
-          logger.debug(formatDstMsg(data));
-        }
-      } else {
-        logger.info(formatDstMsg(data));
-      }
-    }
-  } catch (error: any) {
-    // log as errors but not throw it
-    logger.error(`Line of data: '${line}'; Error: ${error.message}`);
-  }
-  return state;
-}
-
-/**
- * Filter out spec output
- */
-export function processSpecByLine(line: string): AirbyteSpec | undefined {
-  let spec;
-
-  // skip empty lines
-  if (line.trim() === '') {
-    return spec;
-  }
-
-  try {
-    const data = JSON.parse(line);
-    if (data?.type === AirbyteMessageType.SPEC && data?.spec) {
-      spec = data as AirbyteSpec;
-      logger.debug(line);
-    }
-  } catch (error: any) {
-    throw new Error(`Spec data: '${line}'; Error: ${error.message}`);
-  }
-  return spec;
 }
 
 /**
@@ -655,80 +577,97 @@ function schemaToTable(spec: Spec, srcType?: string, dstType?: string): void {
  * Run the spec and wizard to get the configuration spec and autofill the wizard.
  */
 export async function generateConfig(tmpDir: string, cfg: FarosConfig): Promise<void> {
-  // should be an array of two strings: source and destination type
-  const srcInput: string = (cfg.generateConfig?.src ?? '').toLowerCase();
-  const dstInput: string = (cfg.generateConfig?.dst ?? 'faros').toLowerCase();
-  logger.debug(`Generated config input source: ${srcInput}; Generated config input destination: ${dstInput}`);
+  // for images
+  let srcImage;
+  let dstImage;
 
-  // map to corresponding source/destination types
-  const sources = Object.keys(staticAirbyteConfig.sources).concat(Object.keys(airbyteTypes.sources));
-  const destinations = Object.keys(staticAirbyteConfig.destinations).concat(Object.keys(airbyteTypes.destinations));
+  // for non image inputs
+  let srcType;
+  let dstType;
 
-  const srcType = didYouMean(srcInput, sources);
-  const dstType = didYouMean(dstInput, destinations);
+  // for result config
+  let srcConfig;
+  let dstConfig;
 
-  if (!srcType) {
-    throw new Error(`Source type '${srcInput}' not found. Please provide a valid source type.`);
-  } else if (srcType?.toLowerCase() !== srcInput) {
-    logger.warn(
-      `Source type '${cfg.generateConfig?.src}' not found. Assume and proceed with source type '${srcType}'.`,
-    );
+  // if the user inputs are custom images
+  if (cfg.image) {
+    srcImage = cfg.generateConfig?.src;
+    dstImage = cfg.generateConfig?.dst ?? 'farosai/airbyte-faros-destination';
+  }
+  // if the user inputs are recognized types
+  else {
+    // should be an array of two strings: source and destination type
+    const srcInput: string = (cfg.generateConfig?.src ?? '').toLowerCase();
+    const dstInput: string = (cfg.generateConfig?.dst ?? 'faros').toLowerCase();
+    logger.debug(`Generated config input source: ${srcInput}; Generated config input destination: ${dstInput}`);
+
+    // map to corresponding source/destination types
+    const sources = Object.keys(staticAirbyteConfig.sources).concat(Object.keys(airbyteTypes.sources));
+    const destinations = Object.keys(staticAirbyteConfig.destinations).concat(Object.keys(airbyteTypes.destinations));
+
+    srcType = didYouMean(srcInput, sources);
+    dstType = didYouMean(dstInput, destinations);
+
+    if (!srcType) {
+      throw new Error(`Source type '${srcInput}' not found. Please provide a valid source type.`);
+    } else if (srcType?.toLowerCase() !== srcInput) {
+      logger.warn(
+        `Source type '${cfg.generateConfig?.src}' not found. Assume and proceed with source type '${srcType}'.`,
+      );
+    }
+
+    if (!dstType) {
+      throw new Error(`Destination type '${dstInput}' not found. Please provide a valid destination type.`);
+    } else if (dstType?.toLowerCase() !== dstInput) {
+      logger.warn(
+        `Destination type '${cfg.generateConfig?.dst}' not found.` +
+          `Assume and proceed with destination type '${dstType}'.`,
+      );
+    }
+    logger.debug(`Generated config source: ${srcType}; Generated config destination: ${dstType}`);
+
+    // check if source and destination are static (pre-defined)
+    if (srcType in staticAirbyteConfig.sources) {
+      logger.debug(`Source type '${srcType}' is static.`);
+      srcImage = staticAirbyteConfig.sources[srcType]?.image;
+      srcConfig = staticAirbyteConfig.sources[srcType]?.config;
+    } else {
+      srcImage = airbyteTypes.sources[srcType]!.dockerRepo;
+    }
+    if (dstType in staticAirbyteConfig.destinations) {
+      logger.debug(`Destination type '${dstType}' is static.`);
+      dstImage = staticAirbyteConfig.destinations[dstType]?.image;
+      dstConfig = staticAirbyteConfig.destinations[dstType]?.config;
+    } else {
+      dstImage = airbyteTypes.destinations[dstType]!.dockerRepo;
+    }
   }
 
-  if (!dstType) {
-    throw new Error(`Destination type '${dstInput}' not found. Please provide a valid destination type.`);
-  } else if (dstType?.toLowerCase() !== dstInput) {
-    logger.warn(
-      `Destination type '${cfg.generateConfig?.dst}' not found. Assume and proceed with destination type '${dstType}'.`,
-    );
-  }
-  logger.debug(`Generated config source: ${srcType}; Generated config destination: ${dstType}`);
-
-  // check if source and destination are static
-  let staticSrcConfig: any;
-  let staticDstConfig: any;
-  if (srcType in staticAirbyteConfig.sources) {
-    logger.debug(`Source type '${srcType}' is static.`);
-    staticSrcConfig = staticAirbyteConfig.sources[srcType];
-  }
-  if (dstType in staticAirbyteConfig.destinations) {
-    logger.debug(`Destination type '${dstType}' is static.`);
-    staticDstConfig = staticAirbyteConfig.destinations[dstType];
-  }
-
-  // map keys to docker images
-  const srcImage = staticSrcConfig?.image ?? airbyteTypes.sources[srcType]!.dockerRepo;
-  const dstImage = staticDstConfig?.image ?? airbyteTypes.destinations[dstType]!.dockerRepo;
   logger.info(`Using source image: ${srcImage}`);
   logger.info(`Using destination image: ${dstImage}`);
 
   // docker pull images
-  if (cfg.srcPull && srcImage) {
+  if (cfg.srcPull) {
     await pullDockerImage(srcImage);
   }
-  if (cfg.dstPull && dstImage) {
+  if (cfg.dstPull) {
     await pullDockerImage(dstImage);
   }
 
-  // run spec and wizard if not static
-  let srcWizardConfig;
-  let dstWizardConfig;
-  const srcSpec = await runSpec(tmpDir, srcImage);
-  if (!staticSrcConfig) {
-    await runWizard(tmpDir, srcImage);
-    srcWizardConfig = JSON.parse(readFileSync(`${tmpDir}/${TMP_WIZARD_CONFIG_FILENAME}`, 'utf-8'));
+  // run wizard if the config is not generated
+  const srcSpec = await runSpec(srcImage);
+  if (!srcConfig) {
+    srcConfig = await runWizard(tmpDir, srcImage, srcSpec);
   }
-
-  const dstSpec = await runSpec(tmpDir, dstImage);
-  if (!staticDstConfig) {
-    await runWizard(tmpDir, dstImage);
-    dstWizardConfig = JSON.parse(readFileSync(`${tmpDir}/${TMP_WIZARD_CONFIG_FILENAME}`, 'utf-8'));
+  const dstSpec = await runSpec(dstImage);
+  if (!dstConfig) {
+    dstConfig = await runWizard(tmpDir, dstImage, dstSpec);
   }
 
   // write config to temporary directory config files
   const genCfg = {
-    src: staticSrcConfig ?? {image: srcImage, config: srcWizardConfig},
-    dst: staticDstConfig ?? {image: dstImage, config: dstWizardConfig},
+    src: {image: srcImage, config: srcConfig},
+    dst: {image: dstImage, config: dstConfig},
   };
   writeFileSync(CONFIG_FILE, JSON.stringify(genCfg, null, 2) + '\n');
 

@@ -10,6 +10,12 @@ import {
 import {PassThrough, Writable} from 'node:stream';
 
 import {
+  DST_CONFIG_FILENAME,
+  SRC_OUTPUT_DATA_FILE,
+  TMP_SPEC_CONFIG_FILENAME,
+  TMP_WIZARD_CONFIG_FILENAME,
+} from '../src/constants/constants';
+import {
   checkSrcConnection,
   pullDockerImage,
   runDiscoverCatalog,
@@ -18,15 +24,8 @@ import {
   runSrcSync,
   runWizard,
 } from '../src/docker';
-import {FarosConfig} from '../src/types';
-import {
-  DST_CONFIG_FILENAME,
-  OutputStream,
-  setupStreams,
-  SRC_OUTPUT_DATA_FILE,
-  TMP_SPEC_CONFIG_FILENAME,
-  TMP_WIZARD_CONFIG_FILENAME,
-} from '../src/utils';
+import {AirbyteSpec, FarosConfig, OutputStream} from '../src/types';
+import {setupStreams} from '../src/utils';
 
 const defaultConfig: FarosConfig = {
   srcCheckConnection: false,
@@ -43,6 +42,7 @@ const defaultConfig: FarosConfig = {
   srcOutputFile: undefined,
   srcInputFile: undefined,
   silent: false,
+  image: false,
 };
 
 beforeAll(async () => {
@@ -105,6 +105,40 @@ describe('runSrcSync', () => {
 
   it('should success', async () => {
     const {passThrough, srcOutputStream} = setupStreams();
+    const writeStream = createWriteStream(`${testTmpDir}/${SRC_OUTPUT_DATA_FILE}`);
+    passThrough.pipe(writeStream);
+
+    await expect(runSrcSync(testTmpDir, testCfg, srcOutputStream)).resolves.not.toThrow();
+
+    // Replace timestamp and version for snapshot comparison
+    const output = readFileSync(`${testTmpDir}/${SRC_OUTPUT_DATA_FILE}`, 'utf8');
+    const outputWithoutTS = output.split('\n').map((line) => {
+      return line
+        .replace(/"timestamp":\d+/g, '"timestamp":***')
+        .replace(/"sourceVersion":"[\w.-]+"/g, '"sourceVersion":***')
+        .replace(/Source version: [\w.-]+/g, 'Source version: ***');
+    });
+    expect(outputWithoutTS.join('\n')).toMatchSnapshot();
+  });
+
+  it('should wait for write to complete', async () => {
+    const passThrough = new PassThrough();
+    const srcOutputStream = new Writable({
+      async write(chunk, _encoding, callback) {
+        // Sleep for 2 second to simulate a slow stream
+        await new Promise<void>((resolve) => {
+          setTimeout(resolve, 2000);
+        });
+
+        passThrough.write(chunk.toString());
+        callback();
+      },
+    });
+    srcOutputStream.on('finish', () => {
+      passThrough.end();
+    });
+
+    // Write the output to a file
     const writeStream = createWriteStream(`${testTmpDir}/${SRC_OUTPUT_DATA_FILE}`);
     passThrough.pipe(writeStream);
 
@@ -253,58 +287,44 @@ describe('runDstSync', () => {
 });
 
 describe('runSpec', () => {
-  const testTmpDir = `${process.cwd()}`;
-  const testSpecfile = `${testTmpDir}/${TMP_SPEC_CONFIG_FILENAME}`;
-
-  afterAll(() => {
-    try {
-      unlinkSync(testSpecfile);
-    } catch (_error) {
-      // ignore
-    }
-  });
-
   it('should success with faros image', async () => {
-    await expect(runSpec(testTmpDir, 'farosai/airbyte-faros-graphql-source')).resolves.not.toThrow();
-
-    const specData = readFileSync(testSpecfile, 'utf8');
-    expect(JSON.parse(specData).spec).toBeTruthy();
-    expect(specData).toMatchSnapshot();
+    const result = await runSpec('farosai/airbyte-faros-graphql-source');
+    expect(result.spec).toBeTruthy();
+    expect(result).toMatchSnapshot();
   });
 
   it('should success with airbyte image', async () => {
-    await expect(runSpec(testTmpDir, 'airbyte/destination-databricks')).resolves.not.toThrow();
-
-    const specData = readFileSync(testSpecfile, 'utf8');
-    expect(JSON.parse(specData).spec).toBeTruthy();
-    expect(specData).toMatchSnapshot();
+    const result = await runSpec('airbyte/destination-databricks');
+    expect(result.spec).toBeTruthy();
+    expect(result).toMatchSnapshot();
   });
 });
 
 describe('runWizard', () => {
-  const testTmpDirGraphql = `${process.cwd()}/test/resources/dockerIt_runWizard_graphql`;
-  const testTmpDirDatabricks = `${process.cwd()}/test/resources/dockerIt_runWizard_databricks`;
+  const testTmpDir = `${process.cwd()}/test/resources`;
 
   afterAll(() => {
     try {
-      unlinkSync(`${testTmpDirGraphql}/${TMP_WIZARD_CONFIG_FILENAME}`);
-      unlinkSync(`${testTmpDirDatabricks}/${TMP_WIZARD_CONFIG_FILENAME}`);
+      unlinkSync(`${testTmpDir}/${TMP_WIZARD_CONFIG_FILENAME}`);
+      unlinkSync(`${testTmpDir}/${TMP_SPEC_CONFIG_FILENAME}`);
     } catch (_error) {
       // ignore
     }
   });
 
   it('should success with faros image', async () => {
-    await expect(runWizard(testTmpDirGraphql, 'farosai/airbyte-faros-graphql-source')).resolves.not.toThrow();
-
-    const cfgData = readFileSync(`${testTmpDirGraphql}/${TMP_WIZARD_CONFIG_FILENAME}`, 'utf8');
+    const spec = readFileSync(`${process.cwd()}/test/resources/graphql_spec.json`, 'utf8');
+    const cfgData = await runWizard(
+      testTmpDir,
+      'farosai/airbyte-faros-graphql-source',
+      JSON.parse(spec) as AirbyteSpec,
+    );
     expect(cfgData).toMatchSnapshot();
   });
 
   it('should success with airbyte image', async () => {
-    await expect(runWizard(testTmpDirDatabricks, 'airbyte/destination-databricks')).resolves.not.toThrow();
-
-    const cfgData = readFileSync(`${testTmpDirDatabricks}/${TMP_WIZARD_CONFIG_FILENAME}`, 'utf8');
+    const spec = readFileSync(`${process.cwd()}/test/resources/databricks_spec.json`, 'utf8');
+    const cfgData = await runWizard(testTmpDir, 'airbyte/destination-databricks', JSON.parse(spec) as AirbyteSpec);
     expect(cfgData).toMatchSnapshot();
   });
 });

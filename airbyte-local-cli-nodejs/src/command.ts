@@ -1,7 +1,9 @@
 import {Command, Option} from 'commander';
 
-import {AirbyteConfig, AirbyteConfigInputType, CliOptions, FarosConfig} from './types';
-import {CONFIG_FILE, logger, OutputStream, parseConfigFile, updateLogLevel} from './utils';
+import {CONFIG_FILE} from './constants/constants';
+import {logger} from './logger';
+import {AirbyteConfig, AirbyteConfigInputType, CliOptions, FarosConfig, OutputStream} from './types';
+import {parseConfigFile, updateLogLevel} from './utils';
 import {CLI_VERSION} from './version';
 
 // Command line program
@@ -95,14 +97,22 @@ function command() {
         'It is required to provide source, which means you will have to know ' +
         'which source data you are pulling from, e.g. Github, Jira, etc. ' +
         'and the default destination is Faros. ' +
-        'For example, "--generate-config github" will pull data from Github and push it to Faros.',
+        'For example, "./airbyte-local generate-config github" will pull data from Github and push it to Faros. ' +
+        'If you want to use custom images, please use option "--image" and provide the images ' +
+        '(source is required and destination is optional).',
     )
     .allowUnknownOption(false)
     .allowExcessArguments(false)
     .option('-s, --silent', 'Do not print out the configuration tables')
+    .option(
+      '--image',
+      'Indicate that the provided source and destination are custom image(s), ' +
+        'ex: "./airbyte-local generate-config --image farosai/airbyte-github-custom-source "',
+    )
     .action((source, destination, opts: any) => {
-      cmd.setOptionValue('generateConfig', {src: source, dst: destination || 'faros'});
+      cmd.setOptionValue('generateConfig', {src: source, dst: destination});
       cmd.setOptionValue('silent', opts.silent);
+      cmd.setOptionValue('image', opts.image);
     });
 
   return cmd;
@@ -218,14 +228,16 @@ export function parseAndValidateInputs(argv: string[]): FarosConfig {
   const options = structuredClone(program.opts());
   logger.debug(`Options: ${JSON.stringify(options)}`);
 
-  // Check for unknown options
+  // Check for unknown options only if it's not `generateConfig`
   // Note: calling `parseOptions` parsing again will have side effects and update the options object
-  const unknown = program.parseOptions(argv).unknown;
-  unknown.forEach((u) => {
-    if (u.startsWith('--') && !u.startsWith('--src.') && !u.startsWith('--dst.')) {
-      throw new Error(`Unknown option: ${u}`);
-    }
-  });
+  if (!options['generateConfig']) {
+    const unknown = program.parseOptions(argv).unknown;
+    unknown.forEach((u) => {
+      if (u.startsWith('--') && !u.startsWith('--src.') && !u.startsWith('--dst.')) {
+        throw new Error(`Unknown option: ${u}`);
+      }
+    });
+  }
 
   // convert the options to CliOptions
   const cliOptions = convertToCliOptions(options);
@@ -240,6 +252,7 @@ export function parseAndValidateInputs(argv: string[]): FarosConfig {
   const farosConfig: FarosConfig = {
     generateConfig: cliOptions.generateConfig,
     silent: cliOptions.silent ?? false,
+    image: cliOptions.image ?? false,
     // The default source output file is stdout(`-`) if `srcOnly` is true
     // Take the non-default value if provided with `srcOutputFile` option
     srcOutputFile: cliOptions.srcOnly ? OutputStream.STDOUT : cliOptions.srcOutputFile,

@@ -1,8 +1,19 @@
-import {createReadStream, createWriteStream, writeFileSync} from 'node:fs';
+import {createReadStream, createWriteStream, readFileSync, writeFileSync} from 'node:fs';
 import {PassThrough, Writable} from 'node:stream';
 
 import Docker from 'dockerode';
 
+import {
+  DEFAULT_STATE_FILE,
+  DST_CATALOG_FILENAME,
+  DST_CONFIG_FILENAME,
+  SRC_CATALOG_FILENAME,
+  SRC_CONFIG_FILENAME,
+  SRC_OUTPUT_DATA_FILE,
+  TMP_SPEC_CONFIG_FILENAME,
+  TMP_WIZARD_CONFIG_FILENAME,
+} from './constants/constants';
+import {logger} from './logger';
 import {
   AirbyteCatalog,
   AirbyteCatalogMessage,
@@ -11,22 +22,9 @@ import {
   AirbyteMessageType,
   AirbyteSpec,
   FarosConfig,
-} from './types';
-import {
-  DEFAULT_STATE_FILE,
-  DST_CATALOG_FILENAME,
-  DST_CONFIG_FILENAME,
-  logger,
   OutputStream,
-  processDstDataByLine,
-  processSpecByLine,
-  processSrcDataByLine,
-  SRC_CATALOG_FILENAME,
-  SRC_CONFIG_FILENAME,
-  SRC_OUTPUT_DATA_FILE,
-  TMP_SPEC_CONFIG_FILENAME,
-  TMP_WIZARD_CONFIG_FILENAME,
-} from './utils';
+} from './types';
+import {processSrcDataByLine} from './utils';
 
 // Constants
 const DEFAULT_MAX_LOG_SIZE = '10m';
@@ -213,6 +211,74 @@ export async function runDiscoverCatalog(tmpDir: string, image: string | undefin
 }
 
 /**
+ * Process the destination output.
+ */
+export function processDstDataByLine(line: string, cfg: FarosConfig): string {
+  // reformat the JSON message
+  function formatDstMsg(json: any): string {
+    return `[DST] - ${JSON.stringify(json)}`;
+  }
+
+  let state = '';
+
+  // skip empty lines
+  if (line.trim() === '') {
+    return state;
+  }
+
+  try {
+    const data = JSON.parse(line);
+
+    if (data?.type === AirbyteMessageType.STATE && data?.state?.data) {
+      state = JSON.stringify(data.state.data);
+      logger.debug(formatDstMsg(data));
+    }
+    if (cfg.rawMessages) {
+      process.stdout.write(`${line}\n`);
+    } else {
+      if (data?.type === AirbyteMessageType.LOG && data?.log?.level !== 'INFO') {
+        if (data?.log?.level === 'ERROR') {
+          logger.error(formatDstMsg(data));
+        } else if (data?.log?.level === 'WARN') {
+          logger.warn(formatDstMsg(data));
+        } else if (data?.log?.level === 'DEBUG') {
+          logger.debug(formatDstMsg(data));
+        }
+      } else {
+        logger.info(formatDstMsg(data));
+      }
+    }
+  } catch (error: any) {
+    // log as errors but not throw it
+    logger.error(`Line of data: '${line}'; Error: ${error.message}`);
+  }
+  return state;
+}
+/**
+ * Filter out spec output
+ */
+
+export function processSpecByLine(line: string): AirbyteSpec | undefined {
+  let spec;
+
+  // skip empty lines
+  if (line.trim() === '') {
+    return spec;
+  }
+
+  try {
+    const data = JSON.parse(line);
+    if (data?.type === AirbyteMessageType.SPEC && data?.spec) {
+      spec = data as AirbyteSpec;
+      logger.debug(line);
+    }
+  } catch (error: any) {
+    throw new Error(`Spec data: '${line}'; Error: ${error.message}`);
+  }
+  return spec;
+}
+
+/**
  * Spinning up a docker container to run source airbyte connector.
  * Platform is set to 'linux/amd64' as we only publish airbyte connectors images for linux/amd64.
  *
@@ -320,9 +386,23 @@ export async function runSrcSync(tmpDir: string, config: FarosConfig, srcOutputS
     const res = await container.wait();
     logger.debug(`Source connector exit code: ${JSON.stringify(res)}`);
 
-    // Close the output stream
-    if (srcOutputStream || config?.srcOutputFile !== OutputStream.STDOUT.valueOf()) {
-      outputStream.end();
+    // close the output stream when the source connector is done
+    if (outputStream !== process.stdout) {
+      // close the container output stream
+      containerOutputStream.end();
+      logger.debug('Container output stream closed.');
+
+      // close the output stream when the container output stream finishes writing
+      containerOutputStream.on('finish', () => {
+        outputStream.end();
+        logger.debug('Wrting file output stream closed.');
+      });
+
+      // Wait for the outputStream to finish writing
+      await new Promise<void>((resolve, reject) => {
+        (outputStream as Writable).on('finish', resolve);
+        (outputStream as Writable).on('error', reject);
+      });
     }
 
     if (res.StatusCode === 0) {
@@ -494,7 +574,7 @@ export async function runDstSync(tmpDir: string, config: FarosConfig, srcPassThr
  * Raw docker command:
  * docker run -it --rm "$docker_image" spec
  */
-export async function runSpec(tmpDir: string, image: string): Promise<AirbyteSpec> {
+export async function runSpec(image: string): Promise<AirbyteSpec> {
   logger.info('Retrieving Airbyte configuration spec...');
 
   try {
@@ -504,7 +584,6 @@ export async function runSpec(tmpDir: string, image: string): Promise<AirbyteSpe
       AttachStderr: true,
       AttachStdout: true,
       HostConfig: {
-        Binds: [`${tmpDir}:/configs`],
         AutoRemove: true,
       },
       platform: getImagePlatform(image),
@@ -543,7 +622,6 @@ export async function runSpec(tmpDir: string, image: string): Promise<AirbyteSpe
     // write spec to the file
     if (res.StatusCode === 0 && specs.length > 0) {
       const spec = specs.pop();
-      writeFileSync(`${tmpDir}/${TMP_SPEC_CONFIG_FILENAME}`, JSON.stringify(spec));
       if (spec?.type === AirbyteMessageType.SPEC) {
         return spec;
       }
@@ -570,10 +648,14 @@ export async function runSpec(tmpDir: string, image: string): Promise<AirbyteSpe
  *  --spec-file "/configs/$spec_filename"
  */
 const DEFAULT_PLACEHOLDER_WIZARD_IMAGE = 'farosai/airbyte-faros-graphql-source';
-export async function runWizard(tmpDir: string, image: string): Promise<void> {
+export async function runWizard(tmpDir: string, image: string, spec: AirbyteSpec): Promise<any> {
   logger.info('Retrieving Airbyte auto generated configuration...');
 
+  logger.info(`Pulling placeholder image to generate configuration...`);
   await pullDockerImage(DEFAULT_PLACEHOLDER_WIZARD_IMAGE);
+
+  // Write the spec to a file
+  writeFileSync(`${tmpDir}/${TMP_SPEC_CONFIG_FILENAME}`, JSON.stringify(spec));
 
   try {
     const cmd = [
@@ -611,6 +693,8 @@ export async function runWizard(tmpDir: string, image: string): Promise<void> {
     if (res.StatusCode !== 0) {
       throw new Error(`Exit with ${JSON.stringify(res)}`);
     }
+    const resultConfig = JSON.parse(readFileSync(`${tmpDir}/${TMP_WIZARD_CONFIG_FILENAME}`, 'utf-8'));
+    return resultConfig;
   } catch (error: any) {
     throw new Error(`Failed to generate config: ${error.message ?? JSON.stringify(error)}.`);
   }

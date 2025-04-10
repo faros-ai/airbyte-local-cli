@@ -21,6 +21,24 @@ exports[`generateConfig should succeed 1`] = `
 "
 `;
 
+exports[`generateConfig should succeed with image inputs 1`] = `
+"{
+  "src": {
+    "image": "farosai/airbyte-faros-graphql-source",
+    "config": {
+      "foo": "bar"
+    }
+  },
+  "dst": {
+    "image": "farosai/airbyte-faros-destination",
+    "config": {
+      "foo": "bar"
+    }
+  }
+}
+"
+`;
+
 exports[`generateConfig should succeed with static configs 1`] = `
 "{
   "src": {

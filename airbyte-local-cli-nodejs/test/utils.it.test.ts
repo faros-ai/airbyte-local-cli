@@ -1,22 +1,24 @@
 import {chmodSync, existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 
+import {
+  CONFIG_FILE,
+  DST_CATALOG_FILENAME,
+  DST_CONFIG_FILENAME,
+  SRC_CATALOG_FILENAME,
+  SRC_CONFIG_FILENAME,
+  SRC_OUTPUT_DATA_FILE,
+} from '../src/constants/constants';
 import {runDiscoverCatalog, runSpec, runWizard} from '../src/docker';
 import {FarosConfig, SyncMode} from '../src/types';
 import {
   checkDockerInstalled,
   cleanUp,
-  CONFIG_FILE,
   createTmpDir,
-  DST_CATALOG_FILENAME,
-  DST_CONFIG_FILENAME,
   generateConfig,
   loadStateFile,
   parseConfigFile,
   processSrcInputFile,
-  SRC_CATALOG_FILENAME,
-  SRC_CONFIG_FILENAME,
-  SRC_OUTPUT_DATA_FILE,
   writeCatalog,
   writeConfig,
 } from '../src/utils';
@@ -64,6 +66,7 @@ const testConfig: FarosConfig = {
   srcOutputFile: undefined,
   srcInputFile: undefined,
   silent: false,
+  image: false,
 };
 
 describe('parseConfigFile', () => {
@@ -409,8 +412,7 @@ describe('generateConfig', () => {
 
   it('should succeed', async () => {
     (runSpec as jest.Mock).mockResolvedValue({});
-    (runWizard as jest.Mock).mockResolvedValue({});
-    writeFileSync(testWizardFile, JSON.stringify({foo: 'bar'}));
+    (runWizard as jest.Mock).mockResolvedValue({foo: 'bar'});
 
     const testGenCfg = {
       ...testConfig,
@@ -436,6 +438,24 @@ describe('generateConfig', () => {
       },
     };
     await expect(generateConfig('tmp-dummpy', testGenCfg)).resolves.not.toThrow();
+
+    const resultCfg = readFileSync(CONFIG_FILE, 'utf8');
+    expect(resultCfg).toMatchSnapshot();
+  });
+
+  it('should succeed with image inputs', async () => {
+    (runSpec as jest.Mock).mockResolvedValue({});
+    (runWizard as jest.Mock).mockResolvedValue({foo: 'bar'});
+
+    const testGenCfg = {
+      ...testConfig,
+      silent: true,
+      image: true,
+      generateConfig: {
+        src: 'farosai/airbyte-faros-graphql-source',
+      },
+    };
+    await expect(generateConfig(tmpDir, testGenCfg)).resolves.not.toThrow();
 
     const resultCfg = readFileSync(CONFIG_FILE, 'utf8');
     expect(resultCfg).toMatchSnapshot();

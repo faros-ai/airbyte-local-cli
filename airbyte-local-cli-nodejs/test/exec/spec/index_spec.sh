@@ -72,7 +72,7 @@ Describe 'Cli argv validation'
     The status should equal 1
   End
 
-  # Check for unknown options
+  # Check for generate-config arguments
   It 'fails if generate-config has not source input'
     airbyte_local_test() {
       ./airbyte-local generate-config
@@ -100,6 +100,14 @@ Describe 'Cli argv validation'
     }
     When call airbyte_local_test
     The output should include "Unknown option: --unknown-option"
+    The status should equal 1
+  End
+  It 'fails if using unknown options for generate-config'
+    airbyte_local_test() {
+      ./airbyte-local generate-config --unknown-option foo
+    }
+    When call airbyte_local_test
+    The output should include "unknown option '--unknown-option'"
     The status should equal 1
   End
 
@@ -147,6 +155,23 @@ Describe 'Generate config'
   It 'should succeed with static config'
     airbyte_local_test() {
       ./airbyte-local generate-config github
+    }
+    When call airbyte_local_test
+    The output should include "Configuration file generated successfully"
+    The status should equal 0
+  End
+  It 'should succeed with slient option'
+    airbyte_local_test() {
+      ./airbyte-local generate-config --silent github
+    }
+    When call airbyte_local_test
+    The output should not include "Source Airbyte Configuration Spec"
+    The output should include "Configuration file generated successfully"
+    The status should equal 0
+  End
+  It 'should succeed with custom image'
+    airbyte_local_test() {
+      ./airbyte-local generate-config --image farosai/airbyte-faros-graphql-source
     }
     When call airbyte_local_test
     The output should include "Configuration file generated successfully"
