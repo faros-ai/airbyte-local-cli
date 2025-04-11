@@ -123,8 +123,6 @@ jobs:
         shell: bash
         run: |
           curl -fsSL https://git.io/shellspec | sh -s 0.28.1 --yes
-          export PATH="$HOME/.local/bin:$PATH"
-          echo "$PATH"
     
       - name: Run ShellSpec tests (Linux)
         if: matrix.os == 'ubuntu-latest'
@@ -141,7 +139,7 @@ jobs:
         shell: bash
         run: |
           curl -fsSL https://git.io/shellspec | sh -s 0.28.1 --yes
-          export PATH="$HOME/.local/bin:$PATH"
+          export PATH="$HOME/.local/bin:$HOME/.local/lib:$PATH"
           echo "$PATH"
     
       - name: Run ShellSpec tests (Windows)
