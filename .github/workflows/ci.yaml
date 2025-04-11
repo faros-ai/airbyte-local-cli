@@ -91,7 +91,7 @@ jobs:
         run: |
           cp ./out/pkg/airbyte-local ./airbyte-local
           ./airbyte-local --help
-          ./airbyte-local --config-file ./test/resources/test_config_file_src_only_win.json
+          ./airbyte-local --config-file ./test/resources/test_config_file_src_only_win.json --src-only
     
   # test:
   #   name: Test NodeJS Cli
