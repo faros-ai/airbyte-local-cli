@@ -114,7 +114,7 @@ jobs:
           ./airbyte-local --help
 
       - name: Install ShellSpec
-        if: matrix.os == 'ubuntu-latest'
+        if: matrix.os == 'ubuntu-latest' || matrix.os == 'windows-latest'
         shell: bash
         run: |
           curl -fsSL https://git.io/shellspec | sh -s 0.28.1 --yes
@@ -125,7 +125,7 @@ jobs:
       #  - macos: doesn't have docker by default in the github runner. Too much work to configure and Macos syntax should be relatively the same as linux
       #  - windows: TODO
       ##
-      - name: Run ShellSpec tests
+      - name: Run ShellSpec tests (Linux)
         if: matrix.os == 'ubuntu-latest'
         working-directory: airbyte-local-cli-nodejs
         env:
@@ -134,6 +134,15 @@ jobs:
           cp ./out/pkg/airbyte-local ./test/exec/airbyte-local
           cp -rf ./test/resources ./test/exec/
           shellspec --chdir ./test/exec
+
+      - name: Run ShellSpec tests (Windows)
+        if: matrix.os == 'windows-latest'
+        working-directory: airbyte-local-cli-nodejs
+        shell: bash
+        run: |
+          cp ./out/pkg/airbyte-local ./test/exec/airbyte-local
+          cp -rf ./test/resources ./test/exec/
+          shellspec --chdir ./test/exec --pattern "*index_spec.sh"
 
   tag:
     name: Tag
