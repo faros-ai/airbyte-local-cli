@@ -85,9 +85,10 @@ export async function inspectDockerImage(image: string): Promise<{digest: string
 /**
  * Use 'linux/amd64' plaform for farosai images.
  */
+// TODO: For testing only
 function getImagePlatform(image: string): string | undefined {
   if (image?.startsWith('farosai')) {
-    return 'linux/amd64';
+    return 'windows/amd64';
   }
   return undefined;
 }
