@@ -160,7 +160,7 @@ jobs:
         shell: pwsh
         run: |
           Get-ChildItem -Path ./out/pkg
-          Copy-Item -Path ./out/pkg/airbyte-local -Destination ./test/pester/airbyte-local
+          Copy-Item -Path ./out/pkg/airbyte-local.exe -Destination ./test/pester/airbyte-local.exe
           Invoke-Pester -Output Detailed ./test/pester/index.Tests.ps1
 
   # tag:
