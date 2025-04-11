@@ -74,34 +74,22 @@ jobs:
         with:
           node-version: 22.x
 
-      - name: Install and Build
+      - name: Install, Build and Package
         working-directory: airbyte-local-cli-nodejs
         shell: bash
         run: |
           npm ci --no-audit --no-fund
           npm run build
-
-      - name: Package
-        working-directory: airbyte-local-cli-nodejs
-        shell: bash
-        run: |
-          win-x64"
-          npm run pkg -- --target $TARGET
-      
-      # Run the binary: make sure the binary executes fine on the system/arch
-      - name: Run binary
-        working-directory: airbyte-local-cli-nodejs/out/pkg
-        run: |
-          ./airbyte-local --help
+          npm run pkg -- --target "win-x64"
     
-      # for linux and macos
-      - name: Run ShellSpec tests
+      - name: Run test
         working-directory: airbyte-local-cli-nodejs
         shell: bash
         env:
           FAROS_API_KEY: ${{ secrets.FAROS_API_KEY }}
         run: |
           cp ./out/pkg/airbyte-local ./airbyte-local
+          ./airbyte-local --help
           ./airbyte-local --config-file ./test/resources/test_config_file_src_only_win.json
     
   # test:
