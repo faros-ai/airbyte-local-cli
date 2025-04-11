@@ -139,10 +139,6 @@ jobs:
         shell: bash
         run: |
           curl -fsSL https://git.io/shellspec | sh -s 0.28.1 --yes
-          export PATH="$HOME/.local/bin:$HOME/.local/lib:$PATH"
-          echo "$PATH" >> $GITHUB_ENV
-          ls -l $HOME/.local/bin
-          which shellspec
     
       - name: Run ShellSpec tests (Windows)
         if: matrix.os == 'windows-latest'
@@ -151,6 +147,9 @@ jobs:
         run: |
           cp ./out/pkg/airbyte-local ./test/exec/airbyte-local
           cp -rf ./test/resources ./test/exec/
+
+          # shellspec is installed in $HOME/.local/bin
+          export PATH="$HOME/.local/bin:$PATH"
           which shellspec
           shellspec --chdir ./test/exec --pattern "*index_spec.sh"
 
