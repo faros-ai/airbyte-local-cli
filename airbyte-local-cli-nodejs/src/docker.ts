@@ -25,6 +25,7 @@ import {
   OutputStream,
 } from './types';
 import {processSrcDataByLine} from './utils';
+import {sep} from 'node:path';
 
 // Constants
 const DEFAULT_MAX_LOG_SIZE = '10m';
@@ -346,7 +347,7 @@ export async function runSrcSync(tmpDir: string, config: FarosConfig, srcOutputS
         },
         ...config.src?.dockerOptions?.additionalOptions?.HostConfig,
         // Default options: cannot be overridden by users
-        Binds: [`${tmpDir}:/configs`],
+        Binds: [`${tmpDir}:${sep}configs`],
         AutoRemove: !config.keepContainers,
         Init: true,
       },
