@@ -151,6 +151,13 @@ jobs:
           cp -rf ./test/resources ./test/exec/
           shellspec --chdir ./test/exec --pattern "*index_spec.sh"
 
+      # Pester is pre-installed on the Windows runner
+      - name: Run Pester tests
+        if: matrix.os == 'windows-latest'
+        shell: pwsh
+        run: |
+          Invoke-Pester -Output Detailed ./test/pester/index.Tests.ps1
+
   tag:
     name: Tag
     needs: [test]
