@@ -1,0 +1,8 @@
+{
+  "src": {
+    "image": "farosai/airbyte-example-source:windows-v0.14.11-rc0",
+    "config": {
+      "user": "chris"
+    }
+  }
+}

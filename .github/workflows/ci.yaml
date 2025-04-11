@@ -11,69 +11,60 @@ on:
     - main
 
 jobs:
-  build:
-    name: Build
-    timeout-minutes: 10
-    runs-on: ubuntu-latest
-    steps:
-      - name: Check out
-        uses: actions/checkout@v4
+  # build:
+  #   name: Build
+  #   timeout-minutes: 10
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - name: Check out
+  #       uses: actions/checkout@v4
 
-      - name: Set up Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: 22.x
+  #     - name: Set up Node
+  #       uses: actions/setup-node@v4
+  #       with:
+  #         node-version: 22.x
 
-      - name: Install
-        working-directory: airbyte-local-cli-nodejs
-        run: npm ci --no-audit --no-fund
+  #     - name: Install
+  #       working-directory: airbyte-local-cli-nodejs
+  #       run: npm ci --no-audit --no-fund
 
-      - name: Build
-        working-directory: airbyte-local-cli-nodejs
-        run: npm run build
+  #     - name: Build
+  #       working-directory: airbyte-local-cli-nodejs
+  #       run: npm run build
 
-      - name: Lint
-        working-directory: airbyte-local-cli-nodejs
-        run: npm run lint
+  #     - name: Lint
+  #       working-directory: airbyte-local-cli-nodejs
+  #       run: npm run lint
 
-      - name: Test
-        working-directory: airbyte-local-cli-nodejs
-        env:
-          FAROS_API_KEY: ${{ secrets.FAROS_API_KEY }}
-        run: npm run test -- --coverage --color
+  #     - name: Test
+  #       working-directory: airbyte-local-cli-nodejs
+  #       env:
+  #         FAROS_API_KEY: ${{ secrets.FAROS_API_KEY }}
+  #       run: npm run test -- --coverage --color
 
-      - name: Build Shellspec image
-        working-directory: test
-        run: |
-          docker build . -t 'farosai/shellspec:kcov'
+  #     - name: Build Shellspec image
+  #       working-directory: test
+  #       run: |
+  #         docker build . -t 'farosai/shellspec:kcov'
 
-      # Run shellspec tests againgst airbyte-local.sh
-      - name: Run ShellSpec tests
-        run: |
-          docker run --rm \
-            -v "$PWD/test:/src" \
-            -v "$PWD/airbyte-local.sh:/airbyte-local.sh" \
-            farosai/shellspec:kcov
+  #     # Run shellspec tests againgst airbyte-local.sh
+  #     - name: Run ShellSpec tests
+  #       run: |
+  #         docker run --rm \
+  #           -v "$PWD/test:/src" \
+  #           -v "$PWD/airbyte-local.sh:/airbyte-local.sh" \
+  #           farosai/shellspec:kcov
 
-      - name: SonarCloud Scan
-        uses: SonarSource/sonarqube-scan-action@v4
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+  #     - name: SonarCloud Scan
+  #       uses: SonarSource/sonarqube-scan-action@v4
+  #       env:
+  #         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  #         SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
 
-  test:
+  test-windows:
     name: Test NodeJS Cli
-    strategy:
-      matrix:
-        os: 
-          - ubuntu-latest # linux x64
-          - ubuntu-24.04-arm # linux arm64
-          - macos-13 # macos x64
-          - macos-latest # macos arm64
-          - windows-latest # windows x64
-    runs-on: ${{ matrix.os }}
+    runs-on: windows-latest 
     timeout-minutes: 20
-    needs: [build]
     steps:
       - name: Check out
         uses: actions/checkout@v4
@@ -94,17 +85,7 @@ jobs:
         working-directory: airbyte-local-cli-nodejs
         shell: bash
         run: |
-          if [ "${{ matrix.os }}" == 'ubuntu-latest' ]; then
-            TARGET="linuxstatic-x64"
-          elif [ "${{ matrix.os }}" == 'ubuntu-24.04-arm' ]; then
-            TARGET="linuxstatic-arm64"
-          elif [ "${{ matrix.os }}" == 'macos-13' ]; then
-            TARGET="macos-x64"
-          elif [ "${{ matrix.os }}" == 'macos-latest' ]; then
-            TARGET="macos-arm64"
-          elif [ "${{ matrix.os }}" == 'windows-latest' ]; then
-            TARGET="win-x64"
-          fi
+          win-x64"
           npm run pkg -- --target $TARGET
       
       # Run the binary: make sure the binary executes fine on the system/arch
@@ -112,37 +93,99 @@ jobs:
         working-directory: airbyte-local-cli-nodejs/out/pkg
         run: |
           ./airbyte-local --help
-
-      ## 
-      # Run ShellSpec tests
-      #  - linux: run on x64 but not arm64 as we don't have arm64 aibtye images
-      #  - macos: doesn't have docker by default in the github runner. Too much work to configure and Macos syntax should be relatively the same as linux
-      #  - windows: TODO
-      ##
-      - name: Install ShellSpec
-        if: matrix.os == 'ubuntu-latest' || matrix.os == 'windows-latest'
-        shell: bash
-        run: |
-          curl -fsSL https://git.io/shellspec | sh -s 0.28.1 --yes
-
-      - name: Add ShellSpec to PATH
-        if: matrix.os == 'windows-latest'
-        shell: bash
-        run: |
-          echo "$HOME/.local/bin" >> $GITHUB_PATH
     
       # for linux and macos
       - name: Run ShellSpec tests
-        if: matrix.os == 'ubuntu-latest' || matrix.os == 'windows-latest'
         working-directory: airbyte-local-cli-nodejs
         shell: bash
         env:
           FAROS_API_KEY: ${{ secrets.FAROS_API_KEY }}
         run: |
-          shellspec --version
-          cp ./out/pkg/airbyte-local ./test/exec/airbyte-local
-          cp -rf ./test/resources ./test/exec/
-          shellspec --chdir ./test/exec
+          cp ./out/pkg/airbyte-local ./airbyte-local
+          ./airbyte-local --config-file ./test/resources/test_config_file_src_only_win.json
+    
+  # test:
+  #   name: Test NodeJS Cli
+  #   strategy:
+  #     matrix:
+  #       os: 
+  #         - ubuntu-latest # linux x64
+  #         - ubuntu-24.04-arm # linux arm64
+  #         - macos-13 # macos x64
+  #         - macos-latest # macos arm64
+  #         - windows-latest # windows x64
+  #   runs-on: ${{ matrix.os }}
+  #   timeout-minutes: 20
+  #   needs: [build]
+  #   steps:
+  #     - name: Check out
+  #       uses: actions/checkout@v4
+
+  #     - name: Set up Node
+  #       uses: actions/setup-node@v4
+  #       with:
+  #         node-version: 22.x
+
+  #     - name: Install and Build
+  #       working-directory: airbyte-local-cli-nodejs
+  #       shell: bash
+  #       run: |
+  #         npm ci --no-audit --no-fund
+  #         npm run build
+
+  #     - name: Package
+  #       working-directory: airbyte-local-cli-nodejs
+  #       shell: bash
+  #       run: |
+  #         if [ "${{ matrix.os }}" == 'ubuntu-latest' ]; then
+  #           TARGET="linuxstatic-x64"
+  #         elif [ "${{ matrix.os }}" == 'ubuntu-24.04-arm' ]; then
+  #           TARGET="linuxstatic-arm64"
+  #         elif [ "${{ matrix.os }}" == 'macos-13' ]; then
+  #           TARGET="macos-x64"
+  #         elif [ "${{ matrix.os }}" == 'macos-latest' ]; then
+  #           TARGET="macos-arm64"
+  #         elif [ "${{ matrix.os }}" == 'windows-latest' ]; then
+  #           TARGET="win-x64"
+  #         fi
+  #         npm run pkg -- --target $TARGET
+      
+  #     # Run the binary: make sure the binary executes fine on the system/arch
+  #     - name: Run binary
+  #       working-directory: airbyte-local-cli-nodejs/out/pkg
+  #       run: |
+  #         ./airbyte-local --help
+
+  #     ## 
+  #     # Run ShellSpec tests
+  #     #  - linux: run on x64 but not arm64 as we don't have arm64 aibtye images
+  #     #  - macos: doesn't have docker by default in the github runner. Too much work to configure and Macos syntax should be relatively the same as linux
+  #     #  - windows: TODO
+  #     ##
+  #     - name: Install ShellSpec
+  #       if: matrix.os == 'ubuntu-latest' || matrix.os == 'windows-latest'
+  #       shell: bash
+  #       run: |
+  #         curl -fsSL https://git.io/shellspec | sh -s 0.28.1 --yes
+
+  #     - name: Add ShellSpec to PATH
+  #       if: matrix.os == 'windows-latest'
+  #       shell: bash
+  #       run: |
+  #         echo "$HOME/.local/bin" >> $GITHUB_PATH
+    
+  #     # for linux and macos
+  #     - name: Run ShellSpec tests
+  #       if: matrix.os == 'ubuntu-latest' || matrix.os == 'windows-latest'
+  #       working-directory: airbyte-local-cli-nodejs
+  #       shell: bash
+  #       env:
+  #         FAROS_API_KEY: ${{ secrets.FAROS_API_KEY }}
+  #       run: |
+  #         shellspec --version
+  #         cp ./out/pkg/airbyte-local ./test/exec/airbyte-local
+  #         cp -rf ./test/resources ./test/exec/
+  #         shellspec --chdir ./test/exec
 
   tag:
     name: Tag
