@@ -170,6 +170,8 @@ jobs:
         if: matrix.os == 'windows-latest'
         working-directory: airbyte-local-cli-nodejs
         shell: pwsh
+        env:
+          FAROS_API_KEY: ${{ secrets.FAROS_API_KEY }}
         run: |
           # cp ./out/pkg/airbyte-local ./test/airbyte-local
           Copy-Item -Path ./out/pkg/airbyte-local.exe -Destination ./test/airbyte-local.exe
