@@ -158,7 +158,6 @@ jobs:
         working-directory: airbyte-local-cli-nodejs
         shell: pwsh
         run: |
-          Get-ChildItem -Path ./out/pkg
           Copy-Item -Path ./out/pkg/airbyte-local.exe -Destination ./test/airbyte-local.exe
           Set-Location -Path ./test
           Invoke-Pester -Output Detailed ./pester/index.Tests.ps1
