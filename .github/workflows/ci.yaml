@@ -135,7 +135,6 @@ jobs:
         run: |
           cp ./out/pkg/airbyte-local ./test/exec/airbyte-local
           cp -rf ./test/resources ./test/exec/
-          # exclude docker_spec.sh
           shellspec --chdir ./test/exec --tag argvParsing,main
 
       # Run partial e2e tests (excluding any tests related to docker check)
@@ -146,7 +145,8 @@ jobs:
         run: |
           cp ./out/pkg/airbyte-local ./test/exec/airbyte-local
           cp -rf ./test/resources ./test/exec/
-          # exclude docker_spec.sh
+          export PATH="$HOME/.local/bin:$PATH"
+          which shellspec
           shellspec --chdir ./test/exec --tag argvParsing
     
       # Run partial e2e tests on Windows bash (excluding docker tests)
