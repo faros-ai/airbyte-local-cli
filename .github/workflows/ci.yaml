@@ -109,21 +109,15 @@ jobs:
       # Run the binary: make sure the binary executes fine on the system/arch
       - name: Run binary
         working-directory: airbyte-local-cli-nodejs/out/pkg
-        run: |
-          ./airbyte-local --help
+        run: ./airbyte-local --help
 
-       ## 
-      # Run ShellSpec tests
-      #  - linux: run on x64 but not arm64 as we don't have arm64 aibtye images
-      #  - macos: doesn't have docker by default in the github runner. Too much work to configure and Macos syntax should be relatively the same as linux
-      ##
-      - name: Install ShellSpec (Linux)
-        if: matrix.os == 'ubuntu-latest'
+      # We use Shellspec to run the tests in Bash
+      - name: Install ShellSpec
         shell: bash
-        run: |
-          curl -fsSL https://git.io/shellspec | sh -s 0.28.1 --yes
+        run: curl -fsSL https://git.io/shellspec | sh -s 0.28.1 --yes
     
-      - name: Run ShellSpec tests (Linux)
+      # Run ALL e2e tests on Linux x64
+      - name: Run Bash tests (Linux x64)
         if: matrix.os == 'ubuntu-latest'
         working-directory: airbyte-local-cli-nodejs
         env:
@@ -133,13 +127,21 @@ jobs:
           cp -rf ./test/resources ./test/exec/
           shellspec --chdir ./test/exec
 
-      - name: Install ShellSpec (Windows)
-        if: matrix.os == 'windows-latest'
-        shell: bash
+      # Run partial e2e tests (excluding docker tests)
+      #  - linux arm64: without pushing arm64 airbye connector images, the tests will fail
+      #  - macos: doesn't have docker by default in the github runner. Too much work to configure and Macos syntax should be relatively the same as linux
+      - name: Run Bash tests (Linux arm64/MacOS)
+        if: matrix.os == 'ubuntu-arm64' || matrix.os == 'macos-13' || matrix.os == 'macos-latest'
+        working-directory: airbyte-local-cli-nodejs
         run: |
-          curl -fsSL https://git.io/shellspec | sh -s 0.28.1 --yes
+          cp ./out/pkg/airbyte-local ./test/exec/airbyte-local
+          cp -rf ./test/resources ./test/exec/
+          # exclude docker_spec.sh
+          shellspec --chdir ./test/exec --pattern "*index_spec.sh" 
     
-      - name: Run ShellSpec tests (Windows)
+      # Run partial e2e tests on Windows bash (excluding docker tests)
+      # - windows: requires to config the shellspec in PATH. Separete to its own step to run
+      - name: Run Bash tests (Windows)
         if: matrix.os == 'windows-latest'
         working-directory: airbyte-local-cli-nodejs
         shell: bash
@@ -152,14 +154,18 @@ jobs:
           which shellspec
           shellspec --chdir ./test/exec --pattern "*index_spec.sh"
 
-      # Pester is pre-installed on the Windows runner
-      - name: Run Pester tests
+      # Run all e2e tests on Windows powershell
+      # We use Pester to run e2e tests on Windows powershell. Pester is pre-installed on the Windows runner
+      - name: Run Powershell tests (Windows)
         if: matrix.os == 'windows-latest'
         working-directory: airbyte-local-cli-nodejs
         shell: pwsh
         run: |
+          # cp ./out/pkg/airbyte-local ./test/airbyte-local
           Copy-Item -Path ./out/pkg/airbyte-local.exe -Destination ./test/airbyte-local.exe
+          # cd ./test
           Set-Location -Path ./test
+          # Run Pester
           Invoke-Pester -Output Detailed ./pester/index.Tests.ps1
 
   # tag:
