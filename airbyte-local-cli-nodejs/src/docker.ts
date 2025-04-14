@@ -1,4 +1,5 @@
 import {createReadStream, createWriteStream, readFileSync, writeFileSync} from 'node:fs';
+import {sep} from 'node:path';
 import {PassThrough, Writable} from 'node:stream';
 
 import Docker from 'dockerode';
@@ -84,12 +85,28 @@ export async function inspectDockerImage(image: string): Promise<{digest: string
 
 /**
  * Use 'linux/amd64' plaform for farosai images.
+ * Use 'windows/amd64' platform if there's `windows` in the tag.
+ *
+ * TODO: @FAI-15309 This should be removed once we have a proper multi-platform image.
  */
 function getImagePlatform(image: string): string | undefined {
-  if (image?.startsWith('farosai')) {
+  if (image.includes(':windows')) {
+    return 'windows/amd64';
+  } else if (image?.startsWith('farosai')) {
     return 'linux/amd64';
   }
   return undefined;
+}
+
+/**
+ * This is a workaround for running tests on Windows with Windows images.
+ * IRL, users should run linux images even on Windows.
+ */
+function getBindsLocation(image: string): string {
+  if (image.includes(':windows')) {
+    return `C:${sep}configs`;
+  }
+  return `${sep}configs`;
 }
 
 /**
@@ -113,7 +130,7 @@ export async function checkSrcConnection(tmpDir: string, image: string, srcConfi
     const command = ['check', '--config', `/configs/${cfgFile}`];
     const createOptions: Docker.ContainerCreateOptions = {
       HostConfig: {
-        Binds: [`${tmpDir}:/configs`],
+        Binds: [`${tmpDir}:${getBindsLocation(image)}`],
         AutoRemove: true,
       },
       platform: getImagePlatform(image),
@@ -170,7 +187,7 @@ export async function runDiscoverCatalog(tmpDir: string, image: string | undefin
     const command = ['discover', '--config', `/configs/${SRC_CONFIG_FILENAME}`];
     const createOptions: Docker.ContainerCreateOptions = {
       HostConfig: {
-        Binds: [`${tmpDir}:/configs`],
+        Binds: [`${tmpDir}:${getBindsLocation(image)}`],
         AutoRemove: true,
       },
       platform: getImagePlatform(image),
@@ -345,7 +362,7 @@ export async function runSrcSync(tmpDir: string, config: FarosConfig, srcOutputS
         },
         ...config.src?.dockerOptions?.additionalOptions?.HostConfig,
         // Default options: cannot be overridden by users
-        Binds: [`${tmpDir}:/configs`],
+        Binds: [`${tmpDir}:${getBindsLocation(config.src.image)}`],
         AutoRemove: !config.keepContainers,
         Init: true,
       },
@@ -485,7 +502,7 @@ export async function runDstSync(tmpDir: string, config: FarosConfig, srcPassThr
         },
         ...config.dst?.dockerOptions?.additionalOptions?.HostConfig,
         // Default options: cannot be overridden by users
-        Binds: [`${tmpDir}:/configs`],
+        Binds: [`${tmpDir}:${getBindsLocation(config.dst.image)}`],
         AutoRemove: !config.keepContainers,
         Init: true,
       },
@@ -672,7 +689,7 @@ export async function runWizard(tmpDir: string, image: string, spec: AirbyteSpec
       AttachStderr: true,
       AttachStdout: true,
       HostConfig: {
-        Binds: [`${tmpDir}:/configs`],
+        Binds: [`${tmpDir}:${getBindsLocation(image)}`],
         AutoRemove: true,
       },
       platform: getImagePlatform(image),

@@ -81,14 +81,6 @@ Describe 'Cli argv validation' 'argvParsing'
     The output should include "missing required argument 'source'"
     The status should equal 1
   End
-  It 'fails if generate-config not source found'
-    airbyte_local_test() {
-      ./airbyte-local generate-config foo
-    }
-    When call airbyte_local_test
-    The output should include "Source type 'foo' not found. Please provide a valid source type."
-    The status should equal 1
-  End
 
   # Check for unknown options
   It 'fails if using unknown options'
@@ -238,6 +230,14 @@ Describe 'No image pull' 'main'
 End
 
 Describe 'Generate config' 'docker'
+  It 'fails if generate-config not source found'
+    airbyte_local_test() {
+      ./airbyte-local generate-config foo
+    }
+    When call airbyte_local_test
+    The output should include "Source type 'foo' not found. Please provide a valid source type."
+    The status should equal 1
+  End
   It 'should succeed'
     airbyte_local_test() {
       ./airbyte-local generate-config faros-graphql
