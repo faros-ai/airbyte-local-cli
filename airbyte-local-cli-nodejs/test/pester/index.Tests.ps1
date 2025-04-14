@@ -176,7 +176,7 @@ Describe 'Generate config' {
     }
 
     # This test is skipped because the CLI doesn't support running Windows containers in subcommand `generate-config`
-    It 'should succeed' Skip {
+    It 'should succeed' -Skip {
         $result = & ./airbyte-local generate-config faros-graphql 2>&1
         $matchingLine = $result | Where-Object { $_ -match "Configuration file generated successfully" }
         $matchingLine | Should -Not -BeNullOrEmpty
@@ -184,7 +184,7 @@ Describe 'Generate config' {
     }
 
   # This test is skipped because the CLI doesn't support running Windows containers in subcommand `generate-config`
-    It 'should succeed with static config' Skip {
+    It 'should succeed with static config' -Skip {
         $result = & ./airbyte-local generate-config github 2>&1
         $matchingLine = $result | Where-Object { $_ -match "Configuration file generated successfully" }
         $matchingLine | Should -Not -BeNullOrEmpty
@@ -192,7 +192,7 @@ Describe 'Generate config' {
     }
 
     # This test is skipped because the CLI doesn't support running Windows containers in subcommand `generate-config`
-    It 'should succeed with silent option' Skip {
+    It 'should succeed with silent option' -Skip {
         $result = & ./airbyte-local generate-config --silent github 2>&1
         $matchingLine = $result | Where-Object { $_ -notmatch "Source Airbyte Configuration Spec" }
         $matchingLine | Should -Not -BeNullOrEmpty
@@ -202,7 +202,7 @@ Describe 'Generate config' {
     }
 
     # This test is skipped because the CLI doesn't support running Windows containers in subcommand `generate-config`
-    It 'should succeed with custom image' Skip {
+    It 'should succeed with custom image' -Skip {
         $result = & ./airbyte-local generate-config --image farosai/airbyte-faros-graphql-source 2>&1
         $matchingLine = $result | Where-Object { $_ -match "Configuration file generated successfully" }
         $matchingLine | Should -Not -BeNullOrEmpty
