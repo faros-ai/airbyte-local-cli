@@ -159,8 +159,9 @@ jobs:
         shell: pwsh
         run: |
           Get-ChildItem -Path ./out/pkg
-          Copy-Item -Path ./out/pkg/airbyte-local.exe -Destination ./airbyte-local.exe
-          Invoke-Pester -Output Detailed ./test/pester/index.Tests.ps1
+          Copy-Item -Path ./out/pkg/airbyte-local.exe -Destination ./test/airbyte-local.exe
+          Set-Location -Path ./test
+          Invoke-Pester -Output Detailed ./pester/index.Tests.ps1
 
   # tag:
   #   name: Tag
