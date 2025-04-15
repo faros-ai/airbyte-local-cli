@@ -1,4 +1,4 @@
-$EXAMPLE_SOURCE_IMAGE = 'farosai/airbyte-example-source'
+$EXAMPLE_SOURCE_IMAGE = 'farosai/airbyte-example-source:windows-v0.14.11-rc0'
 $FAROS_GRAPHQL_SOURCE_IMAGE = 'farosai/airbyte-faros-graphql-source:windows-v0.14.11-rc0'
 $FAROS_DST_IMAGE = 'farosai/airbyte-faros-destination:windows-v0.14.11-rc0'
 
@@ -14,21 +14,17 @@ BeforeAll {
         New-Item -ItemType Directory -Path './resources/windows' | Out-Null
     }
 
-    & jq --arg src_image "$EXAMPLE_SOURCE_IMAGE" '
-        .src.image = $src_image
-    ' ./resources/test_config_file_src_only.json > ./resources/windows/test_config_file_src_only.json
+    & jq --arg src_image "$EXAMPLE_SOURCE_IMAGE" `
+      '.src.image = $src_image' `
+      ./resources/test_config_file_src_only.json > ./resources/windows/test_config_file_src_only.json
 
-    & jq --arg api_key "$FAROS_API_KEY" --arg dst_image "$FAROS_DST_IMAGE" ' 
-        .dst.config.edition_configs.api_key = $api_key |
-        .dst.image = $dst_image
-    ' ./resources/test_config_file_dst_only.json.template > ./resources/windows/test_config_file_dst_only.json
+    & jq --arg api_key "$FAROS_API_KEY" --arg dst_image "$FAROS_DST_IMAGE" `
+      '.dst.config.edition_configs.api_key = $api_key | .dst.image = $dst_image' `
+      ./resources/test_config_file_dst_only.json.template > ./resources/windows/test_config_file_dst_only.json
 
-    & jq --arg api_key "$FAROS_API_KEY" --arg src_image "$FAROS_GRAPHQL_SOURCE_IMAGE" --arg dst_image "$FAROS_DST_IMAGE" '
-        .src.config.api_key = $api_key |
-        .dst.config.edition_configs.api_key = $api_key |
-        .src.image = $src_image |
-        .dst.image = $dst_image
-    ' ./resources/test_config_file_graph_copy.json.template > ./resources/windows/test_config_file_graph_copy.json    
+    & jq --arg api_key "$FAROS_API_KEY" --arg src_image "$FAROS_GRAPHQL_SOURCE_IMAGE" --arg dst_image "$FAROS_DST_IMAGE" `
+      '.src.config.api_key = $api_key | .dst.config.edition_configs.api_key = $api_key | .src.image = $src_image | .dst.image = $dst_image' `
+      ./resources/test_config_file_graph_copy.json.template > ./resources/windows/test_config_file_graph_copy.json    
 }
 
 Describe 'Cli argv validation' {
