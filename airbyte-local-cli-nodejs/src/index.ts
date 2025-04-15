@@ -92,7 +92,7 @@ export async function main(): Promise<void> {
     cleanUp(context);
     setTimeout(() => {
       whyIsNodeRunning(); // Logs active handles
-    }, 5000);
+    }, 10000);
   }
 }
 

@@ -88,6 +88,29 @@ jobs:
         run: |
           npm ci --no-audit --no-fund
           npm run build
+    
+      - name: Debug
+        working-directory: airbyte-local-cli-nodejs
+        if: matrix.os == 'windows-latest'
+        shell: pwsh
+        run: |
+          # DEBUG
+          $EXAMPLE_SOURCE_IMAGE = 'farosai/airbyte-example-source:windows-v0.14.11-rc0'
+          # create windows directory if not exists
+          if (-not (Test-Path './test/resources/windows')) {
+              New-Item -ItemType Directory -Path './test/resources/windows' | Out-Null
+          }
+
+          Write-Host "Creating test config files with API key and Windows images..."
+          & jq --arg src_image "$EXAMPLE_SOURCE_IMAGE" `
+            '.src.image = $src_image' `
+            ./test/resources/test_config_file_src_only.json > ./test/resources/windows/test_config_file_src_only.json
+
+          Write-Host "Pulling images..."
+          & docker pull $EXAMPLE_SOURCE_IMAGE
+          Write-Host "Images pulled successfully."
+          npx tsx src/index.ts --config-file './test/resources/windows/test_config_file_src_only.json' --src-check-connection --src-only --debug
+          Write-Host "Finishing running check connection command."
 
       - name: Package
         working-directory: airbyte-local-cli-nodejs
@@ -173,28 +196,28 @@ jobs:
         env:
           FAROS_API_KEY: ${{ secrets.FAROS_API_KEY }}
         run: |
-          # cp ./out/pkg/airbyte-local ./test/airbyte-local
-          Copy-Item -Path ./out/pkg/airbyte-local.exe -Destination ./test/airbyte-local.exe
-          # cd ./test
-          Set-Location -Path ./test
-
           # DEBUG
           $EXAMPLE_SOURCE_IMAGE = 'farosai/airbyte-example-source:windows-v0.14.11-rc0'
           # create windows directory if not exists
-          if (-not (Test-Path './resources/windows')) {
-              New-Item -ItemType Directory -Path './resources/windows' | Out-Null
+          if (-not (Test-Path './test/resources/windows')) {
+              New-Item -ItemType Directory -Path './test/resources/windows' | Out-Null
           }
 
           Write-Host "Creating test config files with API key and Windows images..."
           & jq --arg src_image "$EXAMPLE_SOURCE_IMAGE" `
             '.src.image = $src_image' `
-            ./resources/test_config_file_src_only.json > ./resources/windows/test_config_file_src_only.json
+            ./test/resources/test_config_file_src_only.json > ./test/resources/windows/test_config_file_src_only.json
 
           Write-Host "Pulling images..."
           & docker pull $EXAMPLE_SOURCE_IMAGE
           Write-Host "Images pulled successfully."
-          & ./airbyte-local --config-file './resources/windows/test_config_file_src_only.json' --src-check-connection --src-only --debug
+          ./airbyte-local --config-file './test/resources/windows/test_config_file_src_only.json' --src-check-connection --src-only --debug
           Write-Host "Finishing running check connection command."
+
+          # # cp ./out/pkg/airbyte-local ./test/airbyte-local
+          # Copy-Item -Path ./out/pkg/airbyte-local.exe -Destination ./test/airbyte-local.exe
+          # # cd ./test
+          # Set-Location -Path ./test
 
           # Run Pester
           # Invoke-Pester -Output Detailed ./pester/index.Tests.ps1
