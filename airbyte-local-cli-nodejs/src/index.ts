@@ -85,8 +85,9 @@ export async function main(): Promise<void> {
     logger.info('Airbyte CLI completed.');
   } catch (error: any) {
     logger.error(error.message, 'Error');
-    cleanUp(context);
     throw error;
+  } finally {
+    cleanUp(context);
   }
 }
 

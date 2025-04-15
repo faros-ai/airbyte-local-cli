@@ -195,7 +195,8 @@ jobs:
           Write-Host "Pulling images..."
           & docker pull $EXAMPLE_SOURCE_IMAGE
           Write-Host "Images pulled successfully."
-          ./airbyte-local --config-file './resources/windows/test_config_file_src_only.json' --src-check-connection --src-only
+          & ./airbyte-local --config-file './resources/windows/test_config_file_src_only.json' --src-check-connection --src-only --debug
+          Write-Host "Finishing running check connection command."
 
           # Run Pester
           # Invoke-Pester -Output Detailed ./pester/index.Tests.ps1
