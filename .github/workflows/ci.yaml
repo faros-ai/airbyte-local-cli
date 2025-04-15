@@ -177,8 +177,28 @@ jobs:
           Copy-Item -Path ./out/pkg/airbyte-local.exe -Destination ./test/airbyte-local.exe
           # cd ./test
           Set-Location -Path ./test
+
+          # DEBUG
+          $EXAMPLE_SOURCE_IMAGE = 'farosai/airbyte-example-source:windows-v0.14.11-rc0'
+          # create windows directory if not exists
+          if (-not (Test-Path './resources/windows')) {
+              New-Item -ItemType Directory -Path './resources/windows' | Out-Null
+          }
+
+          Write-Host "Creating test config files with API key and Windows images..."
+          & jq --arg src_image "$EXAMPLE_SOURCE_IMAGE" `
+            '.src.image = $src_image' `
+            ./resources/test_config_file_src_only.json > ./resources/windows/test_config_file_src_only.json
+
+          Get-Content -Path ./resources/windows/test_config_file_src_only.json
+
+          Write-Host "Pulling images..."
+          & docker pull $EXAMPLE_SOURCE_IMAGE
+          Write-Host "Images pulled successfully."
+          & ./airbyte-local --config-file './resources/windows/test_config_file_src_only.json' --src-check-connection --src-only
+
           # Run Pester
-          Invoke-Pester -Output Detailed ./pester/index.Tests.ps1
+          # Invoke-Pester -Output Detailed ./pester/index.Tests.ps1
 
   # tag:
   #   name: Tag

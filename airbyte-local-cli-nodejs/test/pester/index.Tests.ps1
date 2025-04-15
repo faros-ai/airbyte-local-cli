@@ -216,7 +216,6 @@ Describe 'Generate config' {
 Describe 'Check source connection' {
     It 'should fail if source connection fails' {
         $result = & ./airbyte-local --src "$EXAMPLE_SOURCE_IMAGE" --src-check-connection --src-only
-        Write-Host "Command Output: $result"
         $matchingLine = $result | Where-Object { $_ -match "Failed to validate source connection: User is not chris." }
         $matchingLine | Should -Not -BeNullOrEmpty
         $LASTEXITCODE | Should -Be 1
