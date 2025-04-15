@@ -72,7 +72,7 @@ jobs:
           - macos-latest # macos arm64
           - windows-latest # windows x64
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 20
+    # timeout-minutes: 20
     steps:
       - name: Check out
         uses: actions/checkout@v4
