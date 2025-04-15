@@ -163,6 +163,10 @@ export async function checkSrcConnection(tmpDir: string, image: string, srcConfi
     const res = await container.wait();
     logger.debug(`Source check connection contaienr exit code: ${JSON.stringify(res)}`);
 
+    if (stream) {
+      (stream as any).destroy();
+    }
+
     // capture connection status from the output
     let status: AirbyteConnectionStatusMessage | undefined;
     data.split('\n').forEach((line) => {
@@ -234,6 +238,10 @@ export async function runDiscoverCatalog(tmpDir: string, image: string | undefin
     // Wait for the container to finish
     const res = await container.wait();
     logger.debug(`Discover catalog container exit code: ${JSON.stringify(res)}`);
+
+    if (stream) {
+      (stream as any).destroy();
+    }
 
     // capture catalog output
     let rawCatalog: AirbyteCatalogMessage | undefined;
