@@ -175,10 +175,6 @@ export function cleanUp(context: AirbyteCliContext): void {
 
   logger.debug('Flushing the logs.');
   logger.flush?.();
-
-  logger.debug('Close all streams.');
-  process.stdout.destroy?.();
-  process.stderr.destroy?.();
 }
 
 export function overrideCatalog(
