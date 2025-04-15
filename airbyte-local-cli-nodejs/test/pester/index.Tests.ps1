@@ -17,6 +17,8 @@ BeforeAll {
     & jq --arg src_image "$EXAMPLE_SOURCE_IMAGE" `
       '.src.image = $src_image' `
       ./resources/test_config_file_src_only.json > ./resources/windows/test_config_file_src_only.json
+    Get-Content -Path ./resources/windows/test_config_file_src_only.json
+    cat ./resources/windows/test_config_file_src_only.json
 
     & jq --arg api_key "$FAROS_API_KEY" --arg dst_image "$FAROS_DST_IMAGE" `
       '.dst.config.edition_configs.api_key = $api_key | .dst.image = $dst_image' `
@@ -208,7 +210,7 @@ Describe 'Generate config' {
 
 Describe 'Check source connection' {
     It 'should fail if source connection fails' {
-        $result = & ./airbyte-local --src "$EXAMPLE_SOURCE_IMAGE" --src-check-connection --src-only 2>&1
+        $result = & ./airbyte-local --src "$EXAMPLE_SOURCE_IMAGE" --src-check-connection --src-only --debug 2>&1
         Write-Host "Command Output: $result"
         $matchingLine = $result | Where-Object { $_ -match "Failed to validate source connection: User is not chris." }
         $matchingLine | Should -Not -BeNullOrEmpty
@@ -216,7 +218,7 @@ Describe 'Check source connection' {
     }
 
     It 'should succeed if source connection is valid' {
-        $result = & ./airbyte-local --config-file './resources/windows/test_config_file_src_only.json' --src-check-connection --src-only 2>&1
+        $result = & ./airbyte-local --config-file './resources/windows/test_config_file_src_only.json' --src-check-connection --src-only  --debug 2>&1
         Write-Host "Command Output: $result"
         $matchingLine = $result | Where-Object { $_ -match "Source connection is valid." }
         $matchingLine | Should -Not -BeNullOrEmpty
