@@ -163,6 +163,7 @@ export async function checkSrcConnection(tmpDir: string, image: string, srcConfi
     const res = await container.wait();
     logger.debug(`Source check connection contaienr exit code: ${JSON.stringify(res)}`);
 
+    // Close the attached stream
     if (stream) {
       (stream as any).destroy();
     }
@@ -239,6 +240,7 @@ export async function runDiscoverCatalog(tmpDir: string, image: string | undefin
     const res = await container.wait();
     logger.debug(`Discover catalog container exit code: ${JSON.stringify(res)}`);
 
+    // Close the attached stream
     if (stream) {
       (stream as any).destroy();
     }
@@ -433,19 +435,6 @@ export async function runSrcSync(tmpDir: string, config: FarosConfig, srcOutputS
     // Attach the stderr to termincal stderr, and stdout to the output stream
     const stream = await container.attach({stream: true, stdout: true, stderr: true});
     container.modem.demuxStream(stream, containerOutputStream, process.stderr);
-    stream.on('end', () => logger.debug('Stream ended.'));
-    stream.on('close', () => logger.debug('Stream closed.'));
-    containerOutputStream.on('error', (err) => logger.error(`Output stream error: ${err.message}`));
-    if (outputStream !== process.stdout) {
-      containerOutputStream.on('finish', () => {
-        outputStream.end();
-        logger.debug('Wrting file output stream closed.');
-      });
-    } else {
-      containerOutputStream.on('finish', () => {
-        logger.debug('Container output stream closed.');
-      });
-    }
 
     // Start the container
     await container.start();
@@ -454,14 +443,17 @@ export async function runSrcSync(tmpDir: string, config: FarosConfig, srcOutputS
     const res = await container.wait();
     logger.debug(`Source connector exit code: ${JSON.stringify(res)}`);
 
-    // close the output stream when the source connector is done
+    // Close the attached stream
     if (stream) {
       (stream as any).destroy();
     }
+
+    // Close the container output stream
     containerOutputStream.end();
     logger.debug('Container output stream ended.');
+
+    // Wait for the outputStream to finish writing
     if (outputStream !== process.stdout) {
-      // Wait for the outputStream to finish writing
       await new Promise<void>((resolve, reject) => {
         (outputStream as Writable).on('finish', resolve);
         (outputStream as Writable).on('error', reject);
@@ -610,6 +602,14 @@ export async function runDstSync(tmpDir: string, config: FarosConfig, srcPassThr
     const res = await container.wait();
     logger.debug(`Destination connector exit code: ${JSON.stringify(res)}`);
 
+    // Close the attached stream
+    if (outputStream) {
+      (outputStream as any).destroy();
+    }
+    if (stdinStream) {
+      (stdinStream as any).destroy();
+    }
+
     if (res.StatusCode === 0) {
       logger.info('Destination connector completed.');
 
@@ -682,6 +682,11 @@ export async function runSpec(image: string): Promise<AirbyteSpec> {
     const res = await container.wait();
     logger.debug(`Spec exit code: ${JSON.stringify(res)}`);
 
+    // Close the attached stream
+    if (outputStream) {
+      (outputStream as any).destroy();
+    }
+
     // write spec to the file
     if (res.StatusCode === 0 && specs.length > 0) {
       const spec = specs.pop();
@@ -752,6 +757,11 @@ export async function runWizard(tmpDir: string, image: string, spec: AirbyteSpec
     await container.start();
     const res = await container.wait();
     logger.debug(`Generate config exit code: ${JSON.stringify(res)}`);
+
+    // Close the attached stream
+    if (outputStream) {
+      (outputStream as any).destroy();
+    }
 
     if (res.StatusCode !== 0) {
       throw new Error(`Exit with ${JSON.stringify(res)}`);

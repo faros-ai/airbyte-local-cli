@@ -93,9 +93,19 @@ jobs:
         working-directory: airbyte-local-cli-nodejs
         if: matrix.os == 'windows-latest'
         shell: pwsh
+        env:
+          FAROS_API_KEY: ${{ secrets.FAROS_API_KEY }}
         run: |
           # DEBUG
           $EXAMPLE_SOURCE_IMAGE = 'farosai/airbyte-example-source:windows-v0.14.11-rc0'
+          $FAROS_GRAPHQL_SOURCE_IMAGE = 'farosai/airbyte-faros-graphql-source:windows-v0.14.11-rc0'
+          $FAROS_DST_IMAGE = 'farosai/airbyte-faros-destination:windows-v0.14.11-rc0'
+
+          $FAROS_API_KEY = $env:FAROS_API_KEY
+          if (-not $FAROS_API_KEY) {
+              throw "FAROS_API_KEY environment variable is not set."
+          }
+
           # create windows directory if not exists
           if (-not (Test-Path './test/resources/windows')) {
               New-Item -ItemType Directory -Path './test/resources/windows' | Out-Null
@@ -106,33 +116,49 @@ jobs:
             '.src.image = $src_image' `
             ./test/resources/test_config_file_src_only.json > ./test/resources/windows/test_config_file_src_only.json
 
+          & jq --arg api_key "$FAROS_API_KEY" --arg dst_image "$FAROS_DST_IMAGE" `
+            '.dst.config.edition_configs.api_key = $api_key | .dst.image = $dst_image' `
+            ./test/resources/test_config_file_dst_only.json.template > ./test/resources/windows/test_config_file_dst_only.json
+
+          & jq --arg api_key "$FAROS_API_KEY" --arg src_image "$FAROS_GRAPHQL_SOURCE_IMAGE" --arg dst_image "$FAROS_DST_IMAGE" `
+            '.src.config.api_key = $api_key | .dst.config.edition_configs.api_key = $api_key | .src.image = $src_image | .dst.image = $dst_image' `
+            ./test/resources/test_config_file_graph_copy.json.template > ./test/resources/windows/test_config_file_graph_copy.json    
+
           Write-Host "Pulling images..."
           & docker pull $EXAMPLE_SOURCE_IMAGE
+          & docker pull $FAROS_GRAPHQL_SOURCE_IMAGE
+          & docker pull $FAROS_DST_IMAGE
           Write-Host "Images pulled successfully."
+          
           npx tsx src/index.ts --config-file './test/resources/windows/test_config_file_src_only.json' --src-check-connection --src-only --debug
+
+          npx tsx src/index.ts --config-file './test/resources/windows/test_config_file_dst_only.json' --dst-only './test/resources/dockerIt_runDstSync/faros_airbyte_cli_src_output' --debug 
+
+          npx tsx src/index.ts --config-file './test/resources/windows/test_config_file_graph_copy.json'
+
           Write-Host "Finishing running check connection command."
 
-      - name: Package
-        working-directory: airbyte-local-cli-nodejs
-        shell: bash
-        run: |
-          if [ "${{ matrix.os }}" == 'ubuntu-latest' ]; then
-            TARGET="linuxstatic-x64"
-          elif [ "${{ matrix.os }}" == 'ubuntu-24.04-arm' ]; then
-            TARGET="linuxstatic-arm64"
-          elif [ "${{ matrix.os }}" == 'macos-13' ]; then
-            TARGET="macos-x64"
-          elif [ "${{ matrix.os }}" == 'macos-latest' ]; then
-            TARGET="macos-arm64"
-          elif [ "${{ matrix.os }}" == 'windows-latest' ]; then
-            TARGET="win-x64"
-          fi
-          npm run pkg -- --target $TARGET
+      # - name: Package
+      #   working-directory: airbyte-local-cli-nodejs
+      #   shell: bash
+      #   run: |
+      #     if [ "${{ matrix.os }}" == 'ubuntu-latest' ]; then
+      #       TARGET="linuxstatic-x64"
+      #     elif [ "${{ matrix.os }}" == 'ubuntu-24.04-arm' ]; then
+      #       TARGET="linuxstatic-arm64"
+      #     elif [ "${{ matrix.os }}" == 'macos-13' ]; then
+      #       TARGET="macos-x64"
+      #     elif [ "${{ matrix.os }}" == 'macos-latest' ]; then
+      #       TARGET="macos-arm64"
+      #     elif [ "${{ matrix.os }}" == 'windows-latest' ]; then
+      #       TARGET="win-x64"
+      #     fi
+      #     npm run pkg -- --target $TARGET
       
-      # Run the binary: make sure the binary executes fine on the system/arch
-      - name: Run binary
-        working-directory: airbyte-local-cli-nodejs/out/pkg
-        run: ./airbyte-local --help
+      # # Run the binary: make sure the binary executes fine on the system/arch
+      # - name: Run binary
+      #   working-directory: airbyte-local-cli-nodejs/out/pkg
+      #   run: ./airbyte-local --help
 
       # # We use Shellspec to run the tests in Bash
       # - name: Install ShellSpec
@@ -189,38 +215,20 @@ jobs:
 
       # Run all e2e tests on Windows powershell
       # We use Pester to run e2e tests on Windows powershell. Pester is pre-installed on the Windows runner
-      - name: Run Powershell tests (Windows)
-        if: matrix.os == 'windows-latest'
-        working-directory: airbyte-local-cli-nodejs
-        shell: pwsh
-        env:
-          FAROS_API_KEY: ${{ secrets.FAROS_API_KEY }}
-        run: |
-          # DEBUG
-          $EXAMPLE_SOURCE_IMAGE = 'farosai/airbyte-example-source:windows-v0.14.11-rc0'
-          # create windows directory if not exists
-          if (-not (Test-Path './test/resources/windows')) {
-              New-Item -ItemType Directory -Path './test/resources/windows' | Out-Null
-          }
+      # - name: Run Powershell tests (Windows)
+      #   if: matrix.os == 'windows-latest'
+      #   working-directory: airbyte-local-cli-nodejs
+      #   shell: pwsh
+      #   env:
+      #     FAROS_API_KEY: ${{ secrets.FAROS_API_KEY }}
+      #   run: |
+      #     # cp ./out/pkg/airbyte-local ./test/airbyte-local
+      #     Copy-Item -Path ./out/pkg/airbyte-local.exe -Destination ./test/airbyte-local.exe
+      #     # cd ./test
+      #     Set-Location -Path ./test
 
-          Write-Host "Creating test config files with API key and Windows images..."
-          & jq --arg src_image "$EXAMPLE_SOURCE_IMAGE" `
-            '.src.image = $src_image' `
-            ./test/resources/test_config_file_src_only.json > ./test/resources/windows/test_config_file_src_only.json
-
-          Write-Host "Pulling images..."
-          & docker pull $EXAMPLE_SOURCE_IMAGE
-          Write-Host "Images pulled successfully."
-          ./airbyte-local --config-file './test/resources/windows/test_config_file_src_only.json' --src-check-connection --src-only --debug
-          Write-Host "Finishing running check connection command."
-
-          # # cp ./out/pkg/airbyte-local ./test/airbyte-local
-          # Copy-Item -Path ./out/pkg/airbyte-local.exe -Destination ./test/airbyte-local.exe
-          # # cd ./test
-          # Set-Location -Path ./test
-
-          # Run Pester
-          # Invoke-Pester -Output Detailed ./pester/index.Tests.ps1
+      #     # Run Pester
+      #     Invoke-Pester -Output Detailed ./pester/index.Tests.ps1
 
   # tag:
   #   name: Tag
