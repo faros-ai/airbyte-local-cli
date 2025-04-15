@@ -1,3 +1,5 @@
+import whyIsNodeRunning from 'why-is-node-running';
+
 import {parseAndValidateInputs} from './command';
 import {checkDockerInstalled, checkSrcConnection, pullDockerImage, runDstSync, runSrcSync} from './docker';
 import {logger} from './logger';
@@ -88,6 +90,9 @@ export async function main(): Promise<void> {
     throw error;
   } finally {
     cleanUp(context);
+    setTimeout(() => {
+      whyIsNodeRunning(); // Logs active handles
+    }, 60000);
   }
 }
 

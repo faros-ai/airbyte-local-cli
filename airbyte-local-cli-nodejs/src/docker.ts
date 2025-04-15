@@ -425,6 +425,22 @@ export async function runSrcSync(tmpDir: string, config: FarosConfig, srcOutputS
     // Attach the stderr to termincal stderr, and stdout to the output stream
     const stream = await container.attach({stream: true, stdout: true, stderr: true});
     container.modem.demuxStream(stream, containerOutputStream, process.stderr);
+    stream.on('end', () => {
+      logger.debug('Container stream ended.');
+    });
+    containerOutputStream.on('error', (err) => {
+      logger.error(`Container output stream error: ${err.message}`);
+    });
+    if (outputStream !== process.stdout) {
+      containerOutputStream.on('finish', () => {
+        outputStream.end();
+        logger.debug('Wrting file output stream closed.');
+      });
+    } else {
+      containerOutputStream.on('finish', () => {
+        logger.debug('Container output stream closed.');
+      });
+    }
 
     // Start the container
     await container.start();
@@ -437,12 +453,6 @@ export async function runSrcSync(tmpDir: string, config: FarosConfig, srcOutputS
     containerOutputStream.end();
     logger.debug('Container output stream closed.');
     if (outputStream !== process.stdout) {
-      // close the output stream when the container output stream finishes writing
-      containerOutputStream.on('finish', () => {
-        outputStream.end();
-        logger.debug('Wrting file output stream closed.');
-      });
-
       // Wait for the outputStream to finish writing
       await new Promise<void>((resolve, reject) => {
         (outputStream as Writable).on('finish', resolve);
