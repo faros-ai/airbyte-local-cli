@@ -129,6 +129,10 @@ export async function checkSrcConnection(tmpDir: string, image: string, srcConfi
     const cfgFile = srcConfigFile ?? SRC_CONFIG_FILENAME;
     const command = ['check', '--config', `/configs/${cfgFile}`];
     const createOptions: Docker.ContainerCreateOptions = {
+      Image: image,
+      Cmd: command,
+      AttachStderr: true,
+      AttachStdout: true,
       HostConfig: {
         Binds: [`${tmpDir}:${getBindsLocation(image)}`],
         AutoRemove: true,
@@ -138,15 +142,26 @@ export async function checkSrcConnection(tmpDir: string, image: string, srcConfi
 
     // create a writable stream to capture the output
     let data = '';
-    const outputStream = new Writable({
+    const containerOutputStream = new Writable({
       write(chunk, _encoding, callback) {
         data += chunk.toString();
         callback();
       },
     });
 
-    // docker run
-    const res = await _docker.run(image, command, outputStream, createOptions);
+    // Create the Docker container
+    const container = await _docker.createContainer(createOptions);
+
+    // Attach the stderr to termincal stderr, and stdout to the output stream
+    const stream = await container.attach({stream: true, stdout: true, stderr: true});
+    container.modem.demuxStream(stream, containerOutputStream, process.stderr);
+
+    // Start the container
+    await container.start();
+
+    // Wait for the container to finish
+    const res = await container.wait();
+    logger.debug(`Source connector exit code: ${JSON.stringify(res)}`);
 
     // capture connection status from the output
     let status: AirbyteConnectionStatusMessage | undefined;
@@ -158,7 +173,7 @@ export async function checkSrcConnection(tmpDir: string, image: string, srcConfi
     if (
       status?.type === AirbyteMessageType.CONNECTION_STATUS &&
       status?.connectionStatus.status === AirbyteConnectionStatus.SUCCEEDED &&
-      res[0].StatusCode === 0
+      res?.StatusCode === 0
     ) {
       logger.info('Source connection is valid.');
     } else {
@@ -186,6 +201,10 @@ export async function runDiscoverCatalog(tmpDir: string, image: string | undefin
   try {
     const command = ['discover', '--config', `/configs/${SRC_CONFIG_FILENAME}`];
     const createOptions: Docker.ContainerCreateOptions = {
+      Image: image,
+      Cmd: command,
+      AttachStderr: true,
+      AttachStdout: true,
       HostConfig: {
         Binds: [`${tmpDir}:${getBindsLocation(image)}`],
         AutoRemove: true,
@@ -195,15 +214,26 @@ export async function runDiscoverCatalog(tmpDir: string, image: string | undefin
 
     // create a writable stream to capture the output
     let data = '';
-    const outputStream = new Writable({
+    const containerOutputStream = new Writable({
       write(chunk, _encoding, callback) {
         data += chunk.toString();
         callback();
       },
     });
 
-    // docker run
-    const res = await _docker.run(image, command, outputStream, createOptions);
+    // Create the Docker container
+    const container = await _docker.createContainer(createOptions);
+
+    // Attach the stderr to termincal stderr, and stdout to the output stream
+    const stream = await container.attach({stream: true, stdout: true, stderr: true});
+    container.modem.demuxStream(stream, containerOutputStream, process.stderr);
+
+    // Start the container
+    await container.start();
+
+    // Wait for the container to finish
+    const res = await container.wait();
+    logger.debug(`Source connector exit code: ${JSON.stringify(res)}`);
 
     // capture catalog output
     let rawCatalog: AirbyteCatalogMessage | undefined;
@@ -217,7 +247,7 @@ export async function runDiscoverCatalog(tmpDir: string, image: string | undefin
       }
     });
 
-    if (rawCatalog?.type === AirbyteMessageType.CATALOG && res[0].StatusCode === 0) {
+    if (rawCatalog?.type === AirbyteMessageType.CATALOG && res?.StatusCode === 0) {
       logger.info('Catalog discovered successfully.');
       return rawCatalog.catalog ?? {streams: []};
     }

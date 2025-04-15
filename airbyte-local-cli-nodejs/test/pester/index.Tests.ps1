@@ -4,8 +4,6 @@ BeforeAll {
     $FAROS_GRAPHQL_SOURCE_IMAGE = 'farosai/airbyte-faros-graphql-source:windows-v0.14.11-rc0'
     $FAROS_DST_IMAGE = 'farosai/airbyte-faros-destination:windows-v0.14.11-rc0'
 
-    Write-Host "Image: $EXAMPLE_SOURCE_IMAGE, $FAROS_GRAPHQL_SOURCE_IMAGE, $FAROS_DST_IMAGE"
-
     $FAROS_API_KEY = $env:FAROS_API_KEY
     if (-not $FAROS_API_KEY) {
         throw "FAROS_API_KEY environment variable is not set."
@@ -16,6 +14,7 @@ BeforeAll {
         New-Item -ItemType Directory -Path './resources/windows' | Out-Null
     }
 
+    Write-Host "Creating test config files with API key and Windows images..."
     & jq --arg src_image "$EXAMPLE_SOURCE_IMAGE" `
       '.src.image = $src_image' `
       ./resources/test_config_file_src_only.json > ./resources/windows/test_config_file_src_only.json
@@ -27,6 +26,12 @@ BeforeAll {
     & jq --arg api_key "$FAROS_API_KEY" --arg src_image "$FAROS_GRAPHQL_SOURCE_IMAGE" --arg dst_image "$FAROS_DST_IMAGE" `
       '.src.config.api_key = $api_key | .dst.config.edition_configs.api_key = $api_key | .src.image = $src_image | .dst.image = $dst_image' `
       ./resources/test_config_file_graph_copy.json.template > ./resources/windows/test_config_file_graph_copy.json    
+
+    Write-Host "Pulling images..."
+    & docker pull $EXAMPLE_SOURCE_IMAGE
+    & docker pull $FAROS_GRAPHQL_SOURCE_IMAGE
+    & docker pull $FAROS_DST_IMAGE
+    Write-Host "Images pulled successfully."
 }
 
 Describe 'Cli argv validation' {
