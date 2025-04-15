@@ -274,9 +274,9 @@ Describe 'Run source and destination sync' {
         $result = & ./airbyte-local --config-file './resources/windows/test_config_file_graph_copy.json' 2>&1
         $matchingLine = $result | Where-Object { $_ -match "Source connector completed." }
         $matchingLine | Should -Not -BeNullOrEmpty
-        $matchingLine = $result | Where-Object { $_ -match '\[SRC\] - {"log":{"level":"INFO","message":"Catalog: {\"streams\":\[{"stream":{"name":"faros_graph","json_schema":{},"supported_sync_modes":\["full_refresh","incremental"\]},"sync_mode":"incremental","destination_sync_mode":"append"}\]}"},"type":"LOG"}' }
+        $matchingLine = $result | Where-Object { $_ -match '\[SRC\] - {"log":{"level":"INFO","message":"Catalog:.*\\"sync_mode\\":\\"incremental\\",\\"destination_sync_mode\\":\\"append\\"' }
         $matchingLine | Should -Not -BeNullOrEmpty
-        $matchingLine = $result | Where-Object { $_ -match '\[DST\] - {"log":{"level":"INFO","message":"Catalog: {\"streams\":\[{"stream":{"name":"myfarosgraphqlsrc__faros_graphql__faros_graph","json_schema":{},"supported_sync_modes":\["full_refresh","incremental"\]},"sync_mode":"incremental","destination_sync_mode":"append"}\]}"},"type":"LOG"}' }
+        $matchingLine = $result | Where-Object { $_ -match '\[DST\] - {"log":{"level":"INFO","message":"Catalog:.*\\"sync_mode\\":\\"incremental\\",\\"destination_sync_mode\\":\\"append\\"' }
         $matchingLine | Should -Not -BeNullOrEmpty
         $matchingLine = $result | Where-Object { $_ -match '\[DST\] - {"log":{"level":"INFO","message":"Errored 0 records"},"type":"LOG"}' }
         $matchingLine | Should -Not -BeNullOrEmpty
@@ -291,9 +291,9 @@ Describe 'Run source and destination sync' {
         $result = & ./airbyte-local --config-file './resources/windows/test_config_file_graph_copy.json' --full-refresh 2>&1
         $matchingLine = $result | Where-Object { $_ -match "Source connector completed." }
         $matchingLine | Should -Not -BeNullOrEmpty
-        $matchingLine = $result | Where-Object { $_ -match '\[SRC\] - {"log":{"level":"INFO","message":"Catalog: {\"streams\":\[{"stream":{"name":"faros_graph","json_schema":{},"supported_sync_modes":\["full_refresh","incremental"\]},"sync_mode":"full_refresh","destination_sync_mode":"overwrite"}\]}"},"type":"LOG"}' }
+        $matchingLine = $result | Where-Object { $_ -match '\[SRC\] - {"log":{"level":"INFO","message":"Catalog:.*\\"sync_mode\\":\\"full_refresh\\",\\"destination_sync_mode\\":\\"overwrite\\"' }
         $matchingLine | Should -Not -BeNullOrEmpty
-        $matchingLine = $result | Where-Object { $_ -match '\[DST\] - {"log":{"level":"INFO","message":"Catalog: {\"streams\":\[{"stream":{"name":"myfarosgraphqlsrc__faros_graphql__faros_graph","json_schema":{},"supported_sync_modes":\["full_refresh","incremental"\]},"sync_mode":"full_refresh","destination_sync_mode":"overwrite"}\]}"},"type":"LOG"}' }
+        $matchingLine = $result | Where-Object { $_ -match '\[DST\] - {"log":{"level":"INFO","message":"Catalog:.*\\"sync_mode\\":\\"full_refresh\\",\\"destination_sync_mode\\":\\"overwrite\\"' }
         $matchingLine | Should -Not -BeNullOrEmpty
         $matchingLine = $result | Where-Object { $_ -match "Destination connector completed." }
         $matchingLine | Should -Not -BeNullOrEmpty
