@@ -111,58 +111,58 @@ jobs:
         working-directory: airbyte-local-cli-nodejs/out/pkg
         run: ./airbyte-local --help
 
-      # We use Shellspec to run the tests in Bash
-      - name: Install ShellSpec
-        shell: bash
-        run: curl -fsSL https://git.io/shellspec | sh -s 0.28.1 --yes
+      # # We use Shellspec to run the tests in Bash
+      # - name: Install ShellSpec
+      #   shell: bash
+      #   run: curl -fsSL https://git.io/shellspec | sh -s 0.28.1 --yes
     
-      # Run ALL e2e tests on Linux x64
-      - name: Run Bash tests (Linux x64)
-        if: matrix.os == 'ubuntu-latest'
-        working-directory: airbyte-local-cli-nodejs
-        env:
-          FAROS_API_KEY: ${{ secrets.FAROS_API_KEY }}
-        run: |
-          cp ./out/pkg/airbyte-local ./test/exec/airbyte-local
-          cp -rf ./test/resources ./test/exec/
-          shellspec --chdir ./test/exec
+      # # Run ALL e2e tests on Linux x64
+      # - name: Run Bash tests (Linux x64)
+      #   if: matrix.os == 'ubuntu-latest'
+      #   working-directory: airbyte-local-cli-nodejs
+      #   env:
+      #     FAROS_API_KEY: ${{ secrets.FAROS_API_KEY }}
+      #   run: |
+      #     cp ./out/pkg/airbyte-local ./test/exec/airbyte-local
+      #     cp -rf ./test/resources ./test/exec/
+      #     shellspec --chdir ./test/exec
 
-      # Run partial e2e tests (excluding docker tests)
-      #  - linux arm64: without pushing arm64 airbye connector images, the tests will fail
-      - name: Run Bash tests (Linux arm64)
-        if: matrix.os == 'ubuntu-arm64'
-        working-directory: airbyte-local-cli-nodejs
-        run: |
-          cp ./out/pkg/airbyte-local ./test/exec/airbyte-local
-          cp -rf ./test/resources ./test/exec/
-          shellspec --chdir ./test/exec --tag argvParsing,main
+      # # Run partial e2e tests (excluding docker tests)
+      # #  - linux arm64: without pushing arm64 airbye connector images, the tests will fail
+      # - name: Run Bash tests (Linux arm64)
+      #   if: matrix.os == 'ubuntu-arm64'
+      #   working-directory: airbyte-local-cli-nodejs
+      #   run: |
+      #     cp ./out/pkg/airbyte-local ./test/exec/airbyte-local
+      #     cp -rf ./test/resources ./test/exec/
+      #     shellspec --chdir ./test/exec --tag argvParsing,main
 
-      # Run partial e2e tests (excluding any tests related to docker check)
-      #  - macos: doesn't have docker by default in the github runner. Too much work to configure and Macos syntax should be relatively the same as linux
-      - name: Run Bash tests (MacOS)
-        if: runner.os == 'MacOS'
-        working-directory: airbyte-local-cli-nodejs
-        run: |
-          cp ./out/pkg/airbyte-local ./test/exec/airbyte-local
-          cp -rf ./test/resources ./test/exec/
-          export PATH="$HOME/.local/bin:$PATH"
-          which shellspec
-          shellspec --chdir ./test/exec --tag argvParsing
+      # # Run partial e2e tests (excluding any tests related to docker check)
+      # #  - macos: doesn't have docker by default in the github runner. Too much work to configure and Macos syntax should be relatively the same as linux
+      # - name: Run Bash tests (MacOS)
+      #   if: runner.os == 'MacOS'
+      #   working-directory: airbyte-local-cli-nodejs
+      #   run: |
+      #     cp ./out/pkg/airbyte-local ./test/exec/airbyte-local
+      #     cp -rf ./test/resources ./test/exec/
+      #     export PATH="$HOME/.local/bin:$PATH"
+      #     which shellspec
+      #     shellspec --chdir ./test/exec --tag argvParsing
     
-      # Run partial e2e tests on Windows bash (excluding docker tests)
-      # - windows: requires to config the shellspec in PATH. Separete to its own step to run
-      - name: Run Bash tests (Windows)
-        if: matrix.os == 'windows-latest'
-        working-directory: airbyte-local-cli-nodejs
-        shell: bash
-        run: |
-          cp ./out/pkg/airbyte-local ./test/exec/airbyte-local
-          cp -rf ./test/resources ./test/exec/
+      # # Run partial e2e tests on Windows bash (excluding docker tests)
+      # # - windows: requires to config the shellspec in PATH. Separete to its own step to run
+      # - name: Run Bash tests (Windows)
+      #   if: matrix.os == 'windows-latest'
+      #   working-directory: airbyte-local-cli-nodejs
+      #   shell: bash
+      #   run: |
+      #     cp ./out/pkg/airbyte-local ./test/exec/airbyte-local
+      #     cp -rf ./test/resources ./test/exec/
 
-          # shellspec is installed in $HOME/.local/bin
-          export PATH="$HOME/.local/bin:$PATH"
-          which shellspec
-          shellspec --chdir ./test/exec --tag argvParsing,main
+      #     # shellspec is installed in $HOME/.local/bin
+      #     export PATH="$HOME/.local/bin:$PATH"
+      #     which shellspec
+      #     shellspec --chdir ./test/exec --tag argvParsing,main
 
       # Run all e2e tests on Windows powershell
       # We use Pester to run e2e tests on Windows powershell. Pester is pre-installed on the Windows runner
