@@ -1,9 +1,11 @@
-$EXAMPLE_SOURCE_IMAGE = 'farosai/airbyte-example-source:windows-v0.14.11-rc0'
-$FAROS_GRAPHQL_SOURCE_IMAGE = 'farosai/airbyte-faros-graphql-source:windows-v0.14.11-rc0'
-$FAROS_DST_IMAGE = 'farosai/airbyte-faros-destination:windows-v0.14.11-rc0'
-
 # Inject API Key and replace to Windows images before all tests
 BeforeAll {
+    $EXAMPLE_SOURCE_IMAGE = 'farosai/airbyte-example-source:windows-v0.14.11-rc0'
+    $FAROS_GRAPHQL_SOURCE_IMAGE = 'farosai/airbyte-faros-graphql-source:windows-v0.14.11-rc0'
+    $FAROS_DST_IMAGE = 'farosai/airbyte-faros-destination:windows-v0.14.11-rc0'
+
+    Write-Host "Image: $EXAMPLE_SOURCE_IMAGE, $FAROS_GRAPHQL_SOURCE_IMAGE, $FAROS_DST_IMAGE"
+
     $FAROS_API_KEY = $env:FAROS_API_KEY
     if (-not $FAROS_API_KEY) {
         throw "FAROS_API_KEY environment variable is not set."
@@ -14,17 +16,15 @@ BeforeAll {
         New-Item -ItemType Directory -Path './resources/windows' | Out-Null
     }
 
-    & jq --arg src_image $EXAMPLE_SOURCE_IMAGE `
+    & jq --arg src_image "$EXAMPLE_SOURCE_IMAGE" `
       '.src.image = $src_image' `
       ./resources/test_config_file_src_only.json > ./resources/windows/test_config_file_src_only.json
-    Get-Content -Path ./resources/windows/test_config_file_src_only.json
-    cat ./resources/windows/test_config_file_src_only.json
 
-    & jq --arg api_key $FAROS_API_KEY --arg dst_image $FAROS_DST_IMAGE `
+    & jq --arg api_key "$FAROS_API_KEY" --arg dst_image "$FAROS_DST_IMAGE" `
       '.dst.config.edition_configs.api_key = $api_key | .dst.image = $dst_image' `
       ./resources/test_config_file_dst_only.json.template > ./resources/windows/test_config_file_dst_only.json
 
-    & jq --arg api_key $FAROS_API_KEY --arg src_image $FAROS_GRAPHQL_SOURCE_IMAGE --arg dst_image $FAROS_DST_IMAGE `
+    & jq --arg api_key "$FAROS_API_KEY" --arg src_image "$FAROS_GRAPHQL_SOURCE_IMAGE" --arg dst_image "$FAROS_DST_IMAGE" `
       '.src.config.api_key = $api_key | .dst.config.edition_configs.api_key = $api_key | .src.image = $src_image | .dst.image = $dst_image' `
       ./resources/test_config_file_graph_copy.json.template > ./resources/windows/test_config_file_graph_copy.json    
 }
@@ -167,7 +167,7 @@ Describe 'No image pull' {
 
 Describe 'Generate config' {
     It 'fails if generate-config not source found' {
-        $result = & ./airbyte-local generate-config foo 2>&1
+        $result = & ./airbyte-local generate-config foo
         $matchingLine = $result | Where-Object { $_ -match "Source type 'foo' not found. Please provide a valid source type." }
         $matchingLine | Should -Not -BeNullOrEmpty
         $LASTEXITCODE | Should -Be 1
@@ -175,7 +175,7 @@ Describe 'Generate config' {
 
     # This test is skipped because the CLI doesn't support running Windows containers in subcommand `generate-config`
     It 'should succeed' -Skip {
-        $result = & ./airbyte-local generate-config faros-graphql 2>&1
+        $result = & ./airbyte-local generate-config faros-graphql
         $matchingLine = $result | Where-Object { $_ -match "Configuration file generated successfully" }
         $matchingLine | Should -Not -BeNullOrEmpty
         $LASTEXITCODE | Should -Be 0
@@ -183,7 +183,7 @@ Describe 'Generate config' {
 
   # This test is skipped because the CLI doesn't support running Windows containers in subcommand `generate-config`
     It 'should succeed with static config' -Skip {
-        $result = & ./airbyte-local generate-config github 2>&1
+        $result = & ./airbyte-local generate-config github
         $matchingLine = $result | Where-Object { $_ -match "Configuration file generated successfully" }
         $matchingLine | Should -Not -BeNullOrEmpty
         $LASTEXITCODE | Should -Be 0
@@ -191,7 +191,7 @@ Describe 'Generate config' {
 
     # This test is skipped because the CLI doesn't support running Windows containers in subcommand `generate-config`
     It 'should succeed with silent option' -Skip {
-        $result = & ./airbyte-local generate-config --silent github 2>&1
+        $result = & ./airbyte-local generate-config --silent github
         $matchingLine = $result | Where-Object { $_ -notmatch "Source Airbyte Configuration Spec" }
         $matchingLine | Should -Not -BeNullOrEmpty
         $matchingLine = $result | Where-Object { $_ -match "Configuration file generated successfully" }
@@ -201,7 +201,7 @@ Describe 'Generate config' {
 
     # This test is skipped because the CLI doesn't support running Windows containers in subcommand `generate-config`
     It 'should succeed with custom image' -Skip {
-        $result = & ./airbyte-local generate-config --image farosai/airbyte-faros-graphql-source 2>&1
+        $result = & ./airbyte-local generate-config --image farosai/airbyte-faros-graphql-source
         $matchingLine = $result | Where-Object { $_ -match "Configuration file generated successfully" }
         $matchingLine | Should -Not -BeNullOrEmpty
         $LASTEXITCODE | Should -Be 0
@@ -210,7 +210,7 @@ Describe 'Generate config' {
 
 Describe 'Check source connection' {
     It 'should fail if source connection fails' {
-        $result = & ./airbyte-local --src $EXAMPLE_SOURCE_IMAGE --src-check-connection --src-only --debug
+        $result = & ./airbyte-local --src "$EXAMPLE_SOURCE_IMAGE" --src-check-connection --src-only
         Write-Host "Command Output: $result"
         $matchingLine = $result | Where-Object { $_ -match "Failed to validate source connection: User is not chris." }
         $matchingLine | Should -Not -BeNullOrEmpty
@@ -218,9 +218,7 @@ Describe 'Check source connection' {
     }
 
     It 'should succeed if source connection is valid' {
-        Get-Content -Path ./resources/windows/test_config_file_src_only.json
-        cat ./resources/windows/test_config_file_src_only.json
-        $result = & ./airbyte-local --config-file './resources/windows/test_config_file_src_only.json' --src-check-connection --src-only  --debug
+        $result = & ./airbyte-local --config-file './resources/windows/test_config_file_src_only.json' --src-check-connection --src-only
         Write-Host "Command Output: $result"
         $matchingLine = $result | Where-Object { $_ -match "Source connection is valid." }
         $matchingLine | Should -Not -BeNullOrEmpty
