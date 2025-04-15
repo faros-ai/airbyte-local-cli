@@ -161,7 +161,7 @@ export async function checkSrcConnection(tmpDir: string, image: string, srcConfi
 
     // Wait for the container to finish
     const res = await container.wait();
-    logger.debug(`Source connector exit code: ${JSON.stringify(res)}`);
+    logger.debug(`Source check connection contaienr exit code: ${JSON.stringify(res)}`);
 
     // capture connection status from the output
     let status: AirbyteConnectionStatusMessage | undefined;
@@ -233,7 +233,7 @@ export async function runDiscoverCatalog(tmpDir: string, image: string | undefin
 
     // Wait for the container to finish
     const res = await container.wait();
-    logger.debug(`Source connector exit code: ${JSON.stringify(res)}`);
+    logger.debug(`Discover catalog container exit code: ${JSON.stringify(res)}`);
 
     // capture catalog output
     let rawCatalog: AirbyteCatalogMessage | undefined;
@@ -434,11 +434,9 @@ export async function runSrcSync(tmpDir: string, config: FarosConfig, srcOutputS
     logger.debug(`Source connector exit code: ${JSON.stringify(res)}`);
 
     // close the output stream when the source connector is done
+    containerOutputStream.end();
+    logger.debug('Container output stream closed.');
     if (outputStream !== process.stdout) {
-      // close the container output stream
-      containerOutputStream.end();
-      logger.debug('Container output stream closed.');
-
       // close the output stream when the container output stream finishes writing
       containerOutputStream.on('finish', () => {
         outputStream.end();
