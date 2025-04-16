@@ -63,6 +63,7 @@ jobs:
 
   test:
     name: Test NodeJS Cli
+    needs: [build]
     strategy:
       matrix:
         os: 
