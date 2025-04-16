@@ -63,6 +63,7 @@ jobs:
 
   test:
     name: Test NodeJS Cli
+    needs: [build]
     strategy:
       matrix:
         os: 
@@ -72,8 +73,7 @@ jobs:
           - macos-latest # macos arm64
           - windows-latest # windows x64
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 20
-    needs: [build]
+    timeout-minutes: 60
     steps:
       - name: Check out
         uses: actions/checkout@v4
@@ -110,22 +110,15 @@ jobs:
       # Run the binary: make sure the binary executes fine on the system/arch
       - name: Run binary
         working-directory: airbyte-local-cli-nodejs/out/pkg
-        run: |
-          ./airbyte-local --help
+        run: ./airbyte-local --help
 
+      # We use Shellspec to run the tests in Bash
       - name: Install ShellSpec
-        if: matrix.os == 'ubuntu-latest'
         shell: bash
-        run: |
-          curl -fsSL https://git.io/shellspec | sh -s 0.28.1 --yes
+        run: curl -fsSL https://git.io/shellspec | sh -s 0.28.1 --yes
     
-      ## 
-      # Run ShellSpec tests
-      #  - linux: run on x64 but not arm64 as we don't have arm64 aibtye images
-      #  - macos: doesn't have docker by default in the github runner. Too much work to configure and Macos syntax should be relatively the same as linux
-      #  - windows: TODO
-      ##
-      - name: Run ShellSpec tests
+      # Run ALL e2e tests on Linux x64
+      - name: Run Bash tests (Linux x64)
         if: matrix.os == 'ubuntu-latest'
         working-directory: airbyte-local-cli-nodejs
         env:
@@ -134,6 +127,60 @@ jobs:
           cp ./out/pkg/airbyte-local ./test/exec/airbyte-local
           cp -rf ./test/resources ./test/exec/
           shellspec --chdir ./test/exec
+
+      # Run partial e2e tests (excluding docker tests)
+      #  - linux arm64: without pushing arm64 airbye connector images, the tests will fail
+      - name: Run Bash tests (Linux arm64)
+        if: matrix.os == 'ubuntu-arm64'
+        working-directory: airbyte-local-cli-nodejs
+        run: |
+          cp ./out/pkg/airbyte-local ./test/exec/airbyte-local
+          cp -rf ./test/resources ./test/exec/
+          shellspec --chdir ./test/exec --tag argvParsing,main
+
+      # Run partial e2e tests (excluding any tests related to docker check)
+      #  - macos: doesn't have docker by default in the github runner. Too much work to configure and Macos syntax should be relatively the same as linux
+      - name: Run Bash tests (MacOS)
+        if: runner.os == 'MacOS'
+        working-directory: airbyte-local-cli-nodejs
+        run: |
+          cp ./out/pkg/airbyte-local ./test/exec/airbyte-local
+          cp -rf ./test/resources ./test/exec/
+          export PATH="$HOME/.local/bin:$PATH"
+          which shellspec
+          shellspec --chdir ./test/exec --tag argvParsing
+    
+      # Run partial e2e tests on Windows bash (excluding docker tests)
+      # - windows: requires to config the shellspec in PATH. Separete to its own step to run
+      - name: Run Bash tests (Windows)
+        if: matrix.os == 'windows-latest'
+        working-directory: airbyte-local-cli-nodejs
+        shell: bash
+        run: |
+          cp ./out/pkg/airbyte-local ./test/exec/airbyte-local
+          cp -rf ./test/resources ./test/exec/
+
+          # shellspec is installed in $HOME/.local/bin
+          export PATH="$HOME/.local/bin:$PATH"
+          which shellspec
+          shellspec --chdir ./test/exec --tag argvParsing,main
+
+      # Run all e2e tests on Windows powershell
+      # We use Pester to run e2e tests on Windows powershell. Pester is pre-installed on the Windows runner
+      - name: Run Powershell tests (Windows)
+        if: matrix.os == 'windows-latest'
+        working-directory: airbyte-local-cli-nodejs
+        shell: pwsh
+        env:
+          FAROS_API_KEY: ${{ secrets.FAROS_API_KEY }}
+        run: |
+          # cp ./out/pkg/airbyte-local ./test/airbyte-local
+          Copy-Item -Path ./out/pkg/airbyte-local.exe -Destination ./test/airbyte-local.exe
+          # cd ./test
+          Set-Location -Path ./test
+
+          # Run Pester
+          Invoke-Pester -Output Detailed ./pester/index.Tests.ps1
 
   tag:
     name: Tag

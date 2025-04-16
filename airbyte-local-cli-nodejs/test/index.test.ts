@@ -71,7 +71,7 @@ describe('main', () => {
     const {main} = await import('../src/index');
     await main();
 
-    expect(docker.checkSrcConnection).toHaveBeenCalled();
+    expect(docker.runCheckSrcConnection).toHaveBeenCalled();
   });
 
   it('should run sync', async () => {

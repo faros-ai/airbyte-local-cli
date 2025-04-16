@@ -1,4 +1,5 @@
-import {createReadStream, createWriteStream, readFileSync, writeFileSync} from 'node:fs';
+import {createReadStream, createWriteStream, readFileSync, ReadStream, writeFileSync} from 'node:fs';
+import {sep} from 'node:path';
 import {PassThrough, Writable} from 'node:stream';
 
 import Docker from 'dockerode';
@@ -35,6 +36,32 @@ let _docker = new Docker();
 // For testing purposes
 export function setDocker(docker: Docker): void {
   _docker = docker;
+}
+
+/**
+ * Use 'linux/amd64' plaform for farosai images.
+ * Use 'windows/amd64' platform if there's `windows` in the tag.
+ *
+ * TODO: @FAI-15309 This should be removed once we have a proper multi-platform image.
+ */
+function getImagePlatform(image: string): string | undefined {
+  if (image.includes(':windows')) {
+    return 'windows/amd64';
+  } else if (image?.startsWith('farosai')) {
+    return 'linux/amd64';
+  }
+  return undefined;
+}
+
+/**
+ * This is a workaround for running tests on Windows with Windows images.
+ * IRL, users should run linux images even on Windows.
+ */
+function getBindsLocation(image: string): string {
+  if (image.includes(':windows')) {
+    return `C:${sep}configs`;
+  }
+  return `${sep}configs`;
 }
 
 export async function checkDockerInstalled(): Promise<void> {
@@ -83,134 +110,6 @@ export async function inspectDockerImage(image: string): Promise<{digest: string
 }
 
 /**
- * Use 'linux/amd64' plaform for farosai images.
- */
-function getImagePlatform(image: string): string | undefined {
-  if (image?.startsWith('farosai')) {
-    return 'linux/amd64';
-  }
-  return undefined;
-}
-
-/**
- * Spinning up a docker container to check the source connection.
- * `docker run --rm -v "$tempdir:/configs" $src_docker_options "$src_docker_image"
- *      check --config "/configs/$src_config_filename"`
- *
- * Sample output from the docker container:
- * {"connectionStatus":{"status":"SUCCEEDED"},"type":"CONNECTION_STATUS"}
- * {"connectionStatus":{"status":"FAILED","message":"Faros API key was not provided"},"type":"CONNECTION_STATUS"}
- */
-export async function checkSrcConnection(tmpDir: string, image: string, srcConfigFile?: string): Promise<void> {
-  logger.info('Validating connection to source...');
-
-  if (!image) {
-    throw new Error('Source image is missing.');
-  }
-
-  try {
-    const cfgFile = srcConfigFile ?? SRC_CONFIG_FILENAME;
-    const command = ['check', '--config', `/configs/${cfgFile}`];
-    const createOptions: Docker.ContainerCreateOptions = {
-      HostConfig: {
-        Binds: [`${tmpDir}:/configs`],
-        AutoRemove: true,
-      },
-      platform: getImagePlatform(image),
-    };
-
-    // create a writable stream to capture the output
-    let data = '';
-    const outputStream = new Writable({
-      write(chunk, _encoding, callback) {
-        data += chunk.toString();
-        callback();
-      },
-    });
-
-    // docker run
-    const res = await _docker.run(image, command, outputStream, createOptions);
-
-    // capture connection status from the output
-    let status: AirbyteConnectionStatusMessage | undefined;
-    data.split('\n').forEach((line) => {
-      if (line.includes(AirbyteMessageType.CONNECTION_STATUS)) {
-        status = JSON.parse(line) as AirbyteConnectionStatusMessage;
-      }
-    });
-    if (
-      status?.type === AirbyteMessageType.CONNECTION_STATUS &&
-      status?.connectionStatus.status === AirbyteConnectionStatus.SUCCEEDED &&
-      res[0].StatusCode === 0
-    ) {
-      logger.info('Source connection is valid.');
-    } else {
-      throw new Error(status?.connectionStatus.message);
-    }
-  } catch (error: any) {
-    throw new Error(`Failed to validate source connection: ${error.message ?? JSON.stringify(error)}.`);
-  }
-}
-
-/**
- * Get catalog configuration
- *
- * Docker cli command:
- * docker run --rm -v "$tempdir:/configs" "$src_docker_image" discover \
- *      --config "/configs/$src_config_filename"
- */
-export async function runDiscoverCatalog(tmpDir: string, image: string | undefined): Promise<AirbyteCatalog> {
-  logger.info('Discovering catalog...');
-
-  if (!image) {
-    throw new Error('Source image is missing.');
-  }
-
-  try {
-    const command = ['discover', '--config', `/configs/${SRC_CONFIG_FILENAME}`];
-    const createOptions: Docker.ContainerCreateOptions = {
-      HostConfig: {
-        Binds: [`${tmpDir}:/configs`],
-        AutoRemove: true,
-      },
-      platform: getImagePlatform(image),
-    };
-
-    // create a writable stream to capture the output
-    let data = '';
-    const outputStream = new Writable({
-      write(chunk, _encoding, callback) {
-        data += chunk.toString();
-        callback();
-      },
-    });
-
-    // docker run
-    const res = await _docker.run(image, command, outputStream, createOptions);
-
-    // capture catalog output
-    let rawCatalog: AirbyteCatalogMessage | undefined;
-    data.split('\n').forEach((line) => {
-      if (line.includes(AirbyteMessageType.CATALOG)) {
-        rawCatalog = JSON.parse(line) as AirbyteCatalogMessage;
-      } else {
-        if (line) {
-          process.stderr.write(`${line}\n`);
-        }
-      }
-    });
-
-    if (rawCatalog?.type === AirbyteMessageType.CATALOG && res[0].StatusCode === 0) {
-      logger.info('Catalog discovered successfully.');
-      return rawCatalog.catalog ?? {streams: []};
-    }
-    throw new Error('Catalog not found or container ends with non-zero status code');
-  } catch (error: any) {
-    throw new Error(`Failed to discover catalog: ${error.message ?? JSON.stringify(error)}.`);
-  }
-}
-
-/**
  * Process the destination output.
  */
 export function processDstDataByLine(line: string, cfg: FarosConfig): string {
@@ -254,10 +153,10 @@ export function processDstDataByLine(line: string, cfg: FarosConfig): string {
   }
   return state;
 }
+
 /**
  * Filter out spec output
  */
-
 export function processSpecByLine(line: string): AirbyteSpec | undefined {
   let spec;
 
@@ -276,6 +175,201 @@ export function processSpecByLine(line: string): AirbyteSpec | undefined {
     throw new Error(`Spec data: '${line}'; Error: ${error.message}`);
   }
   return spec;
+}
+
+/**
+ * Run the docker container with the provided options and stdout stream.
+ * @param options - Docker container create options
+ * @param outputStream - Writable stream to capture the output
+ */
+async function runDocker(
+  options: Docker.ContainerCreateOptions,
+  outputStream: Writable,
+  inputStream?: ReadStream | PassThrough,
+): Promise<void> {
+  // Create the Docker container
+  const container = await _docker.createContainer(options);
+
+  // Attach the stderr to termincal stderr, and stdout to the output stream
+  const stdoutStream = await container.attach({stream: true, stdout: true, stderr: true});
+  container.modem.demuxStream(stdoutStream, outputStream, process.stderr);
+
+  // Attach the input stream to the container stdin
+  let stdinStream: NodeJS.ReadWriteStream | undefined;
+  if (inputStream) {
+    // Remove additional stdin data from the stdin stream
+    // Uderlying bug in dockerode:
+    // Workaround copied from issue: https://github.com/apocas/dockerode/issues/742
+    container.modem = new Proxy(container.modem, {
+      get(target, prop) {
+        const origMethod = target[prop];
+        // internally to send http requests to the docker daemon
+        if (prop === 'dial') {
+          return function (...args: any[]) {
+            if (args[0].path.endsWith('/attach?')) {
+              // send an empty json payload instead
+              args[0].file = Buffer.from('');
+            }
+            return origMethod.apply(target, args);
+          };
+        }
+        return origMethod;
+      },
+    });
+
+    stdinStream = await container.attach({stream: true, hijack: true, stdin: true});
+    inputStream.pipe(stdinStream);
+  }
+
+  // Start the container
+  await container.start();
+
+  // Wait for the container to finish
+  const res = await container.wait();
+  logger.debug(`Container exit code: ${JSON.stringify(res)}`);
+
+  // Close docker attached stream explicitly
+  // This is supposed to be automatically closed when the container exits
+  // but on Windows we intermittently experienced issues with the stream not being closed.
+  try {
+    if (stdoutStream) {
+      (stdoutStream as any).destroy();
+    }
+    if (stdinStream) {
+      (stdinStream as any).destroy();
+    }
+  } catch (error: any) {
+    logger.debug(`Failed to destroy streams: ${error.message} ?? ${JSON.stringify(error)}`);
+  }
+
+  if (res?.StatusCode !== 0) {
+    throw new Error(`Container exited with code ${res.StatusCode}`);
+  }
+}
+
+/**
+ * Spinning up a docker container to check the source connection.
+ * `docker run --rm -v "$tempdir:/configs" $src_docker_options "$src_docker_image"
+ *      check --config "/configs/$src_config_filename"`
+ *
+ * Sample output from the docker container:
+ * {"connectionStatus":{"status":"SUCCEEDED"},"type":"CONNECTION_STATUS"}
+ * {"connectionStatus":{"status":"FAILED","message":"Faros API key was not provided"},"type":"CONNECTION_STATUS"}
+ */
+export async function runCheckSrcConnection(tmpDir: string, image: string, srcConfigFile?: string): Promise<void> {
+  logger.info('Validating connection to source...');
+
+  if (!image) {
+    throw new Error('Source image is missing.');
+  }
+
+  try {
+    const cfgFile = srcConfigFile ?? SRC_CONFIG_FILENAME;
+    const command = ['check', '--config', `/configs/${cfgFile}`];
+    const createOptions: Docker.ContainerCreateOptions = {
+      Image: image,
+      Cmd: command,
+      AttachStderr: true,
+      AttachStdout: true,
+      HostConfig: {
+        Binds: [`${tmpDir}:${getBindsLocation(image)}`],
+        AutoRemove: true,
+      },
+      platform: getImagePlatform(image),
+    };
+
+    // create a writable stream to capture the output
+    let data = '';
+    const containerOutputStream = new Writable({
+      write(chunk, _encoding, callback) {
+        data += chunk.toString();
+        callback();
+      },
+    });
+
+    // run docker
+    await runDocker(createOptions, containerOutputStream);
+
+    // capture connection status from the output
+    let status: AirbyteConnectionStatusMessage | undefined;
+    data.split('\n').forEach((line) => {
+      if (line.includes(AirbyteMessageType.CONNECTION_STATUS)) {
+        status = JSON.parse(line) as AirbyteConnectionStatusMessage;
+      }
+    });
+    if (
+      status?.type === AirbyteMessageType.CONNECTION_STATUS &&
+      status?.connectionStatus.status === AirbyteConnectionStatus.SUCCEEDED
+    ) {
+      logger.info('Source connection is valid.');
+    } else {
+      throw new Error(status?.connectionStatus.message);
+    }
+  } catch (error: any) {
+    throw new Error(`Failed to validate source connection: ${error.message ?? JSON.stringify(error)}.`);
+  }
+}
+
+/**
+ * Get catalog configuration
+ *
+ * Docker cli command:
+ * docker run --rm -v "$tempdir:/configs" "$src_docker_image" discover \
+ *      --config "/configs/$src_config_filename"
+ */
+export async function runDiscoverCatalog(tmpDir: string, image: string | undefined): Promise<AirbyteCatalog> {
+  logger.info('Discovering catalog...');
+
+  if (!image) {
+    throw new Error('Source image is missing.');
+  }
+
+  try {
+    const command = ['discover', '--config', `/configs/${SRC_CONFIG_FILENAME}`];
+    const createOptions: Docker.ContainerCreateOptions = {
+      Image: image,
+      Cmd: command,
+      AttachStderr: true,
+      AttachStdout: true,
+      HostConfig: {
+        Binds: [`${tmpDir}:${getBindsLocation(image)}`],
+        AutoRemove: true,
+      },
+      platform: getImagePlatform(image),
+    };
+
+    // create a writable stream to capture the output
+    let data = '';
+    const containerOutputStream = new Writable({
+      write(chunk, _encoding, callback) {
+        data += chunk.toString();
+        callback();
+      },
+    });
+
+    // run docker
+    await runDocker(createOptions, containerOutputStream);
+
+    // capture catalog output
+    let rawCatalog: AirbyteCatalogMessage | undefined;
+    data.split('\n').forEach((line) => {
+      if (line.includes(AirbyteMessageType.CATALOG)) {
+        rawCatalog = JSON.parse(line) as AirbyteCatalogMessage;
+      } else {
+        if (line) {
+          process.stderr.write(`${line}\n`);
+        }
+      }
+    });
+
+    if (rawCatalog?.type === AirbyteMessageType.CATALOG) {
+      logger.info('Catalog discovered successfully.');
+      return rawCatalog.catalog ?? {streams: []};
+    }
+    throw new Error('Catalog not found or container ends with non-zero status code');
+  } catch (error: any) {
+    throw new Error(`Failed to discover catalog: ${error.message ?? JSON.stringify(error)}.`);
+  }
 }
 
 /**
@@ -345,14 +439,11 @@ export async function runSrcSync(tmpDir: string, config: FarosConfig, srcOutputS
         },
         ...config.src?.dockerOptions?.additionalOptions?.HostConfig,
         // Default options: cannot be overridden by users
-        Binds: [`${tmpDir}:/configs`],
+        Binds: [`${tmpDir}:${getBindsLocation(config.src.image)}`],
         AutoRemove: !config.keepContainers,
         Init: true,
       },
     };
-
-    // Create the Docker container
-    const container = await _docker.createContainer(createOptions);
 
     // Create a writable stream for the processed output data
     const outputStream =
@@ -375,23 +466,16 @@ export async function runSrcSync(tmpDir: string, config: FarosConfig, srcOutputS
       },
     });
 
-    // Attach the stderr to termincal stderr, and stdout to the output stream
-    const stream = await container.attach({stream: true, stdout: true, stderr: true});
-    container.modem.demuxStream(stream, containerOutputStream, process.stderr);
+    // run docker
+    await runDocker(createOptions, containerOutputStream);
 
-    // Start the container
-    await container.start();
+    // Close the container output stream
+    // This is required to notify the dst connector that inputs are done
+    containerOutputStream.end();
+    logger.debug('Container output stream ended.');
 
-    // Wait for the container to finish
-    const res = await container.wait();
-    logger.debug(`Source connector exit code: ${JSON.stringify(res)}`);
-
-    // close the output stream when the source connector is done
+    // Wait for the outputStream to finish writing
     if (outputStream !== process.stdout) {
-      // close the container output stream
-      containerOutputStream.end();
-      logger.debug('Container output stream closed.');
-
       // close the output stream when the container output stream finishes writing
       containerOutputStream.on('finish', () => {
         outputStream.end();
@@ -405,11 +489,7 @@ export async function runSrcSync(tmpDir: string, config: FarosConfig, srcOutputS
       });
     }
 
-    if (res.StatusCode === 0) {
-      logger.info('Source connector completed.');
-    } else {
-      throw new Error('Failed to run source connector.');
-    }
+    logger.info('Source connector completed.');
   } catch (error: any) {
     throw new Error(`Failed to run source connector: ${error.message ?? JSON.stringify(error)}`);
   }
@@ -485,33 +565,11 @@ export async function runDstSync(tmpDir: string, config: FarosConfig, srcPassThr
         },
         ...config.dst?.dockerOptions?.additionalOptions?.HostConfig,
         // Default options: cannot be overridden by users
-        Binds: [`${tmpDir}:/configs`],
+        Binds: [`${tmpDir}:${getBindsLocation(config.dst.image)}`],
         AutoRemove: !config.keepContainers,
         Init: true,
       },
     };
-
-    // Create the Docker container
-    const container = await _docker.createContainer(createOptions);
-
-    // Uderlying bug in dockerode:
-    // Workaround copied from issue: https://github.com/apocas/dockerode/issues/742
-    container.modem = new Proxy(container.modem, {
-      get(target, prop) {
-        const origMethod = target[prop];
-        // internally to send http requests to the docker daemon
-        if (prop === 'dial') {
-          return function (...args: any[]) {
-            if (args[0].path.endsWith('/attach?')) {
-              // send an empty json payload instead
-              args[0].file = Buffer.from('');
-            }
-            return origMethod.apply(target, args);
-          };
-        }
-        return origMethod;
-      },
-    });
 
     // create a writable stream to capture the stdout
     let buffer = '';
@@ -531,35 +589,20 @@ export async function runDstSync(tmpDir: string, config: FarosConfig, srcPassThr
       },
     });
 
-    // Attach stdout to the output stream, stderr to terminal stderr
-    const outputStream = await container.attach({stream: true, stdout: true, stderr: true});
-    container.modem.demuxStream(outputStream, containerOutputStream, process.stderr);
-
     // Create a readable stream from the src output file and pipe it to the container stdin
     const inputStream = srcPassThrough ?? createReadStream(`${tmpDir}/${SRC_OUTPUT_DATA_FILE}`);
-    const stdinStream = await container.attach({stream: true, hijack: true, stdin: true});
-    inputStream.pipe(stdinStream);
 
     // Start the container
-    await container.start();
+    await runDocker(createOptions, containerOutputStream, inputStream);
+    logger.info('Destination connector completed.');
 
-    // Wait for the container to finish
-    const res = await container.wait();
-    logger.debug(`Destination connector exit code: ${JSON.stringify(res)}`);
-
-    if (res.StatusCode === 0) {
-      logger.info('Destination connector completed.');
-
-      // Write the state file
-      const lastState = states.pop();
-      if (lastState) {
-        writeFileSync(`${config.stateFile}`, lastState);
-        logger.info(`New state is updated in '${config.stateFile}'.`);
-      } else {
-        logger.warn('No new state is generated.');
-      }
+    // Write the state file
+    const lastState = states.pop();
+    if (lastState) {
+      writeFileSync(`${config.stateFile}`, lastState);
+      logger.info(`New state is updated in '${config.stateFile}'.`);
     } else {
-      throw new Error(`Exit with ${JSON.stringify(res)}`);
+      logger.warn('No new state is generated.');
     }
   } catch (error: any) {
     throw new Error(`Failed to run destination connector: ${error.message ?? JSON.stringify(error)}`);
@@ -607,27 +650,18 @@ export async function runSpec(image: string): Promise<AirbyteSpec> {
       },
     });
 
-    // Create the Docker container
-    const container = await _docker.createContainer(createOptions);
-
-    // Attach stdout and stderr
-    const outputStream = await container.attach({stream: true, stdout: true, stderr: true});
-    container.modem.demuxStream(outputStream, containerOutputStream, process.stderr);
-
-    // docker run
-    await container.start();
-    const res = await container.wait();
-    logger.debug(`Spec exit code: ${JSON.stringify(res)}`);
+    // run docker
+    await runDocker(createOptions, containerOutputStream);
 
     // write spec to the file
-    if (res.StatusCode === 0 && specs.length > 0) {
+    if (specs.length > 0) {
       const spec = specs.pop();
       if (spec?.type === AirbyteMessageType.SPEC) {
         return spec;
       }
       throw new Error(`Unexpected spec: ${JSON.stringify(spec)}`);
     }
-    throw new Error(`Exit with ${JSON.stringify(res)}`);
+    throw new Error(`No spec found in the output`);
   } catch (error: any) {
     throw new Error(`Failed to run spec: ${error.message ?? JSON.stringify(error)}.`);
   }
@@ -672,27 +706,15 @@ export async function runWizard(tmpDir: string, image: string, spec: AirbyteSpec
       AttachStderr: true,
       AttachStdout: true,
       HostConfig: {
-        Binds: [`${tmpDir}:/configs`],
+        Binds: [`${tmpDir}:${getBindsLocation(image)}`],
         AutoRemove: true,
       },
       platform: getImagePlatform(image),
     };
 
-    // Create the Docker container
-    const container = await _docker.createContainer(createOptions);
+    // run docker
+    await runDocker(createOptions, process.stdout);
 
-    // Attach stdout and stderr
-    const outputStream = await container.attach({stream: true, stdout: true, stderr: true});
-    container.modem.demuxStream(outputStream, process.stdout, process.stderr);
-
-    // docker run
-    await container.start();
-    const res = await container.wait();
-    logger.debug(`Generate config exit code: ${JSON.stringify(res)}`);
-
-    if (res.StatusCode !== 0) {
-      throw new Error(`Exit with ${JSON.stringify(res)}`);
-    }
     const resultConfig = JSON.parse(readFileSync(`${tmpDir}/${TMP_WIZARD_CONFIG_FILENAME}`, 'utf-8'));
     return resultConfig;
   } catch (error: any) {

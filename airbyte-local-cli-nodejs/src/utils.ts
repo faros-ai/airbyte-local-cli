@@ -172,6 +172,9 @@ export function cleanUp(context: AirbyteCliContext): void {
     }
   }
   logger.debug('Clean up completed.');
+
+  logger.debug('Flushing the logs.');
+  logger.flush?.();
 }
 
 export function overrideCatalog(

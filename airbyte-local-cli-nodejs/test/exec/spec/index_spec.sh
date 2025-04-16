@@ -9,7 +9,7 @@ injectApiKey() {
 }
 BeforeAll 'injectApiKey'
 
-Describe 'Cli argv validation'
+Describe 'Cli argv validation' 'argvParsing'
   # Option conflict failures
   It 'fails if using both --config-file and --src'
     airbyte_local_test() {
@@ -81,14 +81,6 @@ Describe 'Cli argv validation'
     The output should include "missing required argument 'source'"
     The status should equal 1
   End
-  It 'fails if generate-config not source found'
-    airbyte_local_test() {
-      ./airbyte-local generate-config foo
-    }
-    When call airbyte_local_test
-    The output should include "Source type 'foo' not found. Please provide a valid source type."
-    The status should equal 1
-  End
 
   # Check for unknown options
   It 'fails if using unknown options'
@@ -121,9 +113,19 @@ Describe 'Cli argv validation'
     The output should include "Failed to read or parse config file"
     The status should equal 1
   End
+  It 'should succeed with space in filename'
+    airbyte_local_test() {
+      ./airbyte-local \
+        --config-file './resources/test_config_file_src_only space.json'
+    }
+    When call airbyte_local_test
+    The output should include "Reading config file"
+    # expected to fail because the config file deosn't include dst
+    The status should equal 1
+  End
 End
 
-Describe 'Validate temporary directory and files creation'
+Describe 'Validate temporary directory and files creation' 'main'
   It 'check docker in shellspec test environment'
     When run docker --version
     The output should include "Docker version"
@@ -143,43 +145,7 @@ Describe 'Validate temporary directory and files creation'
   End
 End
 
-Describe 'Generate config'
-  It 'should succeed'
-    airbyte_local_test() {
-      ./airbyte-local generate-config faros-graphql
-    }
-    When call airbyte_local_test
-    The output should include "Configuration file generated successfully"
-    The status should equal 0
-  End
-  It 'should succeed with static config'
-    airbyte_local_test() {
-      ./airbyte-local generate-config github
-    }
-    When call airbyte_local_test
-    The output should include "Configuration file generated successfully"
-    The status should equal 0
-  End
-  It 'should succeed with slient option'
-    airbyte_local_test() {
-      ./airbyte-local generate-config --silent github
-    }
-    When call airbyte_local_test
-    The output should not include "Source Airbyte Configuration Spec"
-    The output should include "Configuration file generated successfully"
-    The status should equal 0
-  End
-  It 'should succeed with custom image'
-    airbyte_local_test() {
-      ./airbyte-local generate-config --image farosai/airbyte-faros-graphql-source
-    }
-    When call airbyte_local_test
-    The output should include "Configuration file generated successfully"
-    The status should equal 0
-  End
-End
-
-Describe 'Stream prefix'
+Describe 'Stream prefix' 'main'
   It 'should generate stream prefix'
     airbyte_local_test() {
       ./airbyte-local \
@@ -210,7 +176,7 @@ Describe 'Stream prefix'
   End
 End
 
-Describe 'Load state file'
+Describe 'Load state file' 'main'
   It 'should create state file'
     airbyte_local_test() {
       ./airbyte-local \
@@ -248,7 +214,7 @@ Describe 'Load state file'
   End
 End
 
-Describe 'No image pull'
+Describe 'No image pull' 'main'
   It 'should not pull images'
     airbyte_local_test() {
       ./airbyte-local \
@@ -263,7 +229,51 @@ Describe 'No image pull'
   End
 End
 
-Describe 'Check source connection'
+Describe 'Generate config' 'docker'
+  It 'fails if generate-config not source found'
+    airbyte_local_test() {
+      ./airbyte-local generate-config foo
+    }
+    When call airbyte_local_test
+    The output should include "Source type 'foo' not found. Please provide a valid source type."
+    The status should equal 1
+  End
+  It 'should succeed'
+    airbyte_local_test() {
+      ./airbyte-local generate-config faros-graphql
+    }
+    When call airbyte_local_test
+    The output should include "Configuration file generated successfully"
+    The status should equal 0
+  End
+  It 'should succeed with static config'
+    airbyte_local_test() {
+      ./airbyte-local generate-config github
+    }
+    When call airbyte_local_test
+    The output should include "Configuration file generated successfully"
+    The status should equal 0
+  End
+  It 'should succeed with slient option'
+    airbyte_local_test() {
+      ./airbyte-local generate-config --silent github
+    }
+    When call airbyte_local_test
+    The output should not include "Source Airbyte Configuration Spec"
+    The output should include "Configuration file generated successfully"
+    The status should equal 0
+  End
+  It 'should succeed with custom image'
+    airbyte_local_test() {
+      ./airbyte-local generate-config --image farosai/airbyte-faros-graphql-source
+    }
+    When call airbyte_local_test
+    The output should include "Configuration file generated successfully"
+    The status should equal 0
+  End
+End
+
+Describe 'Check source connection' 'docker'
   It 'should fail if source connection fails'
     airbyte_local_test() {
       ./airbyte-local \
@@ -288,7 +298,7 @@ Describe 'Check source connection'
   End
 End
 
-Describe 'Run source sync only'
+Describe 'Run source sync only' 'docker'
   It 'should fail if source sync fails auth'
     airbyte_local_test() {
       ./airbyte-local \
@@ -324,7 +334,7 @@ Describe 'Run source sync only'
   End
 End
 
-Describe 'Run destination sync'
+Describe 'Run destination sync' 'docker'
   It 'should succeed with dstOnly'
     airbyte_local_test() {
       ./airbyte-local \
@@ -340,7 +350,7 @@ Describe 'Run destination sync'
   End
 End
 
-Describe 'Run source and destination sync'
+Describe 'Run source and destination sync' 'docker'
   It 'should succeed with src and dst'
     airbyte_local_test() {
       ./airbyte-local \
