@@ -2,8 +2,8 @@
 
 CLI for running Airbyte sources & destinations locally.
 
-> **Note:** The previous Bash-based version of this CLI has been deprecated.  
-> You can find its documentation [here](./airbyte-local-cli-bash/README.md).  
+> 💡 **IMPORTANT: The previous Bash-based version of this CLI has been deprecated.**  
+> You can find its documentation [here](https://github.com/faros-ai/airbyte-local-cli/blob/main/airbyte-local-cli-bash/README.md).  
 > For migration details, see the [Migration Guide](#migration-guide).
 
 ## Table of Contents
@@ -40,7 +40,7 @@ CLI for running Airbyte sources & destinations locally.
 
 ### Step 1. Install
 
-[All releases](https://github.com/faros-ai/airbyte-local-cli/releases.)
+[All releases](https://github.com/faros-ai/airbyte-local-cli/releases)
 
 #### Linux/MacOS
 
@@ -79,10 +79,10 @@ For example, pulling data from Github and pushing data to Faros AI.
 
 Then, there're two options you can go to create the config file.
 
-a. Auto Generate Configuration Templates:
-This is recommended for first-time users. It helps you to start with a template to update the Airbyte configs. (Go to Step 2a)
+* a. Auto Generate Configuration Templates:
+This is recommended for first-time users. It helps you to start with a template to update the Airbyte configs. (Go to [Step 2a](#step-2a-auto-generate-configuration-templates-experimental))
 
-b. Craft your own configuration: This is for users that are familiar with Airbyte configurations and are looking for a finer tune on the configs. (Go to Step 2b)
+* b. Craft your own configuration: This is for users that are familiar with Airbyte configurations and are looking for a finer tune on the configs. (Go to [Step 2b](#step-2b-craft-your-own-configuration))
 
 #### Step 2a. Auto Generate Configuration Templates (Experimental)
 
@@ -395,8 +395,8 @@ For arguments `--src ...` and `--dst ...`, they are still supported for user con
 | `--src-catalog-json <json>`      | Unsupported | Airbyte catalog config is now defined in Aribyte configuration file |
 | `--dst-catalog-file <path>`      | Unsupported | Airbyte catalog config is now defined in Aribyte configuration file |
 | `--dst-catalog-json <json>`      | Unsupported | Airbyte catalog config is now defined in Aribyte configuration file |
-| `--src-wizard`                   | Unsupported | Use `--generate-config` instead                                     |
-| `--dst-wizard`                   | Unsupported | Use `--generate-config` instead                                     |
+| `--src-wizard`                   | Unsupported | Use `generate-config` instead                                     |
+| `--dst-wizard`                   | Unsupported | Use `generate-config` instead                                     |
 | `--max-log-size <size>`          | Unsupported | Docker settings are now defined in Aribyte configuration file       |
 | `--max-mem <mem>`                | Unsupported | Docker settings are now defined in Aribyte configuration file       |
 | `--max-cpus <cpus>`              | Unsupported | Docker settings are now defined in Aribyte configuration file       |
