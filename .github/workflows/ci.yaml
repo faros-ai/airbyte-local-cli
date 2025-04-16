@@ -11,68 +11,68 @@ on:
     - main
 
 jobs:
-  # build:
-  #   name: Build
-  #   timeout-minutes: 10
-  #   runs-on: ubuntu-latest
-  #   steps:
-  #     - name: Check out
-  #       uses: actions/checkout@v4
+  build:
+    name: Build
+    timeout-minutes: 10
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out
+        uses: actions/checkout@v4
 
-  #     - name: Set up Node
-  #       uses: actions/setup-node@v4
-  #       with:
-  #         node-version: 22.x
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22.x
 
-  #     - name: Install
-  #       working-directory: airbyte-local-cli-nodejs
-  #       run: npm ci --no-audit --no-fund
+      - name: Install
+        working-directory: airbyte-local-cli-nodejs
+        run: npm ci --no-audit --no-fund
 
-  #     - name: Build
-  #       working-directory: airbyte-local-cli-nodejs
-  #       run: npm run build
+      - name: Build
+        working-directory: airbyte-local-cli-nodejs
+        run: npm run build
 
-  #     - name: Lint
-  #       working-directory: airbyte-local-cli-nodejs
-  #       run: npm run lint
+      - name: Lint
+        working-directory: airbyte-local-cli-nodejs
+        run: npm run lint
 
-  #     - name: Test
-  #       working-directory: airbyte-local-cli-nodejs
-  #       env:
-  #         FAROS_API_KEY: ${{ secrets.FAROS_API_KEY }}
-  #       run: npm run test -- --coverage --color
+      - name: Test
+        working-directory: airbyte-local-cli-nodejs
+        env:
+          FAROS_API_KEY: ${{ secrets.FAROS_API_KEY }}
+        run: npm run test -- --coverage --color
 
-  #     - name: Build Shellspec image
-  #       working-directory: test
-  #       run: |
-  #         docker build . -t 'farosai/shellspec:kcov'
+      - name: Build Shellspec image
+        working-directory: test
+        run: |
+          docker build . -t 'farosai/shellspec:kcov'
 
-  #     # Run shellspec tests againgst airbyte-local.sh
-  #     - name: Run ShellSpec tests
-  #       run: |
-  #         docker run --rm \
-  #           -v "$PWD/test:/src" \
-  #           -v "$PWD/airbyte-local.sh:/airbyte-local.sh" \
-  #           farosai/shellspec:kcov
+      # Run shellspec tests againgst airbyte-local.sh
+      - name: Run ShellSpec tests
+        run: |
+          docker run --rm \
+            -v "$PWD/test:/src" \
+            -v "$PWD/airbyte-local.sh:/airbyte-local.sh" \
+            farosai/shellspec:kcov
 
-  #     - name: SonarCloud Scan
-  #       uses: SonarSource/sonarqube-scan-action@v4
-  #       env:
-  #         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-  #         SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+      - name: SonarCloud Scan
+        uses: SonarSource/sonarqube-scan-action@v4
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
 
   test:
     name: Test NodeJS Cli
     strategy:
       matrix:
         os: 
-          # - ubuntu-latest # linux x64
-          # - ubuntu-24.04-arm # linux arm64
-          # - macos-13 # macos x64
-          # - macos-latest # macos arm64
+          - ubuntu-latest # linux x64
+          - ubuntu-24.04-arm # linux arm64
+          - macos-13 # macos x64
+          - macos-latest # macos arm64
           - windows-latest # windows x64
     runs-on: ${{ matrix.os }}
-    # timeout-minutes: 20
+    timeout-minutes: 60
     steps:
       - name: Check out
         uses: actions/checkout@v4
@@ -88,55 +88,6 @@ jobs:
         run: |
           npm ci --no-audit --no-fund
           npm run build
-    
-      - name: Debug
-        working-directory: airbyte-local-cli-nodejs
-        if: matrix.os == 'windows-latest'
-        shell: pwsh
-        env:
-          FAROS_API_KEY: ${{ secrets.FAROS_API_KEY }}
-        run: |
-          # DEBUG
-          $EXAMPLE_SOURCE_IMAGE = 'farosai/airbyte-example-source:windows-v0.14.11-rc0'
-          $FAROS_GRAPHQL_SOURCE_IMAGE = 'farosai/airbyte-faros-graphql-source:windows-v0.14.11-rc0'
-          $FAROS_DST_IMAGE = 'farosai/airbyte-faros-destination:windows-v0.14.11-rc0'
-
-          $FAROS_API_KEY = $env:FAROS_API_KEY
-          if (-not $FAROS_API_KEY) {
-              throw "FAROS_API_KEY environment variable is not set."
-          }
-
-          # create windows directory if not exists
-          if (-not (Test-Path './test/resources/windows')) {
-              New-Item -ItemType Directory -Path './test/resources/windows' | Out-Null
-          }
-
-          Write-Host "Creating test config files with API key and Windows images..."
-          & jq --arg src_image "$EXAMPLE_SOURCE_IMAGE" `
-            '.src.image = $src_image' `
-            ./test/resources/test_config_file_src_only.json > ./test/resources/windows/test_config_file_src_only.json
-
-          & jq --arg api_key "$FAROS_API_KEY" --arg dst_image "$FAROS_DST_IMAGE" `
-            '.dst.config.edition_configs.api_key = $api_key | .dst.image = $dst_image' `
-            ./test/resources/test_config_file_dst_only.json.template > ./test/resources/windows/test_config_file_dst_only.json
-
-          & jq --arg api_key "$FAROS_API_KEY" --arg src_image "$FAROS_GRAPHQL_SOURCE_IMAGE" --arg dst_image "$FAROS_DST_IMAGE" `
-            '.src.config.api_key = $api_key | .dst.config.edition_configs.api_key = $api_key | .src.image = $src_image | .dst.image = $dst_image' `
-            ./test/resources/test_config_file_graph_copy.json.template > ./test/resources/windows/test_config_file_graph_copy.json    
-
-          Write-Host "Pulling images..."
-          & docker pull $EXAMPLE_SOURCE_IMAGE
-          & docker pull $FAROS_GRAPHQL_SOURCE_IMAGE
-          & docker pull $FAROS_DST_IMAGE
-          Write-Host "Images pulled successfully."
-          
-          # npx tsx src/index.ts --config-file './test/resources/windows/test_config_file_src_only.json' --src-check-connection --src-only --debug
-
-          # npx tsx src/index.ts --config-file './test/resources/windows/test_config_file_dst_only.json' --dst-only './test/resources/dockerIt_runDstSync/faros_airbyte_cli_src_output' --debug 
-
-          npx tsx src/index.ts --config-file './test/resources/windows/test_config_file_graph_copy.json' --debug
-
-          Write-Host "Finishing running check connection command."
 
       - name: Package
         working-directory: airbyte-local-cli-nodejs
@@ -160,46 +111,46 @@ jobs:
         working-directory: airbyte-local-cli-nodejs/out/pkg
         run: ./airbyte-local --help
 
-      # # We use Shellspec to run the tests in Bash
-      # - name: Install ShellSpec
-      #   shell: bash
-      #   run: curl -fsSL https://git.io/shellspec | sh -s 0.28.1 --yes
+      # We use Shellspec to run the tests in Bash
+      - name: Install ShellSpec
+        shell: bash
+        run: curl -fsSL https://git.io/shellspec | sh -s 0.28.1 --yes
     
-      # # Run ALL e2e tests on Linux x64
-      # - name: Run Bash tests (Linux x64)
-      #   if: matrix.os == 'ubuntu-latest'
-      #   working-directory: airbyte-local-cli-nodejs
-      #   env:
-      #     FAROS_API_KEY: ${{ secrets.FAROS_API_KEY }}
-      #   run: |
-      #     cp ./out/pkg/airbyte-local ./test/exec/airbyte-local
-      #     cp -rf ./test/resources ./test/exec/
-      #     shellspec --chdir ./test/exec
+      # Run ALL e2e tests on Linux x64
+      - name: Run Bash tests (Linux x64)
+        if: matrix.os == 'ubuntu-latest'
+        working-directory: airbyte-local-cli-nodejs
+        env:
+          FAROS_API_KEY: ${{ secrets.FAROS_API_KEY }}
+        run: |
+          cp ./out/pkg/airbyte-local ./test/exec/airbyte-local
+          cp -rf ./test/resources ./test/exec/
+          shellspec --chdir ./test/exec
 
-      # # Run partial e2e tests (excluding docker tests)
-      # #  - linux arm64: without pushing arm64 airbye connector images, the tests will fail
-      # - name: Run Bash tests (Linux arm64)
-      #   if: matrix.os == 'ubuntu-arm64'
-      #   working-directory: airbyte-local-cli-nodejs
-      #   run: |
-      #     cp ./out/pkg/airbyte-local ./test/exec/airbyte-local
-      #     cp -rf ./test/resources ./test/exec/
-      #     shellspec --chdir ./test/exec --tag argvParsing,main
+      # Run partial e2e tests (excluding docker tests)
+      #  - linux arm64: without pushing arm64 airbye connector images, the tests will fail
+      - name: Run Bash tests (Linux arm64)
+        if: matrix.os == 'ubuntu-arm64'
+        working-directory: airbyte-local-cli-nodejs
+        run: |
+          cp ./out/pkg/airbyte-local ./test/exec/airbyte-local
+          cp -rf ./test/resources ./test/exec/
+          shellspec --chdir ./test/exec --tag argvParsing,main
 
-      # # Run partial e2e tests (excluding any tests related to docker check)
-      # #  - macos: doesn't have docker by default in the github runner. Too much work to configure and Macos syntax should be relatively the same as linux
-      # - name: Run Bash tests (MacOS)
-      #   if: runner.os == 'MacOS'
-      #   working-directory: airbyte-local-cli-nodejs
-      #   run: |
-      #     cp ./out/pkg/airbyte-local ./test/exec/airbyte-local
-      #     cp -rf ./test/resources ./test/exec/
-      #     export PATH="$HOME/.local/bin:$PATH"
-      #     which shellspec
-      #     shellspec --chdir ./test/exec --tag argvParsing
+      # Run partial e2e tests (excluding any tests related to docker check)
+      #  - macos: doesn't have docker by default in the github runner. Too much work to configure and Macos syntax should be relatively the same as linux
+      - name: Run Bash tests (MacOS)
+        if: runner.os == 'MacOS'
+        working-directory: airbyte-local-cli-nodejs
+        run: |
+          cp ./out/pkg/airbyte-local ./test/exec/airbyte-local
+          cp -rf ./test/resources ./test/exec/
+          export PATH="$HOME/.local/bin:$PATH"
+          which shellspec
+          shellspec --chdir ./test/exec --tag argvParsing
     
-      # # Run partial e2e tests on Windows bash (excluding docker tests)
-      # # - windows: requires to config the shellspec in PATH. Separete to its own step to run
+      # Run partial e2e tests on Windows bash (excluding docker tests)
+      # - windows: requires to config the shellspec in PATH. Separete to its own step to run
       - name: Run Bash tests (Windows)
         if: matrix.os == 'windows-latest'
         working-directory: airbyte-local-cli-nodejs
@@ -230,123 +181,123 @@ jobs:
           # Run Pester
           Invoke-Pester -Output Detailed ./pester/index.Tests.ps1
 
-  # tag:
-  #   name: Tag
-  #   needs: [test]
-  #   runs-on: ubuntu-latest
-  #   timeout-minutes: 5
-  #   if: github.ref == 'refs/heads/main'
-  #   outputs:
-  #     createdTag: ${{ steps.create-tag.outputs.tag }}
-  #   steps:
-  #     - name: Check out
-  #       uses: actions/checkout@v4
-  #       with:
-  #         fetch-depth: 2
+  tag:
+    name: Tag
+    needs: [test]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    if: github.ref == 'refs/heads/main'
+    outputs:
+      createdTag: ${{ steps.create-tag.outputs.tag }}
+    steps:
+      - name: Check out
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
 
-  #     - name: Create tag
-  #       id: create-tag
-  #       uses: salsify/action-detect-and-tag-new-version@v2
-  #       with:
-  #         version-command: cat airbyte-local-cli-nodejs/package.json | jq -r '.version'
+      - name: Create tag
+        id: create-tag
+        uses: salsify/action-detect-and-tag-new-version@v2
+        with:
+          version-command: cat airbyte-local-cli-nodejs/package.json | jq -r '.version'
 
-  # build-binaries:
-  #   name: Build Binaries
-  #   strategy:
-  #     matrix:
-  #       os: 
-  #         - ubuntu-latest # linux x64
-  #         - ubuntu-24.04-arm # linux arm64
-  #         - macos-13 # macos x64
-  #         - macos-latest # macos arm64
-  #         - windows-latest # windows x64
-  #   runs-on: ${{ matrix.os }}
-  #   timeout-minutes: 15
-  #   needs: [tag]
-  #   # Only run if the tag was created
-  #   if: needs.tag.outputs.createdTag != null
-  #   permissions:
-  #     contents: write
-  #   steps:
-  #     - name: Check out
-  #       uses: actions/checkout@v4
+  build-binaries:
+    name: Build Binaries
+    strategy:
+      matrix:
+        os: 
+          - ubuntu-latest # linux x64
+          - ubuntu-24.04-arm # linux arm64
+          - macos-13 # macos x64
+          - macos-latest # macos arm64
+          - windows-latest # windows x64
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+    needs: [tag]
+    # Only run if the tag was created
+    if: needs.tag.outputs.createdTag != null
+    permissions:
+      contents: write
+    steps:
+      - name: Check out
+        uses: actions/checkout@v4
 
-  #     - name: Set up Node
-  #       uses: actions/setup-node@v2
-  #       with:
-  #         node-version: 22.x
+      - name: Set up Node
+        uses: actions/setup-node@v2
+        with:
+          node-version: 22.x
 
-  #     - name: Install
-  #       working-directory: airbyte-local-cli-nodejs
-  #       shell: bash
-  #       run: |
-  #         npm ci --no-audit --no-fund
-  #         npm run version
+      - name: Install
+        working-directory: airbyte-local-cli-nodejs
+        shell: bash
+        run: |
+          npm ci --no-audit --no-fund
+          npm run version
 
-  #     - name: Package for Platform
-  #       working-directory: airbyte-local-cli-nodejs
-  #       shell: bash
-  #       run: |
-  #         if [ "${{ matrix.os }}" == 'ubuntu-latest' ]; then
-  #           TARGET="linuxstatic-x64"
-  #           BINARY_NAME="linux-x64"
-  #         elif [ "${{ matrix.os }}" == 'ubuntu-24.04-arm' ]; then
-  #           TARGET="linuxstatic-arm64"
-  #           BINARY_NAME="linux-arm64"
-  #         elif [ "${{ matrix.os }}" == 'macos-13' ]; then
-  #           TARGET="macos-x64"
-  #           BINARY_NAME=$TARGET
-  #         elif [ "${{ matrix.os }}" == 'macos-latest' ]; then
-  #           TARGET="macos-arm64"
-  #           BINARY_NAME=$TARGET
-  #         elif [ "${{ matrix.os }}" == 'windows-latest' ]; then
-  #           TARGET="win-x64"
-  #           BINARY_NAME=$TARGET
-  #         fi
+      - name: Package for Platform
+        working-directory: airbyte-local-cli-nodejs
+        shell: bash
+        run: |
+          if [ "${{ matrix.os }}" == 'ubuntu-latest' ]; then
+            TARGET="linuxstatic-x64"
+            BINARY_NAME="linux-x64"
+          elif [ "${{ matrix.os }}" == 'ubuntu-24.04-arm' ]; then
+            TARGET="linuxstatic-arm64"
+            BINARY_NAME="linux-arm64"
+          elif [ "${{ matrix.os }}" == 'macos-13' ]; then
+            TARGET="macos-x64"
+            BINARY_NAME=$TARGET
+          elif [ "${{ matrix.os }}" == 'macos-latest' ]; then
+            TARGET="macos-arm64"
+            BINARY_NAME=$TARGET
+          elif [ "${{ matrix.os }}" == 'windows-latest' ]; then
+            TARGET="win-x64"
+            BINARY_NAME=$TARGET
+          fi
 
-  #         echo "BINARY_NAME=$BINARY_NAME" >> $GITHUB_ENV
-  #         npm run pkg -- --target $TARGET
+          echo "BINARY_NAME=$BINARY_NAME" >> $GITHUB_ENV
+          npm run pkg -- --target $TARGET
       
-  #     - name: Compress Linux/MacOS binaries
-  #       working-directory: airbyte-local-cli-nodejs/out/pkg
-  #       if: runner.os != 'Windows'
-  #       run: |
-  #         zip airbyte-local-${BINARY_NAME}.zip airbyte-local
+      - name: Compress Linux/MacOS binaries
+        working-directory: airbyte-local-cli-nodejs/out/pkg
+        if: runner.os != 'Windows'
+        run: |
+          zip airbyte-local-${BINARY_NAME}.zip airbyte-local
 
-  #     - name: Compress Windows binaries
-  #       working-directory: airbyte-local-cli-nodejs/out/pkg
-  #       if: runner.os == 'Windows'
-  #       run: |
-  #         Compress-Archive -Path airbyte-local.exe -DestinationPath airbyte-local-win-x64.zip
+      - name: Compress Windows binaries
+        working-directory: airbyte-local-cli-nodejs/out/pkg
+        if: runner.os == 'Windows'
+        run: |
+          Compress-Archive -Path airbyte-local.exe -DestinationPath airbyte-local-win-x64.zip
 
-  #     - name: Upload binaries
-  #       uses: actions/upload-artifact@v4
-  #       with:
-  #         name: release_${{ env.BINARY_NAME }}
-  #         path: airbyte-local-cli-nodejs/out/pkg/airbyte-local-${{ env.BINARY_NAME }}.zip
+      - name: Upload binaries
+        uses: actions/upload-artifact@v4
+        with:
+          name: release_${{ env.BINARY_NAME }}
+          path: airbyte-local-cli-nodejs/out/pkg/airbyte-local-${{ env.BINARY_NAME }}.zip
 
-  # release:
-  #   name: Release
-  #   runs-on: ubuntu-latest
-  #   timeout-minutes: 10
-  #   needs: [tag, build-binaries]
-  #   steps:
-  #     - name: Download All Artifacts
-  #       uses: actions/download-artifact@v4
-  #       with:
-  #         path: airbyte-local-cli-nodejs/out/pkg
+  release:
+    name: Release
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs: [tag, build-binaries]
+    steps:
+      - name: Download All Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: airbyte-local-cli-nodejs/out/pkg
 
-  #     - name: List Downloaded Binaries
-  #       run: |
-  #         ls -R airbyte-local-cli-nodejs/out/pkg
+      - name: List Downloaded Binaries
+        run: |
+          ls -R airbyte-local-cli-nodejs/out/pkg
 
-  #     - name: Release
-  #       uses: softprops/action-gh-release@v2
-  #       with:
-  #         files: |
-  #           airbyte-local-cli-nodejs/out/pkg/release_linux-x64/airbyte-local-linux-x64.zip
-  #           airbyte-local-cli-nodejs/out/pkg/release_linux-arm64/airbyte-local-linux-arm64.zip
-  #           airbyte-local-cli-nodejs/out/pkg/release_macos-x64/airbyte-local-macos-x64.zip
-  #           airbyte-local-cli-nodejs/out/pkg/release_macos-arm64/airbyte-local-macos-arm64.zip
-  #           airbyte-local-cli-nodejs/out/pkg/release_win-x64/airbyte-local-win-x64.zip
-  #         tag_name: ${{ needs.tag.outputs.createdTag }}
+      - name: Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            airbyte-local-cli-nodejs/out/pkg/release_linux-x64/airbyte-local-linux-x64.zip
+            airbyte-local-cli-nodejs/out/pkg/release_linux-arm64/airbyte-local-linux-arm64.zip
+            airbyte-local-cli-nodejs/out/pkg/release_macos-x64/airbyte-local-macos-x64.zip
+            airbyte-local-cli-nodejs/out/pkg/release_macos-arm64/airbyte-local-macos-arm64.zip
+            airbyte-local-cli-nodejs/out/pkg/release_win-x64/airbyte-local-win-x64.zip
+          tag_name: ${{ needs.tag.outputs.createdTag }}
