@@ -43,7 +43,7 @@ jobs:
         run: npm run test -- --coverage --color
 
       - name: Build Shellspec image
-        working-directory: test
+        working-directory: airbyete-local-cli-bash/test
         run: |
           docker build . -t 'farosai/shellspec:kcov'
 
