@@ -1,4 +1,4 @@
-import {createReadStream, createWriteStream, readFileSync, writeFileSync} from 'node:fs';
+import {createReadStream, createWriteStream, readFileSync, ReadStream, writeFileSync} from 'node:fs';
 import {sep} from 'node:path';
 import {PassThrough, Writable} from 'node:stream';
 
@@ -36,6 +36,32 @@ let _docker = new Docker();
 // For testing purposes
 export function setDocker(docker: Docker): void {
   _docker = docker;
+}
+
+/**
+ * Use 'linux/amd64' plaform for farosai images.
+ * Use 'windows/amd64' platform if there's `windows` in the tag.
+ *
+ * TODO: @FAI-15309 This should be removed once we have a proper multi-platform image.
+ */
+function getImagePlatform(image: string): string | undefined {
+  if (image.includes(':windows')) {
+    return 'windows/amd64';
+  } else if (image?.startsWith('farosai')) {
+    return 'linux/amd64';
+  }
+  return undefined;
+}
+
+/**
+ * This is a workaround for running tests on Windows with Windows images.
+ * IRL, users should run linux images even on Windows.
+ */
+function getBindsLocation(image: string): string {
+  if (image.includes(':windows')) {
+    return `C:${sep}configs`;
+  }
+  return `${sep}configs`;
 }
 
 export async function checkDockerInstalled(): Promise<void> {
@@ -84,29 +110,71 @@ export async function inspectDockerImage(image: string): Promise<{digest: string
 }
 
 /**
- * Use 'linux/amd64' plaform for farosai images.
- * Use 'windows/amd64' platform if there's `windows` in the tag.
- *
- * TODO: @FAI-15309 This should be removed once we have a proper multi-platform image.
+ * Process the destination output.
  */
-function getImagePlatform(image: string): string | undefined {
-  if (image.includes(':windows')) {
-    return 'windows/amd64';
-  } else if (image?.startsWith('farosai')) {
-    return 'linux/amd64';
+export function processDstDataByLine(line: string, cfg: FarosConfig): string {
+  // reformat the JSON message
+  function formatDstMsg(json: any): string {
+    return `[DST] - ${JSON.stringify(json)}`;
   }
-  return undefined;
+
+  let state = '';
+
+  // skip empty lines
+  if (line.trim() === '') {
+    return state;
+  }
+
+  try {
+    const data = JSON.parse(line);
+
+    if (data?.type === AirbyteMessageType.STATE && data?.state?.data) {
+      state = JSON.stringify(data.state.data);
+      logger.debug(formatDstMsg(data));
+    }
+    if (cfg.rawMessages) {
+      process.stdout.write(`${line}\n`);
+    } else {
+      if (data?.type === AirbyteMessageType.LOG && data?.log?.level !== 'INFO') {
+        if (data?.log?.level === 'ERROR') {
+          logger.error(formatDstMsg(data));
+        } else if (data?.log?.level === 'WARN') {
+          logger.warn(formatDstMsg(data));
+        } else if (data?.log?.level === 'DEBUG') {
+          logger.debug(formatDstMsg(data));
+        }
+      } else {
+        logger.info(formatDstMsg(data));
+      }
+    }
+  } catch (error: any) {
+    // log as errors but not throw it
+    logger.error(`Line of data: '${line}'; Error: ${error.message}`);
+  }
+  return state;
 }
 
 /**
- * This is a workaround for running tests on Windows with Windows images.
- * IRL, users should run linux images even on Windows.
+ * Filter out spec output
  */
-function getBindsLocation(image: string): string {
-  if (image.includes(':windows')) {
-    return `C:${sep}configs`;
+export function processSpecByLine(line: string): AirbyteSpec | undefined {
+  let spec;
+
+  // skip empty lines
+  if (line.trim() === '') {
+    return spec;
   }
-  return `${sep}configs`;
+
+  try {
+    const data = JSON.parse(line);
+    if (data?.type === AirbyteMessageType.SPEC && data?.spec) {
+      spec = data as AirbyteSpec;
+      logger.debug(line);
+    }
+  } catch (error: any) {
+    throw new Error(`Spec data: '${line}'; Error: ${error.message}`);
+  }
+  return spec;
 }
 
 /**
@@ -114,13 +182,44 @@ function getBindsLocation(image: string): string {
  * @param options - Docker container create options
  * @param outputStream - Writable stream to capture the output
  */
-async function runDocker(options: Docker.ContainerCreateOptions, outputStream: Writable): Promise<void> {
+async function runDocker(
+  options: Docker.ContainerCreateOptions,
+  outputStream: Writable,
+  inputStream?: ReadStream | PassThrough,
+): Promise<void> {
   // Create the Docker container
   const container = await _docker.createContainer(options);
 
   // Attach the stderr to termincal stderr, and stdout to the output stream
-  const stream = await container.attach({stream: true, stdout: true, stderr: true});
-  container.modem.demuxStream(stream, outputStream, process.stderr);
+  const stdoutStream = await container.attach({stream: true, stdout: true, stderr: true});
+  container.modem.demuxStream(stdoutStream, outputStream, process.stderr);
+
+  // Attach the input stream to the container stdin
+  let stdinStream: NodeJS.ReadWriteStream | undefined;
+  if (inputStream) {
+    // Remove additional stdin data from the stdin stream
+    // Uderlying bug in dockerode:
+    // Workaround copied from issue: https://github.com/apocas/dockerode/issues/742
+    container.modem = new Proxy(container.modem, {
+      get(target, prop) {
+        const origMethod = target[prop];
+        // internally to send http requests to the docker daemon
+        if (prop === 'dial') {
+          return function (...args: any[]) {
+            if (args[0].path.endsWith('/attach?')) {
+              // send an empty json payload instead
+              args[0].file = Buffer.from('');
+            }
+            return origMethod.apply(target, args);
+          };
+        }
+        return origMethod;
+      },
+    });
+
+    stdinStream = await container.attach({stream: true, hijack: true, stdin: true});
+    inputStream.pipe(stdinStream);
+  }
 
   // Start the container
   await container.start();
@@ -129,12 +228,21 @@ async function runDocker(options: Docker.ContainerCreateOptions, outputStream: W
   const res = await container.wait();
   logger.debug(`Container exit code: ${JSON.stringify(res)}`);
 
-  // Close the attached stream
-  if (stream) {
-    (stream as any).destroy();
+  // Close docker attached stream explicitly
+  // This is supposed to be automatically closed when the container exits
+  // but on Windows we intermittently experienced issues with the stream not being closed.
+  try {
+    if (stdoutStream) {
+      (stdoutStream as any).destroy();
+    }
+    if (stdinStream) {
+      (stdinStream as any).destroy();
+    }
+  } catch (error: any) {
+    logger.debug(`Failed to destroy streams: ${error.message} ?? ${JSON.stringify(error)}`);
   }
 
-  if (res.StatusCode !== 0) {
+  if (res?.StatusCode !== 0) {
     throw new Error(`Container exited with code ${res.StatusCode}`);
   }
 }
@@ -148,7 +256,7 @@ async function runDocker(options: Docker.ContainerCreateOptions, outputStream: W
  * {"connectionStatus":{"status":"SUCCEEDED"},"type":"CONNECTION_STATUS"}
  * {"connectionStatus":{"status":"FAILED","message":"Faros API key was not provided"},"type":"CONNECTION_STATUS"}
  */
-export async function checkSrcConnection(tmpDir: string, image: string, srcConfigFile?: string): Promise<void> {
+export async function runCheckSrcConnection(tmpDir: string, image: string, srcConfigFile?: string): Promise<void> {
   logger.info('Validating connection to source...');
 
   if (!image) {
@@ -265,74 +373,6 @@ export async function runDiscoverCatalog(tmpDir: string, image: string | undefin
 }
 
 /**
- * Process the destination output.
- */
-export function processDstDataByLine(line: string, cfg: FarosConfig): string {
-  // reformat the JSON message
-  function formatDstMsg(json: any): string {
-    return `[DST] - ${JSON.stringify(json)}`;
-  }
-
-  let state = '';
-
-  // skip empty lines
-  if (line.trim() === '') {
-    return state;
-  }
-
-  try {
-    const data = JSON.parse(line);
-
-    if (data?.type === AirbyteMessageType.STATE && data?.state?.data) {
-      state = JSON.stringify(data.state.data);
-      logger.debug(formatDstMsg(data));
-    }
-    if (cfg.rawMessages) {
-      process.stdout.write(`${line}\n`);
-    } else {
-      if (data?.type === AirbyteMessageType.LOG && data?.log?.level !== 'INFO') {
-        if (data?.log?.level === 'ERROR') {
-          logger.error(formatDstMsg(data));
-        } else if (data?.log?.level === 'WARN') {
-          logger.warn(formatDstMsg(data));
-        } else if (data?.log?.level === 'DEBUG') {
-          logger.debug(formatDstMsg(data));
-        }
-      } else {
-        logger.info(formatDstMsg(data));
-      }
-    }
-  } catch (error: any) {
-    // log as errors but not throw it
-    logger.error(`Line of data: '${line}'; Error: ${error.message}`);
-  }
-  return state;
-}
-/**
- * Filter out spec output
- */
-
-export function processSpecByLine(line: string): AirbyteSpec | undefined {
-  let spec;
-
-  // skip empty lines
-  if (line.trim() === '') {
-    return spec;
-  }
-
-  try {
-    const data = JSON.parse(line);
-    if (data?.type === AirbyteMessageType.SPEC && data?.spec) {
-      spec = data as AirbyteSpec;
-      logger.debug(line);
-    }
-  } catch (error: any) {
-    throw new Error(`Spec data: '${line}'; Error: ${error.message}`);
-  }
-  return spec;
-}
-
-/**
  * Spinning up a docker container to run source airbyte connector.
  * Platform is set to 'linux/amd64' as we only publish airbyte connectors images for linux/amd64.
  *
@@ -430,6 +470,7 @@ export async function runSrcSync(tmpDir: string, config: FarosConfig, srcOutputS
     await runDocker(createOptions, containerOutputStream);
 
     // Close the container output stream
+    // This is required to notify the dst connector that inputs are done
     containerOutputStream.end();
     logger.debug('Container output stream ended.');
 
@@ -530,28 +571,6 @@ export async function runDstSync(tmpDir: string, config: FarosConfig, srcPassThr
       },
     };
 
-    // Create the Docker container
-    const container = await _docker.createContainer(createOptions);
-
-    // Uderlying bug in dockerode:
-    // Workaround copied from issue: https://github.com/apocas/dockerode/issues/742
-    container.modem = new Proxy(container.modem, {
-      get(target, prop) {
-        const origMethod = target[prop];
-        // internally to send http requests to the docker daemon
-        if (prop === 'dial') {
-          return function (...args: any[]) {
-            if (args[0].path.endsWith('/attach?')) {
-              // send an empty json payload instead
-              args[0].file = Buffer.from('');
-            }
-            return origMethod.apply(target, args);
-          };
-        }
-        return origMethod;
-      },
-    });
-
     // create a writable stream to capture the stdout
     let buffer = '';
     const states: string[] = [];
@@ -570,43 +589,20 @@ export async function runDstSync(tmpDir: string, config: FarosConfig, srcPassThr
       },
     });
 
-    // Attach stdout to the output stream, stderr to terminal stderr
-    const outputStream = await container.attach({stream: true, stdout: true, stderr: true});
-    container.modem.demuxStream(outputStream, containerOutputStream, process.stderr);
-
     // Create a readable stream from the src output file and pipe it to the container stdin
     const inputStream = srcPassThrough ?? createReadStream(`${tmpDir}/${SRC_OUTPUT_DATA_FILE}`);
-    const stdinStream = await container.attach({stream: true, hijack: true, stdin: true});
-    inputStream.pipe(stdinStream);
 
     // Start the container
-    await container.start();
+    await runDocker(createOptions, containerOutputStream, inputStream);
+    logger.info('Destination connector completed.');
 
-    // Wait for the container to finish
-    const res = await container.wait();
-    logger.debug(`Destination connector exit code: ${JSON.stringify(res)}`);
-
-    // Close the attached stream
-    if (outputStream) {
-      (outputStream as any).destroy();
-    }
-    if (stdinStream) {
-      (stdinStream as any).destroy();
-    }
-
-    if (res.StatusCode === 0) {
-      logger.info('Destination connector completed.');
-
-      // Write the state file
-      const lastState = states.pop();
-      if (lastState) {
-        writeFileSync(`${config.stateFile}`, lastState);
-        logger.info(`New state is updated in '${config.stateFile}'.`);
-      } else {
-        logger.warn('No new state is generated.');
-      }
+    // Write the state file
+    const lastState = states.pop();
+    if (lastState) {
+      writeFileSync(`${config.stateFile}`, lastState);
+      logger.info(`New state is updated in '${config.stateFile}'.`);
     } else {
-      throw new Error(`Exit with ${JSON.stringify(res)}`);
+      logger.warn('No new state is generated.');
     }
   } catch (error: any) {
     throw new Error(`Failed to run destination connector: ${error.message ?? JSON.stringify(error)}`);

@@ -16,8 +16,8 @@ import {
   TMP_WIZARD_CONFIG_FILENAME,
 } from '../src/constants/constants';
 import {
-  checkSrcConnection,
   pullDockerImage,
+  runCheckSrcConnection,
   runDiscoverCatalog,
   runDstSync,
   runSpec,
@@ -69,7 +69,7 @@ describe('runDiscoverCatalog', () => {
 describe('checkSrcConnection', () => {
   it('should success', async () => {
     await expect(
-      checkSrcConnection(
+      runCheckSrcConnection(
         `${process.cwd()}/test/resources`,
         'farosai/airbyte-example-source',
         'faros_airbyte_cli_src_config_chris.json',
@@ -79,7 +79,7 @@ describe('checkSrcConnection', () => {
 
   it('should fail with', async () => {
     await expect(
-      checkSrcConnection(
+      runCheckSrcConnection(
         `${process.cwd()}/test/resources`,
         'farosai/airbyte-example-source',
         'faros_airbyte_cli_src_config_jennie.json',

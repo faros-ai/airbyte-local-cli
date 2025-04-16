@@ -1,5 +1,5 @@
 import {parseAndValidateInputs} from './command';
-import {checkDockerInstalled, checkSrcConnection, pullDockerImage, runDstSync, runSrcSync} from './docker';
+import {checkDockerInstalled, pullDockerImage, runCheckSrcConnection, runDstSync, runSrcSync} from './docker';
 import {logger} from './logger';
 import {AirbyteCliContext, ImageType} from './types';
 import {
@@ -53,7 +53,7 @@ export async function main(): Promise<void> {
 
     // Check source connection
     if (cfg.srcCheckConnection && cfg.src?.image) {
-      await checkSrcConnection(tmpDir, cfg.src.image);
+      await runCheckSrcConnection(tmpDir, cfg.src.image);
     }
 
     // Run airbyte source connector
