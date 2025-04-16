@@ -44,8 +44,8 @@ Here is the steps of downloading the CLI on MacOS. Linux should have very simila
 
 ```sh
 # Download from the CLI
-# Please swap out `v0.0.1-beta.6` to the version you want
-wget -O airbyte-local.zip https://github.com/faros-ai/airbyte-local-cli/releases/download/v0.0.1-beta.6/airbyte-local-macos-arm64.zip | unzip -o airbyte-local.zip
+# Please swap out `v0.0.5` to the version you want
+wget -O airbyte-local.zip https://github.com/faros-ai/airbyte-local-cli/releases/download/v0.0.5/airbyte-local-macos-arm64.zip | unzip -o airbyte-local.zip
 
 # run `--help` or `--version` to check if the CLI is installed correctly
 ./airbyte-local # this shows the help manual
@@ -57,8 +57,8 @@ wget -O airbyte-local.zip https://github.com/faros-ai/airbyte-local-cli/releases
 
 ```ps1
 # Download from the CLI
-# Please swap out `v0.0.1-beta.6` to the version you want
-Invoke-WebRequest -Uri "https://github.com/faros-ai/airbyte-local-cli/releases/download/v0.0.1-beta.6/airbyte-local-win-x64.zip" -OutFile "airbyte-local-win-x64.zip"
+# Please swap out `v0.0.5` to the version you want
+Invoke-WebRequest -Uri "https://github.com/faros-ai/airbyte-local-cli/releases/download/v0.0.5/airbyte-local-win-x64.zip" -OutFile "airbyte-local-win-x64.zip"
 Expand-Archive -Path "airbyte-local-win-x64.zip" -DestinationPath . -Force
 
 # run `--help` or `--version` to check if the CLI is installed correctly
