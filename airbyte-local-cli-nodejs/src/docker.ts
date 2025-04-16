@@ -454,6 +454,13 @@ export async function runSrcSync(tmpDir: string, config: FarosConfig, srcOutputS
 
     // Wait for the outputStream to finish writing
     if (outputStream !== process.stdout) {
+      // close the output stream when the container output stream finishes writing
+      containerOutputStream.on('finish', () => {
+        outputStream.end();
+        logger.debug('Wrting file output stream closed.');
+      });
+
+      // Wait for the outputStream to finish writing
       await new Promise<void>((resolve, reject) => {
         (outputStream as Writable).on('finish', resolve);
         (outputStream as Writable).on('error', reject);

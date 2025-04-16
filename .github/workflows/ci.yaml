@@ -130,35 +130,35 @@ jobs:
           & docker pull $FAROS_DST_IMAGE
           Write-Host "Images pulled successfully."
           
-          npx tsx src/index.ts --config-file './test/resources/windows/test_config_file_src_only.json' --src-check-connection --src-only --debug
+          # npx tsx src/index.ts --config-file './test/resources/windows/test_config_file_src_only.json' --src-check-connection --src-only --debug
 
-          npx tsx src/index.ts --config-file './test/resources/windows/test_config_file_dst_only.json' --dst-only './test/resources/dockerIt_runDstSync/faros_airbyte_cli_src_output' --debug 
+          # npx tsx src/index.ts --config-file './test/resources/windows/test_config_file_dst_only.json' --dst-only './test/resources/dockerIt_runDstSync/faros_airbyte_cli_src_output' --debug 
 
-          npx tsx src/index.ts --config-file './test/resources/windows/test_config_file_graph_copy.json'
+          npx tsx src/index.ts --config-file './test/resources/windows/test_config_file_graph_copy.json' --debug
 
           Write-Host "Finishing running check connection command."
 
-      # - name: Package
-      #   working-directory: airbyte-local-cli-nodejs
-      #   shell: bash
-      #   run: |
-      #     if [ "${{ matrix.os }}" == 'ubuntu-latest' ]; then
-      #       TARGET="linuxstatic-x64"
-      #     elif [ "${{ matrix.os }}" == 'ubuntu-24.04-arm' ]; then
-      #       TARGET="linuxstatic-arm64"
-      #     elif [ "${{ matrix.os }}" == 'macos-13' ]; then
-      #       TARGET="macos-x64"
-      #     elif [ "${{ matrix.os }}" == 'macos-latest' ]; then
-      #       TARGET="macos-arm64"
-      #     elif [ "${{ matrix.os }}" == 'windows-latest' ]; then
-      #       TARGET="win-x64"
-      #     fi
-      #     npm run pkg -- --target $TARGET
+      - name: Package
+        working-directory: airbyte-local-cli-nodejs
+        shell: bash
+        run: |
+          if [ "${{ matrix.os }}" == 'ubuntu-latest' ]; then
+            TARGET="linuxstatic-x64"
+          elif [ "${{ matrix.os }}" == 'ubuntu-24.04-arm' ]; then
+            TARGET="linuxstatic-arm64"
+          elif [ "${{ matrix.os }}" == 'macos-13' ]; then
+            TARGET="macos-x64"
+          elif [ "${{ matrix.os }}" == 'macos-latest' ]; then
+            TARGET="macos-arm64"
+          elif [ "${{ matrix.os }}" == 'windows-latest' ]; then
+            TARGET="win-x64"
+          fi
+          npm run pkg -- --target $TARGET
       
-      # # Run the binary: make sure the binary executes fine on the system/arch
-      # - name: Run binary
-      #   working-directory: airbyte-local-cli-nodejs/out/pkg
-      #   run: ./airbyte-local --help
+      # Run the binary: make sure the binary executes fine on the system/arch
+      - name: Run binary
+        working-directory: airbyte-local-cli-nodejs/out/pkg
+        run: ./airbyte-local --help
 
       # # We use Shellspec to run the tests in Bash
       # - name: Install ShellSpec
@@ -200,35 +200,35 @@ jobs:
     
       # # Run partial e2e tests on Windows bash (excluding docker tests)
       # # - windows: requires to config the shellspec in PATH. Separete to its own step to run
-      # - name: Run Bash tests (Windows)
-      #   if: matrix.os == 'windows-latest'
-      #   working-directory: airbyte-local-cli-nodejs
-      #   shell: bash
-      #   run: |
-      #     cp ./out/pkg/airbyte-local ./test/exec/airbyte-local
-      #     cp -rf ./test/resources ./test/exec/
+      - name: Run Bash tests (Windows)
+        if: matrix.os == 'windows-latest'
+        working-directory: airbyte-local-cli-nodejs
+        shell: bash
+        run: |
+          cp ./out/pkg/airbyte-local ./test/exec/airbyte-local
+          cp -rf ./test/resources ./test/exec/
 
-      #     # shellspec is installed in $HOME/.local/bin
-      #     export PATH="$HOME/.local/bin:$PATH"
-      #     which shellspec
-      #     shellspec --chdir ./test/exec --tag argvParsing,main
+          # shellspec is installed in $HOME/.local/bin
+          export PATH="$HOME/.local/bin:$PATH"
+          which shellspec
+          shellspec --chdir ./test/exec --tag argvParsing,main
 
       # Run all e2e tests on Windows powershell
       # We use Pester to run e2e tests on Windows powershell. Pester is pre-installed on the Windows runner
-      # - name: Run Powershell tests (Windows)
-      #   if: matrix.os == 'windows-latest'
-      #   working-directory: airbyte-local-cli-nodejs
-      #   shell: pwsh
-      #   env:
-      #     FAROS_API_KEY: ${{ secrets.FAROS_API_KEY }}
-      #   run: |
-      #     # cp ./out/pkg/airbyte-local ./test/airbyte-local
-      #     Copy-Item -Path ./out/pkg/airbyte-local.exe -Destination ./test/airbyte-local.exe
-      #     # cd ./test
-      #     Set-Location -Path ./test
+      - name: Run Powershell tests (Windows)
+        if: matrix.os == 'windows-latest'
+        working-directory: airbyte-local-cli-nodejs
+        shell: pwsh
+        env:
+          FAROS_API_KEY: ${{ secrets.FAROS_API_KEY }}
+        run: |
+          # cp ./out/pkg/airbyte-local ./test/airbyte-local
+          Copy-Item -Path ./out/pkg/airbyte-local.exe -Destination ./test/airbyte-local.exe
+          # cd ./test
+          Set-Location -Path ./test
 
-      #     # Run Pester
-      #     Invoke-Pester -Output Detailed ./pester/index.Tests.ps1
+          # Run Pester
+          Invoke-Pester -Output Detailed ./pester/index.Tests.ps1
 
   # tag:
   #   name: Tag
