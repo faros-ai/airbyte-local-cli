@@ -34,7 +34,7 @@ If you want to add new e2e testing, please make sure you add to both Bash and Po
 #### Bash Testing
 
 For Bash shell testing, we use shellspec. Please install shellspec in your terminal to test it locally.
-Same as above, you will need to set DEV `FARO_API_KEY` environment variable and have your docker on.
+Same as above, you will need to set DEV `FAROS_API_KEY` environment variable and have your docker running.
 
 ```sh
 # Install shellspec on MacOS
