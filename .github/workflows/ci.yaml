@@ -49,6 +49,7 @@ jobs:
 
       # Run shellspec tests againgst airbyte-local.sh
       - name: Run ShellSpec tests
+        working-directory: airbyete-local-cli-bash
         run: |
           docker run --rm \
             -v "$PWD/test:/src" \
