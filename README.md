@@ -1,157 +1,406 @@
 # Airbyte Local CLI [![CI](https://github.com/faros-ai/airbyte-local-cli/actions/workflows/ci.yaml/badge.svg)](https://github.com/faros-ai/airbyte-local-cli/actions/workflows/ci.yaml)
 
-CLI for running Airbyte sources & destinations locally or on a Kubernetes cluster without an Airbyte server
+CLI for running Airbyte sources & destinations locally.
 
-![Alt Text](https://github.com/Faros-ai/airbyte-local-cli/raw/main/resources/demo.gif)
+> **Note:** The previous Bash-based version of this CLI has been deprecated.  
+> You can find its documentation [here](./airbyte-local-cli-bash/README.md).  
+> For migration details, see the [Migration Guide](#migration-guide).
 
-## Example Usage
+## Table of Contents
 
-**Requirements**: `bash`, `jq`, `tee`. Additionally, `docker` when running syncs locally, or `kubectl` when running on a Kubernetes cluster. 
+- [Getting Started](#getting-started)
+  - [Prerequisites](#prerequisites)
+  - [Step 1. Install](#step-1-install)
+  - [Step 2. Create an Airbyte Configuration File](#step-2-create-an-airbyte-configuration-file)
+    - [Step 2a. Auto Generate Configuration Templates (Experimental)](#step-2a-auto-generate-configuration-templates-experimental)
+    - [Step 2b. Craft your own configuration](#step-2b-craft-your-own-configuration)
+  - [Step 3. Run it!](#step-3-run-it)
+- [Advanced Settings](#advanced-settings)
+  - [CLI Arguments](#cli-arguments)
+  - [Airbyte Configuration - Override Airbyte Catalog](#airbyte-configuration---override-airbyte-catalog)
+  - [Airbyte Configuration - Customize Docker Settings](#airbyte-configuration---customize-docker-settings)
+- [FAQ](#faq)
+- [Migration Guide](#migration-guide)
+  - [Old CLI v.s. New CLI](#old-cli-vs-new-cli)
+  - [New/Renamed Arguments](#newrenamed-arguments)
+  - [Unsupported Arguments](#unsupported-arguments)
 
-Either [download the script manually](https://raw.githubusercontent.com/faros-ai/airbyte-local-cli/main/airbyte-local.sh) or invoke the script directly with curl:
+## Getting Started
 
-```sh
-bash <(curl -s https://raw.githubusercontent.com/faros-ai/airbyte-local-cli/main/airbyte-local.sh) --help
-```
+**Supported System**
 
-For example here is how you can sync ServiceNow source with [Faros Cloud](https://www.faros.ai) destination:
+- Linux x86_64
+- MacOS arm64 (Apple chip)
+- Windows x86_64
 
-```sh
-./airbyte-local.sh \
-  --src 'farosai/airbyte-servicenow-source' \
-  --src.username '<source_username>' \
-  --src.password '<source_password>' \
-  --src.url '<source_url>' \
-  --dst 'farosai/airbyte-faros-destination' \
-  --dst.edition_configs.edition 'cloud' \
-  --dst.edition_configs.api_url '<faros_api_url>' \
-  --dst.edition_configs.api_key '<faros_api_key>' \
-  --dst.edition_configs.graph 'default' \
-  --state state.json \
-  --check-connection
-```
+### Prerequisites
 
-Or with [Faros Community Edition](https://github.com/faros-ai/faros-community-edition) as the destination:
+- Docker
+- Faros API key: check out the [instructions](https://docs.faros.ai/reference/getting-api-access).
 
-```sh
-./airbyte-local.sh \
-  --src 'farosai/airbyte-servicenow-source' \
-  --src.username '<source_username>' \
-  --src.password '<source_password>' \
-  --src.url '<source_url>' \
-  --dst 'farosai/airbyte-faros-destination' \
-  --dst.edition_configs.edition 'community' \
-  --dst.edition_configs.hasura_admin_secret 'admin' \
-  --dst.edition_configs.hasura_url 'http://host.docker.internal:8080/' \
-  --state state.json \
-  --check-connection
-```
-**Note**: The `src.*` and `dst.*` arguments will differ depending on the source and destination being used.
+### Step 1. Install
 
-Or on a Kubernetes cluster:
+[All releases](https://github.com/faros-ai/airbyte-local-cli/releases.)
+
+#### Linux/MacOS
+
+Here is the steps of downloading the CLI on MacOS. Linux should have very similar steps.
 
 ```sh
-./airbyte-local.sh \
-  --src 'farosai/airbyte-servicenow-source' \
-  --src.username '<source_username>' \
-  --src.password '<source_password>' \
-  --src.url '<source_url>' \
-  --dst 'farosai/airbyte-faros-destination' \
-  --dst.edition_configs.edition 'cloud' \
-  --dst.edition_configs.api_url '<faros_api_url>' \
-  --dst.edition_configs.api_key '<faros_api_key>' \
-  --dst.edition_configs.graph 'default' \
-  --state state.json \
-  --k8s-deployment \
-  --k8s-namespace default \
-  --max-cpus 0.5 \
-  --max-mem 500Mi \
-  --keep-containers
-```
-**Note**: The command assumes Kubernetes cluster context, and credentials are already configured. For more info, see [official docs](https://kubernetes.io/docs/concepts/configuration/organize-cluster-access-kubeconfig/).
+# Download from the CLI
+# Please swap out `v0.0.5` to the version you want
+wget -O airbyte-local.zip https://github.com/faros-ai/airbyte-local-cli/releases/download/v0.0.5/airbyte-local-macos-arm64.zip | unzip -o airbyte-local.zip
 
-
-## Configuring Faros source/destination using a wizard
-
-**Note**: Faros Sources and/or Faros Destination only. Not supported with Kubernetes deployment.
-
-Instead of passing `src.*` and `dst.*`, it is possible to invoke a configuration wizard for the Faros source 
-and/or destination:
-
-```
-./airbyte-local.sh \
-  --src 'farosai/airbyte-servicenow-source' \
-  --src-wizard \
-  --dst 'farosai/airbyte-faros-destination' \
-  --dst-wizard
+# run `--help` or `--version` to check if the CLI is installed correctly
+./airbyte-local # this shows the help manual
+./airbyte-local --help
+./airbyte-local --version
 ```
 
-## Arguments
+#### Windows (Powershell)
 
-| Argument                          | Required | Description                                                                                       |
-| --------------------------------- | -------- | ------------------------------------------------------------------------------------------------- |
-| --src \<image\>                   | Yes      | Airbyte source Docker image                                                                       |
-| --dst \<image\>                   | Yes      | Airbyte destination Docker image                                                                  |
-| --src.\<key\> \<value\>           |          | Append `"key": "value"` into the source config \*                                                 |
-| --dst.\<key\> \<value\>           |          | Append `"key": "value"` into the destination config \*                                            |
-| --check-connection                |          | Validate the Airbyte source connection                                                            |
-| --full-refresh                    |          | Force source full_refresh and destination overwrite mode                                          |
-| --state \<path\>                  |          | Override state file path for incremental sync                                                     |
-| --src-output-file \<path\>        |          | Write source output as a file (handy for debugging)                                               |
-| --src-catalog-overrides \<json\>  |          | JSON string of sync mode overrides. See [overriding default catalog](#overriding-default-catalog) |
-| --src-config-file \<path\>        |          | Source config file path                                                                           |
-| --src-config-json \<json\>        |          | Source config as a JSON string                                                                    |
-| --src-catalog-file \<path\>       |          | Source catalog file path                                                                          |
-| --src-catalog-json \<json\>       |          | Source catalog as a JSON string                                                                   |
-| --dst-config-file \<path\>        |          | Destination config file path                                                                      |
-| --dst-config-json \<json\>        |          | Destination config as a JSON string                                                               |
-| --dst-catalog-file \<path\>       |          | Destination catalog file path                                                                     |
-| --dst-catalog-json \<json\>       |          | Destination catalog as a JSON string                                                              |
-| --dst-stream-prefix \<prefix\>    |          | Destination stream prefix                                                                         |
-| --no-src-pull                     |          | Skip pulling Airbyte source image                                                                 |
-| --no-dst-pull                     |          | Skip pulling Airbyte destination image                                                            |
-| --src-wizard                      |          | Run the Airbyte source configuration  wizard                                                      |
-| --dst-wizard                      |          | Run the Airbyte destination configuration  wizard                                                 |
-| --src-only                        |          | Only run the Airbyte source                                                                       |
-| --dst-only \<file\>               |          | Use a file for destination input instead of a source                                              |
-| --connection-name                 |          | Connection name used in various places                                                            |
-| --raw-messages                    |          | Output raw Airbyte messages, i.e., without a log prefix or colors                                 |
-| --max-log-size \<size\>           |          | Set Docker maximum log size                                                                       |
-| --max-mem \<mem\>                 |          | Set the maximum amount of memory for Docker or Kubernetes container, e.g., `"1g"` or `"1024Mi"`   |
-| --max-cpus \<cpus\>               |          | Set the maximum number of CPUs for each Docker or Kubernetes container, e.g, `"1"` or `"1000m"`   |
-| --src-docker-options "\<string\>" |          | Set additional options to pass to the `docker run <src>` command, e.g `--src-docker-options "-e NODE_OPTIONS=--max_old_space_size=2000 -e NODE_TLS_REJECT_UNAUTHORIZED=0"` |
-| --dst-docker-options "\<string\>" |          | Set additional options to pass to the `docker run <dst>` command, e.g `--dst-docker-options "-e NODE_OPTIONS=--max_old_space_size=2000"` |
-| --k8s-deployment                  |          | Deploy and run source/destination connectors as a pod on a Kubernetes cluster                     |
-| --k8s-namespace \<name\>          |          | Kubernetes namespace where the source/destination connectors pod is deployed to                   |
-| --keep-containers                 |          | Do not delete source and destination containers (or Kubernetes pod) after they exit               |
-| --debug                           |          | Enable debug logging                                                                              |
+```ps1
+# Download from the CLI
+# Please swap out `v0.0.5` to the version you want
+Invoke-WebRequest -Uri "https://github.com/faros-ai/airbyte-local-cli/releases/download/v0.0.5/airbyte-local-win-x64.zip" -OutFile "airbyte-local-win-x64.zip"
+Expand-Archive -Path "airbyte-local-win-x64.zip" -DestinationPath . -Force
 
-**Note**: when passing an array value for a parameter specify it as a json array, for example:
+# run `--help` or `--version` to check if the CLI is installed correctly
+.\airbyte-local
+.\airbyte-local --help
+.\airbyte-local --version
 
 ```
---src.projects '["project-1","project-2","project-3"]'
+
+### Step 2. Create an Airbyte Configuration File
+
+First of all, you will have to know where you want to pull data from and where you want to push data to.
+For example, pulling data from Github and pushing data to Faros AI.
+
+Then, there're two options you can go to create the config file.
+
+a. Auto Generate Configuration Templates:
+This is recommended for first-time users. It helps you to start with a template to update the Airbyte configs. (Go to Step 2a)
+
+b. Craft your own configuration: This is for users that are familiar with Airbyte configurations and are looking for a finer tune on the configs. (Go to Step 2b)
+
+#### Step 2a. Auto Generate Configuration Templates (Experimental)
+
+You can utilize the `generate-config` subcommand to bootstrap your Airbyte config.
+It's required to provide the Airbyte source, which means you will have to know which source data you are pulling from, e.g. Github, Jira, etc. For the Airbtye destination, it is set to Faros by default, i.e. pushing the data to Faros.
+For users convenience, the CLI will attempt to guess the source and destination from your inputs. It handles some typos and is case insensitive.
+If the CLI cannot correctly guess the source/destination, or you want to use your own images that are not managed by Faros, you can use the option `--image` to specify your images.
+The CLI will use your exact input image(s) to generate Airbyte configurations.
+The default destination image is set to Faros, i.e. `farosai/airbyte-faros-destination`.
+
+By running this subcommand, it prints out both Airbyte source and deestination configuration tables in the terminal for your reference.
+And it generates a template config file `faros_airbyte_cli_config.json` in the current directory. The template config file only includes requried configs. If you need additional configs, please refer to the configuration tables and update the config file.
+
+Run the command to generate the template
+
+```sh
+# ./airbyte-local generate-config <source> [destination]
+
+# Ex: Pull data from Github and push to Faros
+./airbyte-local generate-config github
+./airbyte-local generate-config github faros
+
+# Ex: Pull data from Jira and push to Faros
+./airbyte-local generate-config jira
+
+# Suppress printing out the configuration tables
+./airbyte-local generate-config -s jira
+
+# Use your own custom images
+./airbyte-local generate-config --image farosai/airbyte-github-custom-source
+./airbyte-local generate-config -s --image farosai/airbyte-github-custom-source
+./airbyte-local generate-config --image farosai/airbyte-github-custom-source farosai/airbyte-custom-destination
 ```
 
-## Overriding Default Catalog
+Note: Both source and destination inputs are case insensitive and tolerate a bit of typos.
 
-To generate the Airbyte catalog needed for running the source and destination
-connectors, the script runs the `discover` command on the source to get the list
-of all supported streams. It then creates an Airbyte configured catalog,
-enabling all of the streams and using "incremental" sync mode for all the
-streams that support it. Each stream's destination sync mode defaults to
-"append" for incremental streams and "overwrite" for full_refresh streams. To
-disable or customize the sync mode or destination sync mode on any of the
-streams, pass a `--src-catalog-overrides` option whose value is a JSON string in
-the following format:
+After running the command, you should see `🔹 **Next Steps:**` instructions showing up in your terminal. Follow the steps to complete the config.
+
+#### Step 2b. Craft your own configuration
+
+The CLI uses arguement `--config-file` (`-c` for short) to take the airybte configuration in a JSON file format.
+
+JSON Schema
 
 ```json
 {
-  "<stream name 1>": { "disabled": true },
-  "<stream name 2>": {
-    "sync_mode": "full_refresh",
-    "destination_sync_mode": "append"
+  "src": {
+    "image": "<YOUR_SOURCE_IMAGE_NAME>",
+    "config": {...YOUR_SOURCE_CONFIG...}
+  },
+  "dst": {
+    "image": "<YOUR_DESTINATION_IMAGE_NAME>",
+    "config": {...YOUR_DESTINATION_CONFIG...}
   }
 }
 ```
 
-You can also force full_refresh mode for all streams by setting the `--full-refresh` flag.
+You can find all the available soure and destiantion images that are supported by Faros [here](https://hub.docker.com/u/farosai). \
+Here're some popular source image
+
+- Github source: `farosai/airbyte-github-source`
+- Jira source: `farosai/airbyte-jira-source`
+- Faros destination: `farosai/airbyte-faros-destination`
+
+#### Example of Airbyte Config File
+
+Assuming you want to pull data from Github org `my-org` by using GitHub PAT and push data to Faros `default` workspace. This is what the JSON would look like
+
+```json
+{
+  "src": {
+    "image": "farosai/airbyte-github-source",
+    "config": {
+      "api_key": "<YOUR_FAROS_API_KEY>",                              <-- Faros API key
+      "graph": "default"                                              <-- Faros workspace
+      "authentication": {
+        "type": "token",
+        "personal_access_token": "<YOUR_GITHUB_PAT_TOKEN>"
+      },
+      "organizations": ["my-org"],
+    }
+  },
+  "dst": {
+    "image": "farosai/airbyte-faros-destination",
+    "config": {
+      "edition_configs": {
+        "api_key": "<YOUR_FAROS_API_KEY>",                            <-- Faros API key
+        "graph": "default"                                            <-- Faros workspace
+      }
+    }
+  }
+}
+```
+
+Save it as `faros_airbyte_cli_config.json`. \
+In most cases, you always have to provide Faros API key and workspace under `src.config` and `dst.config.edition_configs`.
+
+More resources you can find it in [Faros Documantation](https://docs.faros.ai/), e.g. instructions to create GitHub PAT and what permission you need for the PAT, etc.
+
+### Step 3. Run it!
+
+#### Linux/MacOS
+
+```sh
+./airbyte-local --config-file 'faros_airbyte_cli_config.json'
+./airbyte-local -c 'faros_airbyte_cli_config.json'
+```
+
+#### Windows (Powershell)
+
+```ps1
+.\airbyte-local --config-file 'faros_airbyte_cli_config.json'
+.\airbyte-local -c 'faros_airbyte_cli_config.json'
+```
+
+The logs should indicate the process of the data sync. \
+You can also see the progress and logs in Faros App > Switch to the workspace you are running against > Admin Settings > Data Control > Sources.
+
+## Advanced Settings
+
+In some cases, you might want to customized the data sync more. \
+We provide some more CLI optional arguments and optional fields in the Airbyte configuration file.
+
+### CLI Arguments
+
+| Option                     | Required | Description                                                                                                |
+| -------------------------- | -------- | ---------------------------------------------------------------------------------------------------------- |
+| `-c, --config-file <path>` | Yes      | Airbyte source and destination connector config JSON file path                                             |
+| `-h, --help`               |          | Display usage information                                                                                  |
+| `-v, --version`            |          | Output the current version                                                                                 |
+| `--full-refresh`           |          | Force full_refresh and overwrite mode. This overrides the mode in provided config file                     |
+| `--state-file <path>`      |          | Override state file path for incremental sync                                                              |
+| `--no-src-pull`            |          | Skip pulling Airbyte source image                                                                          |
+| `--no-dst-pull`            |          | Skip pulling Airbyte destination image                                                                     |
+| `--src-only`               |          | Only run the Airbyte source and write output in stdout. Use '--src-output-file' instead to write to a file |
+| `--src-output-file <path>` |          | Write source output as a file (requires a destination)                                                     |
+| `--src-check-connection`   |          | Validate the Airbyte source connection                                                                     |
+| `--dst-only <file>`        |          | Use a file for destination input instead of a source                                                       |
+| `--dst-use-host-network`   |          | Use the host network when running the Airbyte destination                                                  |
+| `--log-level <level>`      |          | Set level of source and destination loggers (default: "info")                                              |
+| `--raw-messages`           |          | Output raw Airbyte messages                                                                                |
+| `--connection-name <name>` |          | Connection name used in various places                                                                     |
+| `--keep-containers`        |          | Do not remove source and destination containers after they exit                                            |
+| `--debug`                  |          | Enable debug logging                                                                                       |
+| `--src <image>`            |          | [Deprecated] Airbyte source Docker image                                                                   |
+| `--dst <image>`            |          | [Deprecated] Airbyte destination Docker image                                                              |
+| `--src.<key> <value>`      |          | [Deprecated] Add "key": "value" into the source config                                                     |
+| `--dst.<key> <value>`      |          | [Deprecated] Add "key": "value" into the destination config                                                |
+
+#### Example Usage
+
+##### Linux/MacOS
+
+```sh
+# Turn on debug logs
+./airbyte-local --config-file 'sample.json' --debug
+
+# Run source sync only
+./airbyte-local \
+  --config-file 'sample.json' \
+  --src-only
+
+# Check source connection
+./airbyte-local \
+  --config-file 'sample.json' \
+  --src-check-connection
+
+# Enforce full refreash
+./airbyte-local \
+  --config-file 'sample.json' \
+  --full-refresh
+
+# Use customized connection name
+./airbyte-local \
+  --config-file 'sample.json' \
+  --connection-name 'test-connection'
+```
+
+##### Windows (Powershell)
+
+```ps1
+# Turn on debug logs
+./airbyte-local --config-file 'sample.json' --debug
+
+# Run source sync only
+./airbyte-local `
+  --config-file 'sample.json' `
+  --src-only
+
+# Check source connection
+./airbyte-local `
+  --config-file 'sample.json' `
+  --src-check-connection
+
+# Enforce full refreash
+./airbyte-local `
+  --config-file 'sample.json' `
+  --full-refresh
+
+# Use customized connection name
+./airbyte-local `
+  --config-file 'sample.json' `
+  --connection-name 'test-connection'
+```
+
+### Airbyte Configuration - Override Airbyte Catalog
+
+You can override the default Airbyte catalog in the Airbyte configuration file that passed via `--config-file`. \
+It should be defined under `catalog` and src and dst has the same schema.
+You will have to know the stream name and sync mode you would like to run.
+
+```json
+{
+  "src": {
+    "image": ...,
+    "config": ...,
+    "catalog": {                                                     <-- define your catalog
+      "streams":[
+          {
+            "stream":{"name":"<STREAM_NAME>"},                       <-- stream name
+            "sync_mode":"full_refresh"                               <-- sync mode: "full_refresh" or "incremental"
+          }
+      ]
+    }
+  },
+  "dst": {
+    "image": ...,
+    "config": ...,
+    "catalog": {
+      ...
+    }
+  }
+}
+```
+
+### Airbyte Configuration - Customize Docker Settings
+
+If you want to customize the Airbyte connectors docker settings, there're optional fields that you configure CPU, memory and log file size. This can be do so by specifying in the Airbyte configuration file.
+
+```json
+{
+  "src": {
+    "image": ...,
+    "dockerOptions":  {
+      "maxCpus": 2,                                                <-- unit: CPU (type: number)
+      "maxMemory": 256 ,                                           <-- unit: MB (type: number)
+      "maxLogSize": "10m"                                          <-- unit: k/m/g (type: string)
+    }
+  },
+  ...
+}
+
+```
+
+## FAQ
+
+- If you have customized your docker socket, please exports the docker socket in env var `DOCKER_HOST`.
+- We only support reading Airbyte configuration file in encoding: `utf-8`, `utf-16le`, `utf-16be`.
+
+## Migration Guide
+
+As some users might come from our previous Airbyte CLI Bash version. \
+Here is some guide for you to upgrade to the new one.
+
+### Old CLI v.s. New CLI
+
+1. Update the CLI from Bash script to binary - open up to users that don't use Bash by default
+1. Move Airbyte configuration into one JSON file - avoid syntax issues caused by running on different systems
+
+#### Example Usage
+
+```sh
+# Older version
+./airbyte-local.sh  \
+  --src 'farosai/airbyte-faros-graphql-source' \
+  --src.api_url $FAROS_API_URL \
+  --src.graph 'faros' \
+  --src.result_model 'Flat' \
+  --src.models_filter '["org_Team"]' \
+  --dst 'farosai/airbyte-faros-destination' \
+  --dst.edition_configs.graph 'default' \
+  --dst.edition_configs.api_url $FAROS_API_URL
+
+# Newer version
+./airbyte-local --config-file graph_copy.json
+```
+
+### New/Renamed Arguments
+
+| Old Argument         | New Argument             | Replacement/Notes                          |
+| -------------------- | ------------------------ | ------------------------------------------ |
+|                      | `--config-file`          | New arugment to take Airbyte configuration |
+| `--check-connection` | `--src-check-connection` | For naming consistency                     |
+| `--state <file>`     | `--state-file <file>`    | For naming consistency                     |
+
+### Unsupported Arguments
+
+The following arguments are droppeed in the new CLI. Please update your command according.
+
+For arguments `--src ...` and `--dst ...`, they are still supported for user convenience. We strongly encourage users to use the new arugment `--config-file` to pass in Airbyte configuration in favor of the deprecated ones. Also, you can find a file named `faros_airbyte_cli_config.json` be automatically generated after running the CLI. It should covert your Airybte configuration to the new schema and next time you can just pass in this file with arugment `--config-file` and stop using the deprecated arguments!
+
+| Argument                         | Status      | Replacement/Notes                                                   |
+| -------------------------------- | ----------- | ------------------------------------------------------------------- |
+| `--src <image>`                  | Deprecated  | Image name is now defined in Aribyte configuration file             |
+| `--dst <image>`                  | Deprecated  | Image name is now defined in Aribyte configuration file             |
+| `--src.<key> <value>`            | Deprecated  | Airbyte config is now defined in Aribyte configuration file         |
+| `--dst.<key> <value>`            | Deprecated  | Airbyte config is now defined in Aribyte configuration file         |
+| `--src-catalog-overrides <json>` | Unsupported | Airbyte catalog config is now defined in Aribyte configuration file |
+| `--src-catalog-file <path>`      | Unsupported | Airbyte catalog config is now defined in Aribyte configuration file |
+| `--src-catalog-json <json>`      | Unsupported | Airbyte catalog config is now defined in Aribyte configuration file |
+| `--dst-catalog-file <path>`      | Unsupported | Airbyte catalog config is now defined in Aribyte configuration file |
+| `--dst-catalog-json <json>`      | Unsupported | Airbyte catalog config is now defined in Aribyte configuration file |
+| `--src-wizard`                   | Unsupported | Use `--generate-config` instead                                     |
+| `--dst-wizard`                   | Unsupported | Use `--generate-config` instead                                     |
+| `--max-log-size <size>`          | Unsupported | Docker settings are now defined in Aribyte configuration file       |
+| `--max-mem <mem>`                | Unsupported | Docker settings are now defined in Aribyte configuration file       |
+| `--max-cpus <cpus>`              | Unsupported | Docker settings are now defined in Aribyte configuration file       |
+| `--src-docker-options "<string>` | Unsupported | Docker settings are now defined in Aribyte configuration file       |
+| `--dst-docker-options "<string>` | Unsupported | Docker settings are now defined in Aribyte configuration file       |
+| `--k8s-deployment`               | Unsupported | Stop surporting running on local kubernetes cluster                 |
+| `--dst-stream-prefix <prefix>`   | Unsupported | Use `--connection-name` instead                                     |
