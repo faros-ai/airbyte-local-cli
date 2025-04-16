@@ -223,7 +223,6 @@ Describe 'Check source connection' {
 
     It 'should succeed if source connection is valid' {
         $result = & ./airbyte-local --config-file './resources/windows/test_config_file_src_only.json' --src-check-connection --src-only
-        Write-Host "Command Output: $result"
         $matchingLine = $result | Where-Object { $_ -match "Source connection is valid." }
         $matchingLine | Should -Not -BeNullOrEmpty
         $LASTEXITCODE | Should -Be 0

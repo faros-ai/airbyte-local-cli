@@ -1,4 +1,6 @@
-# WIP: Airbyte CLI Rewrite
+# Airbyte Local CLI
+
+This is the manaual for developers
 
 ```sh
 nvm use           # Use Node v22
@@ -12,7 +14,7 @@ npm run pkg       # Packaging with yao-pkg and generate an executable in out/pkg
 
 ### Node Js Testing
 
-Please make sure you have a valid DEV Faros api key set in `FARO_API_KEY` environment variable and you have your docker on, otherwise some integration tests would fail.
+Please make sure you have a valid DEV Faros api key set in `FARO_API_KEY` environment variable and you have your docker on, otherwise some integration tests would fail. All tests are running against DEV so you need to take the api key in dev istead prod.
 
 ```sh
 # Run typescript unit and integration tests
@@ -32,7 +34,7 @@ If you want to add new e2e testing, please make sure you add to both Bash and Po
 #### Bash Testing
 
 For Bash shell testing, we use shellspec. Please install shellspec in your terminal to test it locally.
-Same as above, you will need to set in `FARO_API_KEY` environment variable and have your docker on.
+Same as above, you will need to set DEV `FARO_API_KEY` environment variable and have your docker on.
 
 ```sh
 # Install shellspec on MacOS
@@ -66,5 +68,9 @@ They are all tagged with `windows-v0.14.11-rc0` as they are based on `v0.14.11`.
 - `farosai/airbyte-faros-graphql-source:windows-v0.14.11-rc0`
 - `farosai/airbyte-faros-destination:windows-v0.14.11-rc0`
 
-Please note that we do not support running Windows images in the CLI. These images are for testing purpose only.
+Please note that we do not support running Windows images on Windows in the CLI. We only support Linux images on Windows system. These Windows images are for testing purpose only.
 If you want to push or update the images, you can refer to branch [`jg/windows-test-images`](https://github.com/faros-ai/airbyte-connectors/tree/jg/windows-test-images) in repo `faros-ai/airbyte-connectors`. There are Dockerfiles and steps in Github CI to build and push the test images.
+
+## Packaging
+
+We package the NodeJs project to executables by using [yao-pkg](https://github.com/yao-pkg/pkg). We picked it as the popular `pkg` tool from Vercel is archived and `yao-pkg` seems to be the next most maintainable option.
