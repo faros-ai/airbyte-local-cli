@@ -18,7 +18,7 @@ CLI for running Airbyte sources & destinations locally or on a Kubernetes cluste
 
 **Requirements**: `bash`, `jq`, `tee`. Additionally, `docker` when running syncs locally, or `kubectl` when running on a Kubernetes cluster. 
 
-Either [download the script manually](https:/ /raw.githubusercontent.com/faros-ai/airbyte-local-cli/main/airbyte-local.sh) or invoke the script directly with curl:
+Either [download the script manually](https://raw.githubusercontent.com/faros-ai/airbyte-local-cli/main/airbyte-local.sh) or invoke the script directly with curl:
 
 ```sh
 bash <(curl -s https://raw.githubusercontent.com/faros-ai/airbyte-local-cli/main/airbyte-local.sh) --help
