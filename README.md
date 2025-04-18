@@ -49,7 +49,8 @@ Here is the steps of downloading the CLI on MacOS. Linux should have very simila
 ```sh
 # Download the CLI
 # Please swap out `v0.0.5` to the version you want
-wget -O airbyte-local.zip https://github.com/faros-ai/airbyte-local-cli/releases/download/v0.0.5/airbyte-local-macos-arm64.zip | unzip -o airbyte-local.zip
+wget -O airbyte-local.zip https://github.com/faros-ai/airbyte-local-cli/releases/download/v0.0.5/airbyte-local-macos-arm64.zip
+unzip -o airbyte-local.zip
 
 ./airbyte-local
 ```
