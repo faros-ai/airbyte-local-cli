@@ -37,14 +37,14 @@ export const staticAirbyteConfig: StaticAirbyteConfig = {
       },
     },
     gitlab: {
-      image: 'farosai/airbyte-github-source',
+      image: 'farosai/airbyte-faros-feeds-source',
       config: {
         feed_cfg: {
           feed_name: 'gitlab-feed',
           token: '<UPDATE_YOUR_GITLAB_TOKEN>',
           repos_query_mode: {
             query_mode: 'FarosGraph',
-            group_names: ['<UPDATE_YOUR_GROUP_1>', '<UPDATE_YOUR_GROUP_2>'],
+            group_name: ['<UPDATE_YOUR_GROUP_1>', '<UPDATE_YOUR_GROUP_2>'],
           },
         },
       },

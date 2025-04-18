@@ -42,14 +42,20 @@ A command line tool for running Airbyte sources & destinations **locally** with 
 
 [All releases](https://github.com/faros-ai/airbyte-local-cli/releases)
 
-#### Linux/MacOS
+#### MacOS (Arch: Apple Silicon)
 
 Here is the steps of downloading the CLI on MacOS. Linux should have very similar steps.
 
 ```sh
-# Download the CLI
-# Please swap out `v0.0.5` to the version you want
 wget -O airbyte-local.zip https://github.com/faros-ai/airbyte-local-cli/releases/download/v0.0.5/airbyte-local-macos-arm64.zip
+unzip -o airbyte-local.zip
+
+./airbyte-local
+```
+
+### Linux
+```sh
+wget -O airbyte-local.zip https://github.com/faros-ai/airbyte-local-cli/releases/download/v0.0.5/airbyte-local-linux-x64.zip
 unzip -o airbyte-local.zip
 
 ./airbyte-local
@@ -58,8 +64,6 @@ unzip -o airbyte-local.zip
 #### Windows (Powershell)
 
 ```ps1
-# Download the CLI
-# Please swap out `v0.0.5` to the version you want
 Invoke-WebRequest -Uri "https://github.com/faros-ai/airbyte-local-cli/releases/download/v0.0.5/airbyte-local-win-x64.zip" -OutFile "airbyte-local-win-x64.zip"
 Expand-Archive -Path "airbyte-local-win-x64.zip" -DestinationPath . -Force
 
@@ -92,7 +96,7 @@ Examples:
 ./airbyte-local generate-config jira
 ./airbyte-local generate-config -s jira
 
-# Use your own custom images
+# Use your own custom or non Faros managed images
 ./airbyte-local generate-config --image farosai/airbyte-github-custom-source
 ./airbyte-local generate-config --image farosai/airbyte-github-custom-source farosai/airbyte-custom-destination
 
@@ -337,12 +341,14 @@ Here is some guide for you to upgrade to the new one.
 ./airbyte-local.sh  \
   --src 'farosai/airbyte-faros-graphql-source' \
   --src.api_url $FAROS_API_URL \
+  --src.api_key $FAROS_API_KEY \
   --src.graph 'faros' \
   --src.result_model 'Flat' \
   --src.models_filter '["org_Team"]' \
   --dst 'farosai/airbyte-faros-destination' \
   --dst.edition_configs.graph 'default' \
-  --dst.edition_configs.api_url $FAROS_API_URL
+  --dst.edition_configs.api_url $FAROS_API_URL \
+  --dst.edition_configs.api_key $FAROS_API_KEY
 
 # Newer version
 ./airbyte-local --config-file graph_copy.json
