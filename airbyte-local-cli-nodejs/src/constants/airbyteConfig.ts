@@ -44,7 +44,7 @@ export const staticAirbyteConfig: StaticAirbyteConfig = {
           token: '<UPDATE_YOUR_GITLAB_TOKEN>',
           repos_query_mode: {
             query_mode: 'FarosGraph',
-            group_name: ['<UPDATE_YOUR_GROUP_1>', '<UPDATE_YOUR_GROUP_2>'],
+            group_names: ['<UPDATE_YOUR_GROUP_1>', '<UPDATE_YOUR_GROUP_2>'],
           },
         },
       },
