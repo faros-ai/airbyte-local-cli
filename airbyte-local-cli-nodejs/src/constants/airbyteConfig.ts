@@ -53,10 +53,8 @@ export const staticAirbyteConfig: StaticAirbyteConfig = {
       image: 'farosai/airbyte-jira-source',
       config: {
         url: 'https://<UPDATE_YOUR_DOMAIN>.atlassian.net',
-        authentication: {
-          username: '<UPDATE_YOUR_JIRA_USER_EMAIL>',
-          password: '<UPDATE_YOUR_JIRA_TOKEN>',
-        },
+        username: '<UPDATE_YOUR_JIRA_USER_EMAIL>',
+        password: '<UPDATE_YOUR_JIRA_TOKEN>',
       },
     },
     azure: {
