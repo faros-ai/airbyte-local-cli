@@ -14,6 +14,8 @@ import {
   TMP_SPEC_CONFIG_FILENAME,
   TMP_WIZARD_CONFIG_FILENAME,
 } from './constants/constants';
+// Self-reference for unit test mocking
+import * as docker from './docker';
 import {logger} from './logger';
 import {
   AirbyteCatalog,
@@ -34,8 +36,8 @@ const DEFAULT_MAX_LOG_SIZE = '10m';
 let _docker = new Docker();
 
 // For testing purposes
-export function setDocker(docker: Docker): void {
-  _docker = docker;
+export function setDocker(testDocker: Docker): void {
+  _docker = testDocker;
 }
 
 /**
@@ -182,7 +184,7 @@ export function processSpecByLine(line: string): AirbyteSpec | undefined {
  * @param options - Docker container create options
  * @param outputStream - Writable stream to capture the output
  */
-async function runDocker(
+export async function runDocker(
   options: Docker.ContainerCreateOptions,
   outputStream: Writable,
   inputStream?: ReadStream | PassThrough,
@@ -288,7 +290,7 @@ export async function runCheckSrcConnection(tmpDir: string, image: string, srcCo
     });
 
     // run docker
-    await runDocker(createOptions, containerOutputStream);
+    await docker.runDocker(createOptions, containerOutputStream);
 
     // capture connection status from the output
     let status: AirbyteConnectionStatusMessage | undefined;
@@ -348,7 +350,7 @@ export async function runDiscoverCatalog(tmpDir: string, image: string | undefin
     });
 
     // run docker
-    await runDocker(createOptions, containerOutputStream);
+    await docker.runDocker(createOptions, containerOutputStream);
 
     // capture catalog output
     let rawCatalog: AirbyteCatalogMessage | undefined;
@@ -438,8 +440,14 @@ export async function runSrcSync(tmpDir: string, config: FarosConfig, srcOutputS
           },
         },
         ...config.src?.dockerOptions?.additionalOptions?.HostConfig,
+
+        // Allow users to add bind mount but not override the default one
+        Binds: [
+          `${tmpDir}:${getBindsLocation(config.src.image)}`,
+          ...(config.src?.dockerOptions?.additionalOptions?.HostConfig?.Binds || []),
+        ],
+
         // Default options: cannot be overridden by users
-        Binds: [`${tmpDir}:${getBindsLocation(config.src.image)}`],
         AutoRemove: !config.keepContainers,
         Init: true,
       },
@@ -467,7 +475,7 @@ export async function runSrcSync(tmpDir: string, config: FarosConfig, srcOutputS
     });
 
     // run docker
-    await runDocker(createOptions, containerOutputStream);
+    await docker.runDocker(createOptions, containerOutputStream);
 
     // Close the container output stream
     // This is required to notify the dst connector that inputs are done
@@ -564,8 +572,14 @@ export async function runDstSync(tmpDir: string, config: FarosConfig, srcPassThr
           },
         },
         ...config.dst?.dockerOptions?.additionalOptions?.HostConfig,
+
+        // Allow users to add bind mount but not override the default one
+        Binds: [
+          `${tmpDir}:${getBindsLocation(config.dst.image)}`,
+          ...(config.dst?.dockerOptions?.additionalOptions?.HostConfig?.Binds || []),
+        ],
+
         // Default options: cannot be overridden by users
-        Binds: [`${tmpDir}:${getBindsLocation(config.dst.image)}`],
         AutoRemove: !config.keepContainers,
         Init: true,
       },
@@ -593,7 +607,7 @@ export async function runDstSync(tmpDir: string, config: FarosConfig, srcPassThr
     const inputStream = srcPassThrough ?? createReadStream(`${tmpDir}/${SRC_OUTPUT_DATA_FILE}`);
 
     // Start the container
-    await runDocker(createOptions, containerOutputStream, inputStream);
+    await docker.runDocker(createOptions, containerOutputStream, inputStream);
     logger.info('Destination connector completed.');
 
     // Write the state file
@@ -651,7 +665,7 @@ export async function runSpec(image: string): Promise<AirbyteSpec> {
     });
 
     // run docker
-    await runDocker(createOptions, containerOutputStream);
+    await docker.runDocker(createOptions, containerOutputStream);
 
     // write spec to the file
     if (specs.length > 0) {
@@ -713,7 +727,7 @@ export async function runWizard(tmpDir: string, image: string, spec: AirbyteSpec
     };
 
     // run docker
-    await runDocker(createOptions, process.stdout);
+    await docker.runDocker(createOptions, process.stdout);
 
     const resultConfig = JSON.parse(readFileSync(`${tmpDir}/${TMP_WIZARD_CONFIG_FILENAME}`, 'utf-8'));
     return resultConfig;
