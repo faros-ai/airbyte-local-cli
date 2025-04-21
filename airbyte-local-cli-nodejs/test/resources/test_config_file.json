@@ -9,7 +9,14 @@
     "catalog": {},
     "dockerOptions": {
       "maxMemory": 2048,
-      "maxCpus": 2
+      "maxCpus": 2,
+      "additionalOptions": {
+        "HostConfig": {
+          "Binds": [
+            "/test/path:/test/path/test.json"
+          ]
+        }
+      }
     }
   },
   "dst": {
