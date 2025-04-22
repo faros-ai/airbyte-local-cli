@@ -114,7 +114,7 @@ Tips & Tricks:
 - Source and destination names are case-insensitive and tolerate typos.
 - Destination defaults to Faros unless specified
 - Add `-s` to skip printing the config tables if you just want the file.
-- Use `--image` to specify your custom images. This doesn't tolerate typos and set default destination to Faros, i.e. `farosai/airbyte-faros-destination`.
+- Use `--image` to specify your custom images. This doesn't tolerate typos, and sets the default destination to Faros, i.e. `farosai/airbyte-faros-destination`.
 
 #### 🔧 Option B: Write Your Own Config (For Advanced Users)
 If you already know your way around Airbyte and want full control, you can craft your own config file.  
