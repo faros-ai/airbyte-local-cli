@@ -80,7 +80,7 @@ Before you can run your sync, you need to tell the CLI:
 You have two options to create this configuration:
 
 #### ✨ Option A: Auto-Generate (Recommended for new users)
-Use this if you’re new or want a quick start.
+Use this if you’re new or want to get started quickly.
 
 Run:
 ```bash
@@ -96,7 +96,7 @@ Examples:
 ./airbyte-local generate-config jira
 ./airbyte-local generate-config -s jira
 
-# Use your own custom or non Faros managed images
+# Use your own custom or non Faros-managed images
 ./airbyte-local generate-config --image farosai/airbyte-github-custom-source
 ./airbyte-local generate-config --image farosai/airbyte-github-custom-source farosai/airbyte-custom-destination
 
@@ -110,7 +110,7 @@ This command will:
 - Create a `faros_airbyte_cli_config.json` file with **required** fields only.
 - Show you 🔹 Next Steps in the terminal — follow those to continue!
 
-Pro tips:
+Tips & Tricks:
 - Source and destination names are case-insensitive and tolerate typos.
 - Destination defaults to Faros unless specified
 - Add `-s` to skip printing the config tables if you just want the file.
