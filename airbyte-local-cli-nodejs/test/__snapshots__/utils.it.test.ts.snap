@@ -93,6 +93,13 @@ exports[`parseConfigFile should parse utf16 encoding 1`] = `
       "username": "test-username",
     },
     "dockerOptions": {
+      "additionalOptions": {
+        "HostConfig": {
+          "Binds": [
+            "/test/path:/test/path/test.json",
+          ],
+        },
+      },
       "maxCpus": 2,
       "maxMemory": 2048,
     },
@@ -127,6 +134,13 @@ exports[`parseConfigFile should pass 1`] = `
       "username": "test-username",
     },
     "dockerOptions": {
+      "additionalOptions": {
+        "HostConfig": {
+          "Binds": [
+            "/test/path:/test/path/test.json",
+          ],
+        },
+      },
       "maxCpus": 2,
       "maxMemory": 2048,
     },
