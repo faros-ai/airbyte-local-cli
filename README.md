@@ -322,7 +322,12 @@ Additionally, the additionalOptions field enables you to specify advanced Docker
       }
     }
   },
-  ...
+  "dst": {
+    ...
+    "dockerOptions": {                             <-- Same `dockerOptions` schema as above
+      ...
+    }
+  }
 }
 ```
 
@@ -344,6 +349,23 @@ To bind a volume mount, you can use the `Binds` option under `HostConfig` in `ad
             "/path/to/tasks.xlsx:/tasks.xlsx"
           ]
         }
+      }
+    }
+...
+```
+#### Environment Variable Example
+
+To define environment variables for the container, use the `Env` option in `additionalOptions`.
+
+```json
+{
+  "src": {
+    "image": "<SOURCE_IMAGE>",
+    "config": {...},
+    "dockerOptions": {
+      "maxMemory": 6144,
+      "additionalOptions": {
+        "Env": ["NODE_OPTIONS=--max_old_space_size=6000"]
       }
     }
 ...
