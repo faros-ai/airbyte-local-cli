@@ -77,7 +77,10 @@ describe('parseConfigFile', () => {
     expect(() => parseConfigFile('test_config_file_invalid')).toThrow();
   });
   it('should parse utf16 encoding', () => {
-    expect(parseConfigFile('test/resources/test_config_file.json')).toMatchSnapshot();
+    expect(parseConfigFile('test/resources/test_config_file_utf16.json')).toMatchSnapshot();
+  });
+  it('should parse crlf', () => {
+    expect(parseConfigFile('test/resources/test_config_file_crlf.json')).toMatchSnapshot();
   });
 });
 
