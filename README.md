@@ -53,7 +53,7 @@ unzip -o airbyte-local.zip
 ./airbyte-local
 ```
 
-### Linux
+#### Linux
 ```sh
 wget -O airbyte-local.zip https://github.com/faros-ai/airbyte-local-cli/releases/download/v0.0.5/airbyte-local-linux-x64.zip
 unzip -o airbyte-local.zip
@@ -69,6 +69,8 @@ Expand-Archive -Path "airbyte-local-win-x64.zip" -DestinationPath . -Force
 
 .\airbyte-local
 ```
+
+---
 
 ### 🧩 Step 2. Create an Airbyte Config File
 
@@ -117,8 +119,7 @@ Tips & Tricks:
 - Use `--image` to specify your custom images. This doesn't tolerate typos, and sets the default destination to Faros, i.e. `farosai/airbyte-faros-destination`.
 
 #### 🔧 Option B: Write Your Own Config (For Advanced Users)
-If you already know your way around Airbyte and want full control, you can craft your own config file.  
-Use the `--config-file` (`-c`) argument with a custom JSON file:
+If you already know your way around Airbyte and want full control, you can craft your own config file.
 
 ```json
 {
@@ -173,6 +174,8 @@ Save as `faros_airbyte_cli_config.json`. \
 In most cases, you always have to provide Faros API key and workspace under `src.config` and `dst.config.edition_configs`.
 
 More resources you can find it in [Faros Documantation](https://docs.faros.ai/), e.g. instructions to create GitHub PAT and what permission you need for the PAT, etc.
+
+---
 
 ### 🏁 Step 3. Run it!
 
@@ -281,11 +284,11 @@ You will have to know the stream name and sync mode you would like to run.
   "src": {
     "image": ...,
     "config": ...,
-    "catalog": {                                                     <-- define your catalog
+    "catalog": {                                   <-- define your catalog
       "streams":[
           {
-            "stream":{"name":"<STREAM_NAME>"},                       <-- stream name
-            "sync_mode":"full_refresh"                               <-- sync mode: "full_refresh" or "incremental"
+            "stream":{"name":"<STREAM_NAME>"},     <-- stream name
+            "sync_mode":"full_refresh"             <-- sync mode: "full_refresh" or "incremental"
           }
       ]
     }
@@ -302,21 +305,70 @@ You will have to know the stream name and sync mode you would like to run.
 
 ### Airbyte Configuration - Customize Docker Settings
 
-If you want to customize the Airbyte connectors docker settings, there're optional fields that you configure CPU, memory and log file size. This can be do so by specifying in the Airbyte configuration file.
+To customize the Docker settings for Airbyte connectors, you can configure optional fields such as CPU, memory, and log file size in the Airbyte configuration file. These settings allow you to fine-tune resource allocation for your connectors.
+
+Additionally, the additionalOptions field enables you to specify advanced Docker options beyond CPU, memory, and log size. The schema for these options follows the [Docker API specification](https://docs.docker.com/reference/api/engine/version/v1.48/#tag/Container/operation/ContainerCreate). While these options are rarely needed, they can be useful for debugging or handling specific source use cases.
 
 ```json
 {
   "src": {
-    "image": ...,
+    "image": "<SOURCE_IMAGE>",
     "dockerOptions":  {
-      "maxCpus": 2,                                                <-- unit: CPU (type: number)
-      "maxMemory": 256 ,                                           <-- unit: MB (type: number)
-      "maxLogSize": "10m"                                          <-- unit: k/m/g (type: string)
+      "maxCpus": 2,                                <-- unit: CPU (type: number)
+      "maxMemory": 256,                            <-- unit: MB (type: number)
+      "maxLogSize": "10m",                         <-- unit: k/m/g (type: string)
+      "additionalOptions": {                       <-- Additinoal Docker options
+        ...
+      }
     }
   },
-  ...
+  "dst": {
+    ...
+    "dockerOptions": {                             <-- Same `dockerOptions` schema as above
+      ...
+    }
+  }
 }
+```
 
+#### Volume Mount Example
+
+To bind a volume mount, you can use the `Binds` option under `HostConfig` in `additionalOptions`:
+
+```json
+{
+  "src": {
+    "image": "<SOURCE_IMAGE>",
+    "config": {...},
+    "dockerOptions": {
+      "maxMemory": 2048,
+      "maxCpus": 2,
+      "additionalOptions": {
+        "HostConfig": {
+          "Binds": [
+            "/path/to/tasks.xlsx:/tasks.xlsx"
+          ]
+        }
+      }
+    }
+...
+```
+#### Environment Variable Example
+
+To define environment variables for the container, use the `Env` option in `additionalOptions`.
+
+```json
+{
+  "src": {
+    "image": "<SOURCE_IMAGE>",
+    "config": {...},
+    "dockerOptions": {
+      "maxMemory": 6144,
+      "additionalOptions": {
+        "Env": ["NODE_OPTIONS=--max_old_space_size=6000"]
+      }
+    }
+...
 ```
 
 ## 🔎 FAQ
