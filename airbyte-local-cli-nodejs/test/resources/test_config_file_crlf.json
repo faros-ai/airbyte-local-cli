@@ -1,0 +1,38 @@
+{
+  "src": {
+    "image": "farosai/airbyte-servicenow-source",
+    "config": {
+      "username": "test-username",
+      "password": "***",
+      "url": "https://test-instance.service-now.com"
+    },
+    "catalog": {},
+    "dockerOptions": {
+      "maxMemory": 2048,
+      "maxCpus": 2,
+      "additionalOptions": {
+        "HostConfig": {
+          "Binds": [
+            "/test/path:/test/path/test.json"
+          ]
+        }
+      }
+    }
+  },
+  "dst": {
+    "image": "farosai/airbyte-servicenow-destination",
+    "config": {
+      "edition_config": {
+        "graph": "default",
+        "edition": "cloud",
+        "api_url": "https://prod.api.faros.ai",
+        "api_key": "***"
+      }
+    },
+    "catalog": {},
+    "dockerOptions": {
+      "maxMemory": 2048,
+      "maxCpus": 2
+    }
+  }
+}

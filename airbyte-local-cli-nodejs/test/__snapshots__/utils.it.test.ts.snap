@@ -67,7 +67,7 @@ exports[`generateConfig should succeed with static configs 1`] = `
 "
 `;
 
-exports[`parseConfigFile should parse utf16 encoding 1`] = `
+exports[`parseConfigFile should parse crlf 1`] = `
 {
   "dst": {
     "catalog": {},
@@ -100,6 +100,40 @@ exports[`parseConfigFile should parse utf16 encoding 1`] = `
           ],
         },
       },
+      "maxCpus": 2,
+      "maxMemory": 2048,
+    },
+    "image": "farosai/airbyte-servicenow-source",
+  },
+}
+`;
+
+exports[`parseConfigFile should parse utf16 encoding 1`] = `
+{
+  "dst": {
+    "catalog": {},
+    "config": {
+      "edition_config": {
+        "api_key": "***",
+        "api_url": "https://prod.api.faros.ai",
+        "edition": "cloud",
+        "graph": "default",
+      },
+    },
+    "dockerOptions": {
+      "maxCpus": 2,
+      "maxMemory": 2048,
+    },
+    "image": "farosai/airbyte-servicenow-destination",
+  },
+  "src": {
+    "catalog": {},
+    "config": {
+      "password": "***",
+      "url": "https://test-instance.service-now.com",
+      "username": "test-username",
+    },
+    "dockerOptions": {
       "maxCpus": 2,
       "maxMemory": 2048,
     },
