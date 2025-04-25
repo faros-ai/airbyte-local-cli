@@ -40,14 +40,12 @@ A command line tool for running Airbyte sources & destinations **locally** with 
 
 ### 🚀 Step 1. Install
 
-[All releases](https://github.com/faros-ai/airbyte-local-cli/releases)
-
 #### MacOS (Arch: Apple Silicon)
 
 Here is the steps of downloading the CLI on MacOS. Linux should have very similar steps.
 
 ```sh
-wget -O airbyte-local.zip https://github.com/faros-ai/airbyte-local-cli/releases/download/v0.0.5/airbyte-local-macos-arm64.zip
+wget -O airbyte-local.zip https://github.com/faros-ai/airbyte-local-cli/releases/download/latest/airbyte-local-macos-arm64.zip
 unzip -o airbyte-local.zip
 
 ./airbyte-local
@@ -55,7 +53,7 @@ unzip -o airbyte-local.zip
 
 #### Linux
 ```sh
-wget -O airbyte-local.zip https://github.com/faros-ai/airbyte-local-cli/releases/download/v0.0.5/airbyte-local-linux-x64.zip
+wget -O airbyte-local.zip https://github.com/faros-ai/airbyte-local-cli/releases/download/latest/airbyte-local-linux-x64.zip
 unzip -o airbyte-local.zip
 
 ./airbyte-local
@@ -64,7 +62,7 @@ unzip -o airbyte-local.zip
 #### Windows (Powershell)
 
 ```ps1
-Invoke-WebRequest -Uri "https://github.com/faros-ai/airbyte-local-cli/releases/download/v0.0.5/airbyte-local-win-x64.zip" -OutFile "airbyte-local-win-x64.zip"
+Invoke-WebRequest -Uri "https://github.com/faros-ai/airbyte-local-cli/releases/download/latest/airbyte-local-win-x64.zip" -OutFile "airbyte-local-win-x64.zip"
 Expand-Archive -Path "airbyte-local-win-x64.zip" -DestinationPath . -Force
 
 .\airbyte-local
