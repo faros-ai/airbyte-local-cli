@@ -203,6 +203,12 @@ jobs:
         with:
           version-command: cat airbyte-local-cli-nodejs/package.json | jq -r '.version'
 
+      - name: Recreate latest tag
+        run: |
+          git push --delete origin latest || true
+          git tag -f latest
+          git push origin latest --force
+
   build-binaries:
     name: Build Binaries
     strategy:
@@ -303,12 +309,6 @@ jobs:
             airbyte-local-cli-nodejs/out/pkg/release_macos-arm64/airbyte-local-macos-arm64.zip
             airbyte-local-cli-nodejs/out/pkg/release_win-x64/airbyte-local-win-x64.zip
           tag_name: ${{ needs.tag.outputs.createdTag }}
-      
-      - name: Recreate latest tag
-        run: |
-          git push --delete origin latest || true
-          git tag -f latest
-          git push origin latest --force
 
       # Release to latest every time
       - name: Release Latest
