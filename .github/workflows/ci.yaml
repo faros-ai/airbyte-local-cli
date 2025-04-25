@@ -303,3 +303,23 @@ jobs:
             airbyte-local-cli-nodejs/out/pkg/release_macos-arm64/airbyte-local-macos-arm64.zip
             airbyte-local-cli-nodejs/out/pkg/release_win-x64/airbyte-local-win-x64.zip
           tag_name: ${{ needs.tag.outputs.createdTag }}
+      
+      - name: Recreate latest tag
+        run: |
+          git push --delete origin latest || true
+          git tag -f latest
+          git push origin latest --force
+
+      # Release to latest every time
+      - name: Release Latest
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            airbyte-local-cli-nodejs/out/pkg/release_linux-x64/airbyte-local-linux-x64.zip
+            airbyte-local-cli-nodejs/out/pkg/release_linux-arm64/airbyte-local-linux-arm64.zip
+            airbyte-local-cli-nodejs/out/pkg/release_macos-x64/airbyte-local-macos-x64.zip
+            airbyte-local-cli-nodejs/out/pkg/release_macos-arm64/airbyte-local-macos-arm64.zip
+            airbyte-local-cli-nodejs/out/pkg/release_win-x64/airbyte-local-win-x64.zip
+          tag_name: latest
+          prerelease: false
+          draft: false

@@ -1,4 +1,6 @@
 * text=auto
 
 *.sh text eol=lf
-**test_config_file_crlf.json text eol=crlf # for testing
+
+# for testing
+**test_config_file_crlf.json text eol=crlf
