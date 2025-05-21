@@ -171,7 +171,7 @@ Assuming you want to pull data from Github org `my-org` by using GitHub PAT and 
 Save as `faros_airbyte_cli_config.json`. \
 In most cases, you always have to provide Faros API key and workspace under `src.config` and `dst.config.edition_configs`.
 
-More resources you can find it in [Faros Documantation](https://docs.faros.ai/), e.g. instructions to create GitHub PAT and what permission you need for the PAT, etc.
+More resources you can find it in [Faros Documentation](https://docs.faros.ai/), e.g. instructions to create GitHub PAT and what permission you need for the PAT, etc.
 
 ---
 
