@@ -30,7 +30,7 @@ import {
   SRC_CONFIG_FILENAME,
   SRC_OUTPUT_DATA_FILE,
 } from './constants/constants';
-import {inspectDockerImage, pullDockerImage, runDiscoverCatalog, runSpec, runWizard} from './docker';
+import {inspectDockerImage, pullDockerImage, runDiscoverCatalog, runSpec, runWizard, stopContainers} from './docker';
 import {logger} from './logger';
 import {
   AirbyteCatalog,
@@ -183,15 +183,18 @@ export function loadStateFile(tempDir: string, filePath?: string, connectionName
   return path;
 }
 
-export function cleanUp(context: AirbyteCliContext): void {
+export function cleanUp(ctx: AirbyteCliContext): void {
   logger.debug('Cleaning up...');
-  if (context.tmpDir !== undefined) {
+  if (ctx.tmpDir !== undefined) {
     try {
-      rmSync(context.tmpDir, {recursive: true, force: true});
-      logger.debug(`Temporary directory ${context.tmpDir} removed.`);
+      rmSync(ctx.tmpDir, {recursive: true, force: true});
+      logger.debug(`Temporary directory ${ctx.tmpDir} removed.`);
     } catch (error: any) {
-      logger.error(`Failed to remove temporary directory ${context.tmpDir}: ${error.message}`);
+      logger.error(`Failed to remove temporary directory ${ctx.tmpDir}: ${error.message}`);
     }
+  }
+  if (ctx.containers) {
+    stopContainers([...ctx.containers]);
   }
   logger.debug('Clean up completed.');
 

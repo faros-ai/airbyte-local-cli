@@ -16,6 +16,7 @@ import {
 } from './constants/constants';
 // Self-reference for unit test mocking
 import * as docker from './docker';
+import {ctx} from './index';
 import {logger} from './logger';
 import {
   AirbyteCatalog,
@@ -48,6 +49,19 @@ let _docker = new Docker();
 // For testing purposes
 export function setDocker(testDocker: Docker): void {
   _docker = testDocker;
+}
+
+export function stopContainers(containers: string[]): void {
+  if (containers) {
+    containers.forEach(async (containerId) => {
+      try {
+        await _docker.getContainer(containerId).stop();
+        logger.debug(`Container ${containerId} stopped.`);
+      } catch (error: any) {
+        logger.warn(`Failed to stop container ${containerId}: ${error.message}`);
+      }
+    });
+  }
 }
 
 /**
@@ -221,9 +235,11 @@ export async function runDocker(
 
   // Start the container
   await container.start();
+  ctx.containers?.add(container.id);
 
   // Wait for the container to finish
   const res = await container.wait();
+  ctx.containers?.delete(container.id);
   logger.debug(`Container exit code: ${JSON.stringify(res)}`);
 
   // Close docker attached stream explicitly
