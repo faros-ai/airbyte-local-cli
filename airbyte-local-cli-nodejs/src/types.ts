@@ -3,6 +3,7 @@ import {Dictionary} from 'ts-essentials';
 export interface AirbyteCliContext {
   // temporary directory for storing intermeditate files
   tmpDir?: string;
+  containers?: Set<string>;
 }
 
 // Cli options provided by the user
