@@ -21,9 +21,14 @@ export const ctx: AirbyteCliContext = {
 
 // Handle `Ctrl+C` (SIGINT) and `SIGTERM`
 ['SIGINT', 'SIGTERM'].forEach((signal) => {
-  process.on(signal, () => {
+  process.on(signal, async () => {
     logger.info(`Received ${signal}. Cleaning up...`);
-    cleanUp(ctx);
+    try {
+      await cleanUp(ctx);
+      logger.info('Cleanup completed successfully.');
+    } catch (error: any) {
+      logger.error(`Error during cleanup: ${error.message}`);
+    }
     logger.info('Exit Airbyte CLI.');
     process.exit(1);
   });
@@ -100,7 +105,7 @@ export async function main(): Promise<void> {
     logger.error(error.message, 'Error');
     throw error;
   } finally {
-    cleanUp(ctx);
+    await cleanUp(ctx);
   }
 }
 

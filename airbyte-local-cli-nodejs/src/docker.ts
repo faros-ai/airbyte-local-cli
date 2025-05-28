@@ -41,17 +41,33 @@ export function setDocker(testDocker: Docker): void {
   _docker = testDocker;
 }
 
-export function stopContainers(containers: string[]): void {
-  if (containers) {
-    containers.forEach(async (containerId) => {
-      try {
-        await _docker.getContainer(containerId).stop();
-        logger.debug(`Container ${containerId} stopped.`);
-      } catch (error: any) {
-        logger.warn(`Failed to stop container ${containerId}: ${error.message}`);
-      }
-    });
+/**
+ * Stops Docker containers with a configurable timeout.
+ * This function is used during cleanup to ensure no containers are left running
+ * when the CLI exits, either normally or due to interruption (Ctrl+C).
+ * 
+ * @param containers - Array of container IDs to stop
+ * @param timeoutSeconds - Seconds to wait before killing the container (default: 10)
+ */
+export async function stopContainers(containers: string[], timeoutSeconds = 10): Promise<void> {
+  if (!containers || containers.length === 0) {
+    return;
   }
+  
+  logger.debug(`Stopping ${containers.length} container(s) with ${timeoutSeconds}s timeout...`);
+  
+  const stopPromises = containers.map(async (containerId) => {
+    try {
+      await _docker.getContainer(containerId).stop({ t: timeoutSeconds });
+      logger.debug(`Container ${containerId} stopped.`);
+    } catch (error: any) {
+      logger.warn(`Failed to stop container ${containerId}: ${error.message}`);
+    }
+  });
+  
+  // Wait for all containers to be stopped
+  await Promise.all(stopPromises);
+  logger.debug('All containers stopped or failed to stop.');
 }
 
 /**
