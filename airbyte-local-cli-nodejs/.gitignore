@@ -13,3 +13,4 @@ out/pkg
 *airbyte-local
 test/exec/resources
 tmp/
+.envrc
