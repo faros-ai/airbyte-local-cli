@@ -50,7 +50,7 @@ export function setDocker(testDocker: Docker): void {
  * @param timeoutSeconds - Seconds to wait before killing the container (default: 10)
  */
 export async function stopContainers(containers: string[], timeoutSeconds = 10): Promise<void> {
-  if (!containers || containers.length === 0) {
+  if (containers.length === 0) {
     return;
   }
   
