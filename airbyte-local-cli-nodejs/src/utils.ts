@@ -161,8 +161,18 @@ export function loadStateFile(tempDir: string, filePath?: string, connectionName
   return path;
 }
 
-export function cleanUp(ctx: AirbyteCliContext): void {
+/**
+ * Cleans up resources used by the CLI, including temporary directories and running containers.
+ * This function is called during normal exit and when handling interruption signals (SIGINT/SIGTERM).
+ * 
+ * @param ctx - The application context containing tracked resources
+ * @param timeoutSeconds - Seconds to wait before forcefully killing containers (default: 10)
+ * @returns Promise that resolves when cleanup is complete
+ */
+export async function cleanUp(ctx: AirbyteCliContext, timeoutSeconds = 10): Promise<void> {
   logger.debug('Cleaning up...');
+  
+  // Clean up temporary directory
   if (ctx.tmpDir !== undefined) {
     try {
       rmSync(ctx.tmpDir, {recursive: true, force: true});
@@ -171,9 +181,12 @@ export function cleanUp(ctx: AirbyteCliContext): void {
       logger.error(`Failed to remove temporary directory ${ctx.tmpDir}: ${error.message}`);
     }
   }
-  if (ctx.containers) {
-    stopContainers([...ctx.containers]);
+  
+  if (ctx.containers && ctx.containers.size > 0) {
+    logger.debug(`Stopping ${ctx.containers.size} tracked containers...`);
+    await stopContainers([...ctx.containers], timeoutSeconds);
   }
+  
   logger.debug('Clean up completed.');
 
   logger.debug('Flushing the logs.');
