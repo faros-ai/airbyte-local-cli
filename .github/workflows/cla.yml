@@ -25,7 +25,7 @@ jobs:
           # branch should not be protected
           branch: 'main'
           allowlist: cjwooo,tovbinm,thomas-gerber,ypc-faros,dependabot*,sonarcloud*,faros-ai-devin*
-
+          
          #below are the optional inputs - If the optional inputs are not given, then default values will be taken
           remote-organization-name: faros-ai
           remote-repository-name: cla
