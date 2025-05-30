@@ -203,7 +203,9 @@ jobs:
         with:
           version-command: cat airbyte-local-cli-nodejs/package.json | jq -r '.version'
 
+      # Only recreate the latest tag if a new tag was created
       - name: Recreate latest tag
+        if: steps.create-tag.outputs.tag != null
         run: |
           git push --delete origin latest || true
           git tag -f latest
