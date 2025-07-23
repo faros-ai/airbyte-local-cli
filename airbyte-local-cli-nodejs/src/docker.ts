@@ -63,7 +63,7 @@ function getBindsLocation(image: string): string {
   if (image.includes(':windows')) {
     return `C:${sep}configs`;
   }
-  return `${sep}configs`;
+  return `/configs`;
 }
 
 export async function checkDockerInstalled(): Promise<void> {
