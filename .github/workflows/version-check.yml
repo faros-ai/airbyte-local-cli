@@ -39,5 +39,5 @@ jobs:
               issue_number: context.issue.number,
               owner: context.repo.owner,
               repo: context.repo.repo,
-              body: '⚠️ **Version Update Reminder**\n\nIf this PR introduces new features, bug fixes, or breaking changes in the NodeJs CLI, please consider updating the version number.\n\n*This is an automated reminder. If no version update is needed, you can safely ignore this comment.*'
+              body: '⚠️ **Version Update Reminder**\n\nIf this PR introduces new features, bug fixes, or breaking changes in the NodeJs CLI, please consider updating the version number by running `npm run bump patch` in folder `airbyte-local-cli-nodejs` to bump up patch version.\n\n*This is an automated reminder. If no version update is needed, you can safely ignore this comment.*'
             })
