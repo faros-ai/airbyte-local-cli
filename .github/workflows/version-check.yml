@@ -1,0 +1,43 @@
+name: Version Check
+
+on:
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  check-version:
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+      contents: read
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check if version.ts has changed
+        id: version-check
+        run: |
+          # Get the list of changed files
+          changed_files=$(git diff --name-only ${{ github.event.pull_request.base.sha }}..${{ github.event.pull_request.head.sha }})
+          
+          # Check if version.ts is in the changed files
+          if echo "$changed_files" | grep -q "airbyte-local-cli-nodejs/src/version.ts"; then
+            echo "version_changed=true" >> $GITHUB_OUTPUT
+          else
+            echo "version_changed=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Comment about missing version update
+        if: steps.version-check.outputs.version_changed == 'false'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: '⚠️ **Version Update Reminder**\n\nIf this PR introduces new features, bug fixes, or breaking changes in the NodeJs CLI, please consider updating the version number.\n\n*This is an automated reminder. If no version update is needed, you can safely ignore this comment.*'
+            })
