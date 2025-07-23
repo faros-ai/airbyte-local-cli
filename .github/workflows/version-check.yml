@@ -21,7 +21,7 @@ jobs:
         id: version-check
         run: |
           # Get the list of changed files
-          changed_files=$(git diff --name-only ${{ github.event.pull_request.base.sha }}..${{ github.event.pull_request.head.sha }})
+          changed_files=$(git diff --name-only origin/${{ github.event.pull_request.base.ref }}..HEAD)
           
           # Check if version.ts is in the changed files
           if echo "$changed_files" | grep -q "airbyte-local-cli-nodejs/src/version.ts"; then
