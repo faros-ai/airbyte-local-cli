@@ -50,7 +50,7 @@ function getImagePlatform(image: string): string | undefined {
   if (image.includes(':windows')) {
     return 'windows/amd64';
   } else if (image?.startsWith('farosai')) {
-    return 'linux/amd64';
+    return 'linux/arm64'; // TODO convert this debug change back
   }
   return undefined;
 }

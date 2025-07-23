@@ -1,0 +1,21 @@
+{
+  "src": {
+    "image": "farosai/airbyte-faros-feeds-source",
+    "config": {
+      "feed_cfg": {
+        "feed_name": "sonarqube-feed",
+        "organization": "myorg",
+        "token": "mytoken"
+      }
+    }
+  },
+  "dst": {
+    "image": "farosai/airbyte-faros-destination",
+    "config": {
+      "edition_configs": {
+        "api_key": "mytoken",
+        "graph": "jennie-test"
+      }
+    }
+  }
+}
