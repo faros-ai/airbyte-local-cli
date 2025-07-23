@@ -438,5 +438,3 @@ For arguments `--src ...` and `--dst ...`, they are still supported for user con
 | `--dst-docker-options "<string>` | Unsupported | Docker settings are now defined in Aribyte configuration file       |
 | `--k8s-deployment`               | Unsupported | Stop surporting running on local kubernetes cluster                 |
 | `--dst-stream-prefix <prefix>`   | Unsupported | Use `--connection-name` instead                                     |
-
-
