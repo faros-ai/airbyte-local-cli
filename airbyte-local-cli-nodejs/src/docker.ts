@@ -156,43 +156,23 @@ export function processDstDataByLine(line: string, cfg: FarosConfig): string {
   return state;
 }
 
-/**
- * Process non-target lines for logging
- */
-function processNonTargetLine(line: string): void {
-  try {
-    const data = JSON.parse(line);
-    if (data?.trace?.type === 'ERROR' || data?.log?.level === 'ERROR') {
-      logger.error(line);
+function processAirbyteLines<T>(lines: string[], messageType: AirbyteMessageType): T | undefined {
+  let message: T | undefined;
+  lines.forEach((line: string) => {
+    try {
+      const parsedLine = JSON.parse(line);
+      if (line.includes(messageType)) {
+        message = parsedLine as T;
+      } else {
+        if (parsedLine?.trace?.type === 'ERROR' || parsedLine?.log?.level === 'ERROR') {
+          logger.error(line);
+        }
+      }
+    } catch (error: any) {
+      logger.debug(`Failed to parse line: '${line}'; Error: ${error.message}`);
     }
-  } catch {
-    // ignore parsing error
-  }
-}
-
-/**
- * Filter out spec output
- */
-export function processSpecByLine(line: string): AirbyteSpec | undefined {
-  let spec;
-
-  // skip empty lines
-  if (line.trim() === '') {
-    return spec;
-  }
-
-  try {
-    const data = JSON.parse(line);
-    if (data?.type === AirbyteMessageType.SPEC && data?.spec) {
-      spec = data as AirbyteSpec;
-      logger.debug(line);
-    } else {
-      processNonTargetLine(line);
-    }
-  } catch (error: any) {
-    throw new Error(`Spec data: '${line}'; Error: ${error.message}`);
-  }
-  return spec;
+  });
+  return message;
 }
 
 /**
@@ -265,15 +245,6 @@ export async function runDocker(
   }
 }
 
-/**
- * Spinning up a docker container to check the source connection.
- * `docker run --rm -v "$tempdir:/configs" $src_docker_options "$src_docker_image"
- *      check --config "/configs/$src_config_filename"`
- *
- * Sample output from the docker container:
- * {"connectionStatus":{"status":"SUCCEEDED"},"type":"CONNECTION_STATUS"}
- * {"connectionStatus":{"status":"FAILED","message":"Faros API key was not provided"},"type":"CONNECTION_STATUS"}
- */
 export async function runCheckSrcConnection(tmpDir: string, image: string, srcConfigFile?: string): Promise<void> {
   logger.info('Validating connection to source...');
 
@@ -291,7 +262,7 @@ export async function runCheckSrcConnection(tmpDir: string, image: string, srcCo
       AttachStdout: true,
       HostConfig: {
         Binds: [`${tmpDir}:${getBindsLocation(image)}`],
-        AutoRemove: false,
+        AutoRemove: true,
       },
       platform: getImagePlatform(image),
     };
@@ -304,13 +275,7 @@ export async function runCheckSrcConnection(tmpDir: string, image: string, srcCo
         buffer += chunk.toString();
         const lines = buffer.split('\n');
         buffer = lines.pop() ?? '';
-        lines.forEach((line: string) => {
-          if (line.includes(AirbyteMessageType.CONNECTION_STATUS)) {
-            status = JSON.parse(line) as AirbyteConnectionStatusMessage;
-          } else {
-            processNonTargetLine(line);
-          }
-        });
+        status = processAirbyteLines<AirbyteConnectionStatusMessage>(lines, AirbyteMessageType.CONNECTION_STATUS);
         callback();
       },
     });
@@ -367,13 +332,7 @@ export async function runDiscoverCatalog(tmpDir: string, image: string | undefin
         buffer += chunk.toString();
         const lines = buffer.split('\n');
         buffer = lines.pop() ?? '';
-        lines.forEach((line: string) => {
-          if (line.includes(AirbyteMessageType.CATALOG)) {
-            rawCatalog = JSON.parse(line) as AirbyteCatalogMessage;
-          } else {
-            processNonTargetLine(line);
-          }
-        });
+        rawCatalog = processAirbyteLines<AirbyteCatalogMessage>(lines, AirbyteMessageType.CATALOG);
         callback();
       },
     });
@@ -665,18 +624,13 @@ export async function runSpec(image: string): Promise<AirbyteSpec> {
 
     // create a writable stream to capture the spec
     let buffer = '';
-    const specs: AirbyteSpec[] = [];
+    let spec: AirbyteSpec | undefined;
     const containerOutputStream = new Writable({
       write(chunk, _encoding, callback) {
         buffer += chunk.toString();
         const lines = buffer.split('\n');
         buffer = lines.pop() ?? '';
-        lines.forEach((line: string) => {
-          const maybeSpec = processSpecByLine(line);
-          if (maybeSpec) {
-            specs.push(maybeSpec);
-          }
-        });
+        spec = processAirbyteLines<AirbyteSpec>(lines, AirbyteMessageType.SPEC);
         callback();
       },
     });
@@ -684,13 +638,8 @@ export async function runSpec(image: string): Promise<AirbyteSpec> {
     // run docker
     await docker.runDocker(createOptions, containerOutputStream);
 
-    // write spec to the file
-    if (specs.length > 0) {
-      const spec = specs.pop();
-      if (spec?.type === AirbyteMessageType.SPEC) {
-        return spec;
-      }
-      throw new Error(`Unexpected spec: ${JSON.stringify(spec)}`);
+    if (spec?.type === AirbyteMessageType.SPEC) {
+      return spec;
     }
     throw new Error(`No spec found in the output`);
   } catch (error: any) {
