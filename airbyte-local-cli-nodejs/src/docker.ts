@@ -275,7 +275,10 @@ export async function runCheckSrcConnection(tmpDir: string, image: string, srcCo
         buffer += chunk.toString();
         const lines = buffer.split('\n');
         buffer = lines.pop() ?? '';
-        status = processAirbyteLines<AirbyteConnectionStatusMessage>(lines, AirbyteMessageType.CONNECTION_STATUS);
+        const result = processAirbyteLines<AirbyteConnectionStatusMessage>(lines, AirbyteMessageType.CONNECTION_STATUS);
+        if (result !== undefined) {
+          status = result;
+        }
         callback();
       },
     });
@@ -332,7 +335,10 @@ export async function runDiscoverCatalog(tmpDir: string, image: string | undefin
         buffer += chunk.toString();
         const lines = buffer.split('\n');
         buffer = lines.pop() ?? '';
-        rawCatalog = processAirbyteLines<AirbyteCatalogMessage>(lines, AirbyteMessageType.CATALOG);
+        const result = processAirbyteLines<AirbyteCatalogMessage>(lines, AirbyteMessageType.CATALOG);
+        if (result !== undefined) {
+          rawCatalog = result;
+        }
         callback();
       },
     });
@@ -630,7 +636,10 @@ export async function runSpec(image: string): Promise<AirbyteSpec> {
         buffer += chunk.toString();
         const lines = buffer.split('\n');
         buffer = lines.pop() ?? '';
-        spec = processAirbyteLines<AirbyteSpec>(lines, AirbyteMessageType.SPEC);
+        const result = processAirbyteLines<AirbyteSpec>(lines, AirbyteMessageType.SPEC);
+        if (result !== undefined) {
+          spec = result;
+        }
         callback();
       },
     });
