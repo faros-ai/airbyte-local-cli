@@ -50,7 +50,7 @@ function getImagePlatform(image: string): string | undefined {
   if (image.includes(':windows')) {
     return 'windows/amd64';
   } else if (image?.startsWith('farosai')) {
-    return 'linux/arm64'; // TODO convert this debug change back
+    return 'linux/amd64';
   }
   return undefined;
 }
@@ -157,6 +157,20 @@ export function processDstDataByLine(line: string, cfg: FarosConfig): string {
 }
 
 /**
+ * Process non-target lines for logging
+ */
+function processNonTargetLine(line: string): void {
+  try {
+    const data = JSON.parse(line);
+    if (data?.trace?.type === 'ERROR' || data?.log?.level === 'ERROR') {
+      logger.error(line);
+    }
+  } catch {
+    // ignore parsing error
+  }
+}
+
+/**
  * Filter out spec output
  */
 export function processSpecByLine(line: string): AirbyteSpec | undefined {
@@ -172,6 +186,8 @@ export function processSpecByLine(line: string): AirbyteSpec | undefined {
     if (data?.type === AirbyteMessageType.SPEC && data?.spec) {
       spec = data as AirbyteSpec;
       logger.debug(line);
+    } else {
+      processNonTargetLine(line);
     }
   } catch (error: any) {
     throw new Error(`Spec data: '${line}'; Error: ${error.message}`);
@@ -275,16 +291,26 @@ export async function runCheckSrcConnection(tmpDir: string, image: string, srcCo
       AttachStdout: true,
       HostConfig: {
         Binds: [`${tmpDir}:${getBindsLocation(image)}`],
-        AutoRemove: true,
+        AutoRemove: false,
       },
       platform: getImagePlatform(image),
     };
 
-    // create a writable stream to capture the output
-    let data = '';
+    // create a writable stream to capture the output and process line by line
+    let buffer = '';
+    let status: AirbyteConnectionStatusMessage | undefined;
     const containerOutputStream = new Writable({
       write(chunk, _encoding, callback) {
-        data += chunk.toString();
+        buffer += chunk.toString();
+        const lines = buffer.split('\n');
+        buffer = lines.pop() ?? '';
+        lines.forEach((line: string) => {
+          if (line.includes(AirbyteMessageType.CONNECTION_STATUS)) {
+            status = JSON.parse(line) as AirbyteConnectionStatusMessage;
+          } else {
+            processNonTargetLine(line);
+          }
+        });
         callback();
       },
     });
@@ -292,13 +318,6 @@ export async function runCheckSrcConnection(tmpDir: string, image: string, srcCo
     // run docker
     await docker.runDocker(createOptions, containerOutputStream);
 
-    // capture connection status from the output
-    let status: AirbyteConnectionStatusMessage | undefined;
-    data.split('\n').forEach((line) => {
-      if (line.includes(AirbyteMessageType.CONNECTION_STATUS)) {
-        status = JSON.parse(line) as AirbyteConnectionStatusMessage;
-      }
-    });
     if (
       status?.type === AirbyteMessageType.CONNECTION_STATUS &&
       status?.connectionStatus.status === AirbyteConnectionStatus.SUCCEEDED
@@ -340,29 +359,27 @@ export async function runDiscoverCatalog(tmpDir: string, image: string | undefin
       platform: getImagePlatform(image),
     };
 
-    // create a writable stream to capture the output
-    let data = '';
+    // create a writable stream to capture the output and process line by line
+    let buffer = '';
+    let rawCatalog: AirbyteCatalogMessage | undefined;
     const containerOutputStream = new Writable({
       write(chunk, _encoding, callback) {
-        data += chunk.toString();
+        buffer += chunk.toString();
+        const lines = buffer.split('\n');
+        buffer = lines.pop() ?? '';
+        lines.forEach((line: string) => {
+          if (line.includes(AirbyteMessageType.CATALOG)) {
+            rawCatalog = JSON.parse(line) as AirbyteCatalogMessage;
+          } else {
+            processNonTargetLine(line);
+          }
+        });
         callback();
       },
     });
 
     // run docker
     await docker.runDocker(createOptions, containerOutputStream);
-
-    // capture catalog output
-    let rawCatalog: AirbyteCatalogMessage | undefined;
-    data.split('\n').forEach((line) => {
-      if (line.includes(AirbyteMessageType.CATALOG)) {
-        rawCatalog = JSON.parse(line) as AirbyteCatalogMessage;
-      } else {
-        if (line) {
-          process.stderr.write(`${line}\n`);
-        }
-      }
-    });
 
     if (rawCatalog?.type === AirbyteMessageType.CATALOG) {
       logger.info('Catalog discovered successfully.');
