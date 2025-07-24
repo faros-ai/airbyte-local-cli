@@ -245,6 +245,15 @@ export async function runDocker(
   }
 }
 
+/**
+ * Spinning up a docker container to check the source connection.
+ * `docker run --rm -v "$tempdir:/configs" $src_docker_options "$src_docker_image"
+ *      check --config "/configs/$src_config_filename"`
+ *
+ * Sample output from the docker container:
+ * {"connectionStatus":{"status":"SUCCEEDED"},"type":"CONNECTION_STATUS"}
+ * {"connectionStatus":{"status":"FAILED","message":"Faros API key was not provided"},"type":"CONNECTION_STATUS"}
+ */
 export async function runCheckSrcConnection(tmpDir: string, image: string, srcConfigFile?: string): Promise<void> {
   logger.info('Validating connection to source...');
 
