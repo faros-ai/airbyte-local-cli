@@ -61,7 +61,7 @@ function command() {
     .option('--keep-containers', 'Do not remove source and destination containers after they exit')
 
     // Options: Cli settings
-    .option('--debug', 'Enable debug logging')
+    .option('-d, --debug', 'Enable debug logging')
 
     // Options: deprecated options
     .option('--src <image>', '[Deprecated] Airbyte source Docker image')
@@ -223,6 +223,9 @@ export function parseAndValidateInputs(argv: string[]): FarosConfig {
 
   // Parse arguments
   program.parse(argv);
+
+  // Log the version
+  logger.debug(`CLI version: ${CLI_VERSION}`);
 
   // Deep clone the parsed options before parsing the second time to get unknown options
   const options = structuredClone(program.opts());
