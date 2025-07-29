@@ -161,6 +161,9 @@ export const airbyteTypes: AirbyteTypes = {
     bigquery: {
       dockerRepo: 'airbyte/source-bigquery',
     },
+    cursor: {
+      dockerRepo: 'farosai/airbyte-cursor-source',
+    },
 
     // Feeds sources
     changeset: {
