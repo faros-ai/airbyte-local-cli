@@ -465,9 +465,15 @@ export async function processSrcInputFile(tmpDir: string, cfg: FarosConfig): Pro
  * Only update if the destination image is a Faros destination image.
  */
 export function generateDstStreamPrefix(cfg: FarosConfig): void {
+  // If dstStreamPrefix is already set via CLI flag, skip generation
+  if (cfg.dstStreamPrefix) {
+    logger.info(`Using provided destination stream prefix: ${cfg.dstStreamPrefix}`);
+    return;
+  }
+
   const srcImage = cfg.src?.image;
   const dstImage = cfg.dst?.image;
-  if (dstImage?.startsWith('farosai/airbyte-faros-destination')) {
+  if (dstImage?.startsWith('farosai/')) {
     // if source image is a faros feed image
     if (
       !cfg.connectionName &&

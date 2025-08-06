@@ -24,6 +24,7 @@ export interface CliOptions {
   dstUseHostNetwork?: boolean;
   dstOnly?: string;
   dstPull?: boolean;
+  dstStreamPrefix?: string;
 
   // general connector settings
   connectionName?: string;
@@ -76,6 +77,7 @@ export interface FarosConfig {
   dstPull: boolean;
   connectionName: string | undefined;
   stateFile: string | undefined;
+  dstStreamPrefix?: string | undefined;
   fullRefresh: boolean;
   rawMessages: boolean;
   keepContainers: boolean;
@@ -86,9 +88,6 @@ export interface FarosConfig {
   generateConfig?: any;
   silent: boolean;
   image: boolean;
-
-  // internal use
-  dstStreamPrefix?: string;
 }
 
 export enum OutputStream {
