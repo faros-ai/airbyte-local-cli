@@ -269,4 +269,15 @@ describe('generateDstStreamPrefix', () => {
     expect(testAirbyteConfig.connectionName).toEqual('testConnectionName');
     expect(testAirbyteConfig.dstStreamPrefix).toEqual('testConnectionName__faros_feeds__');
   });
+
+  it('should skip generation when dstStreamPrefix is provided via CLI flag', () => {
+    const testAirbyteConfig = {
+      src: {image: 'farosai/airbyte-example-source:latest'},
+      dst: {image: 'farosai/airbyte-faros-destination:latest'},
+      dstStreamPrefix: 'custom_prefix__',
+    } as FarosConfig;
+    generateDstStreamPrefix(testAirbyteConfig);
+    expect(testAirbyteConfig.dstStreamPrefix).toEqual('custom_prefix__');
+    expect(testAirbyteConfig.connectionName).toBeUndefined();
+  });
 });

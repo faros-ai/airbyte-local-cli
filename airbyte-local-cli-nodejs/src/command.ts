@@ -73,6 +73,13 @@ function command() {
     .addOption(new Option('--check-connection', 'Support for the renamed option').hideHelp())
     .addOption(new Option('--state <file>', 'Support for the renamed option').hideHelp())
 
+    // Options: hidden options
+    .addOption(
+      new Option('--dst-stream-prefix <prefix>', 'Override destination stream prefix')
+        .hideHelp()
+        .conflicts('connectionName'),
+    )
+
     // Additional check
     .action((opts: any) => {
       if (opts.debug) {
@@ -273,6 +280,7 @@ export function parseAndValidateInputs(argv: string[]): FarosConfig {
     keepContainers: cliOptions.keepContainers ?? false,
     logLevel: cliOptions.logLevel ?? 'info',
     debug: cliOptions.debug ?? false,
+    dstStreamPrefix: cliOptions.dstStreamPrefix,
   };
 
   if (cliOptions.srcImage || cliOptions.dstImage) {
