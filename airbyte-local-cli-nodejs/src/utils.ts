@@ -57,8 +57,12 @@ export async function logImageVersion(type: ImageType, image: string | undefined
     return;
   }
   const {digest, version} = await inspectDockerImage(image);
-  logger.info(`Using ${type} image digest ${digest}`);
-  logger.info(`Using ${type} image version ${version}`);
+  if (digest && version) {
+    logger.info(`Using ${type} image digest ${digest}`);
+    logger.info(`Using ${type} image version ${version}`);
+  } else {
+    logger.warn(`Unknown ${type} image version or digest`);
+  }
 }
 
 // Read a file and detect the encoding by checking Byte Order Mark
