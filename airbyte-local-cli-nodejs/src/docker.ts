@@ -91,7 +91,7 @@ export async function pullDockerImage(image: string): Promise<void> {
   }
 }
 
-export async function inspectDockerImage(image: string): Promise<{digest: string; version: string}> {
+export async function inspectDockerImage(image: string): Promise<{digest?: string; version?: string}> {
   logger.debug(`Inspecting docker image: ${image}`);
 
   try {
@@ -106,8 +106,8 @@ export async function inspectDockerImage(image: string): Promise<{digest: string
     }
     return {digest, version};
   } catch (error: any) {
-    logger.error(`Failed to inspect docker image: ${image}`);
-    throw error;
+    logger.warn(`Failed to inspect docker image '${image}': ${error.message ?? JSON.stringify(error)}`);
+    return {};
   }
 }
 
