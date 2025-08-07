@@ -1,6 +1,6 @@
 {
   "src": {
-    "image": "gerrit",
+    "image": "farosai/airbyte-example-source",
     "config": {
       "user": "chris"
     }
