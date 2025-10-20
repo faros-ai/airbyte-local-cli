@@ -606,6 +606,10 @@ export async function generateConfig(tmpDir: string, cfg: FarosConfig): Promise<
   if (cfg.image) {
     srcImage = cfg.generateConfig?.src;
     dstImage = cfg.generateConfig?.dst ?? 'farosai/airbyte-faros-destination';
+    // Set dstType to 'faros' if using the Faros destination image
+    if (dstImage?.includes('faros-destination')) {
+      dstType = 'faros';
+    }
   }
   // if the user inputs are recognized types
   else {
