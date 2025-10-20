@@ -40,8 +40,8 @@ export const staticAirbyteConfig: StaticAirbyteConfig = {
       image: 'farosai/airbyte-gitlab-source',
       config: {
         authentication: {
-          'type': 'token',
-          'personal_access_token': '<UPDATE_YOUR_CREDENTIAL>'
+          type: 'token',
+          personal_access_token: '<UPDATE_YOUR_CREDENTIAL>'
         }
       },
     },
