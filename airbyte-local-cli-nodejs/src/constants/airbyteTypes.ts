@@ -205,9 +205,6 @@ export const airbyteTypes: AirbyteTypes = {
     transform: {
       dockerRepo: 'farosai/airbyte-faros-feeds-source',
     },
-    gitlab: {
-      dockerRepo: 'farosai/airbyte-faros-feeds-source',
-    },
 
     // Sources not in Poseidon config.json
     buildkite: {
