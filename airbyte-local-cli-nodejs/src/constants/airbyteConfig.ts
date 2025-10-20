@@ -41,8 +41,8 @@ export const staticAirbyteConfig: StaticAirbyteConfig = {
       config: {
         authentication: {
           type: 'token',
-          personal_access_token: '<UPDATE_YOUR_CREDENTIAL>'
-        }
+          personal_access_token: '<UPDATE_YOUR_CREDENTIAL>',
+        },
       },
     },
     jira: {
