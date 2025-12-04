@@ -111,55 +111,76 @@ export async function inspectDockerImage(image: string): Promise<{digest?: strin
   }
 }
 
+function formatDstMsg(json: any): string {
+  return `[DST] - ${JSON.stringify(json)}`;
+}
+
+function extractStateFromMessage(data: any): string | undefined {
+  if (!data?.state) {
+    return undefined;
+  }
+  // Handle GLOBAL and STREAM state types (new format)
+  if ((data.state.type === 'GLOBAL' && data.state.global) || (data.state.type === 'STREAM' && data.state.stream)) {
+    return JSON.stringify(data.state);
+  }
+  // Legacy format
+  if (data.state.data) {
+    return JSON.stringify(data.state.data);
+  }
+  return undefined;
+}
+
+function logDstMessage(data: any): void {
+  const msg = formatDstMsg(data);
+
+  if (data?.type !== AirbyteMessageType.LOG) {
+    logger.info(msg);
+    return;
+  }
+
+  switch (data?.log?.level) {
+    case 'ERROR':
+      logger.error(msg);
+      break;
+    case 'WARN':
+      logger.warn(msg);
+      break;
+    case 'DEBUG':
+      logger.debug(msg);
+      break;
+    default:
+      logger.info(msg);
+  }
+}
+
 /**
  * Process the destination output.
  */
-export function processDstDataByLine(line: string, cfg: FarosConfig): string {
-  // reformat the JSON message
-  function formatDstMsg(json: any): string {
-    return `[DST] - ${JSON.stringify(json)}`;
-  }
-
-  let state = '';
-
-  // skip empty lines
+export function processDstDataByLine(line: string, cfg: FarosConfig): string | undefined {
   if (line.trim() === '') {
-    return state;
+    return undefined;
   }
 
   try {
     const data = JSON.parse(line);
+    let state: string | undefined;
 
-    if (data?.type === AirbyteMessageType.STATE && data?.state) {
-      // Handle different state types with backward compatibility
-      if ((data.state.type === 'GLOBAL' && data.state.global) || (data.state.type === 'STREAM' && data.state.stream)) {
-        state = JSON.stringify(data.state);
-      } else if (data.state.data) {
-        // Legacy format
-        state = JSON.stringify(data.state.data);
-      }
+    if (data?.type === AirbyteMessageType.STATE) {
+      state = extractStateFromMessage(data);
       logger.debug(formatDstMsg(data));
     }
+
     if (cfg.rawMessages) {
       process.stdout.write(`${line}\n`);
     } else {
-      if (data?.type === AirbyteMessageType.LOG && data?.log?.level !== 'INFO') {
-        if (data?.log?.level === 'ERROR') {
-          logger.error(formatDstMsg(data));
-        } else if (data?.log?.level === 'WARN') {
-          logger.warn(formatDstMsg(data));
-        } else if (data?.log?.level === 'DEBUG') {
-          logger.debug(formatDstMsg(data));
-        }
-      } else {
-        logger.info(formatDstMsg(data));
-      }
+      logDstMessage(data);
     }
+
+    return state;
   } catch (error: any) {
-    // log as errors but not throw it
     logger.error(`Line of data: '${line}'; Error: ${error.message}`);
+    return undefined;
   }
-  return state;
 }
 
 function processAirbyteLines<T>(lines: string[], messageType: AirbyteMessageType): T | undefined {
