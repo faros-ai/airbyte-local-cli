@@ -633,7 +633,7 @@ spec:
           fi
           echo "Starting processing output of source connector"
           cat /pipes/src_out | jq -cR --unbuffered "fromjson? | select(.type == \"RECORD\" or .type == \"STATE\") | .record.stream |= \"\${DST_STREAM_PREFIX}\" + ." > /pipes/dst_in
-          cat /pipes/state | jq -cR --unbuffered 'fromjson? | select(.type == "STATE") | .state.data' | tail -n 1 > "\$NEW_STATE"
+          cat /pipes/state | jq -cR --unbuffered 'fromjson? | select(.type == "STATE") | if .state.type == "GLOBAL" or .state.type == "STREAM" then .state else .state.data end' | tail -n 1 > "\$NEW_STATE"
           echo "Completed piping state records"
           ITERATION=0
           MAX_ITERATION=300
@@ -776,7 +776,7 @@ function sync_local() {
         tee "$output_filepath" |
         docker run --name $dst_container_name $dst_use_host_network $max_memory $max_cpus --cidfile="$tempPrefix-dst_cid" -i --init -v "$tempdir:/configs" --log-opt max-size="$max_log_size" -a stdout -a stderr -a stdin --env LOG_LEVEL="$log_level" $dst_docker_options "$dst_docker_image" write \
         --config "/configs/$dst_config_filename" --catalog "/configs/$dst_catalog_filename" |
-        tee >(jq -cR --unbuffered 'fromjson? | select(.type == "STATE") | .state.data' | tail -n 1 > "$new_source_state_file") |
+        tee >(jq -cR --unbuffered 'fromjson? | select(.type == "STATE") | if .state.type == "GLOBAL" or .state.type == "STREAM" then .state else .state.data end' | tail -n 1 > "$new_source_state_file") |
         # https://stedolan.github.io/jq/manual/#Colors
         JQ_COLORS="1;30:0;37:0;37:0;37:0;36:1;37:1;37" \
         jq -cR $jq_color_opt --unbuffered 'fromjson? | select(.type != "STATE")' | jq -rR "$jq_dst_msg"

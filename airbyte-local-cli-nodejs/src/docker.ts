@@ -130,8 +130,14 @@ export function processDstDataByLine(line: string, cfg: FarosConfig): string {
   try {
     const data = JSON.parse(line);
 
-    if (data?.type === AirbyteMessageType.STATE && data?.state?.data) {
-      state = JSON.stringify(data.state.data);
+    if (data?.type === AirbyteMessageType.STATE && data?.state) {
+      // Handle different state types with backward compatibility
+      if ((data.state.type === 'GLOBAL' && data.state.global) || (data.state.type === 'STREAM' && data.state.stream)) {
+        state = JSON.stringify(data.state);
+      } else if (data.state.data) {
+        // Legacy format
+        state = JSON.stringify(data.state.data);
+      }
       logger.debug(formatDstMsg(data));
     }
     if (cfg.rawMessages) {
