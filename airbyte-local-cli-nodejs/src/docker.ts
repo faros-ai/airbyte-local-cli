@@ -91,69 +91,98 @@ export async function pullDockerImage(image: string): Promise<void> {
   }
 }
 
-export async function inspectDockerImage(image: string): Promise<{digest?: string; version?: string}> {
+export async function inspectDockerImage(image: string): Promise<any> {
   logger.debug(`Inspecting docker image: ${image}`);
 
   try {
     const imageInfo = await _docker.getImage(image).inspect();
     logger.debug(`Docker image inspected: ${image}`);
 
-    const digest = imageInfo.RepoDigests[0];
-    const version = imageInfo.Config.Labels['io.airbyte.version'];
-
-    if (!digest || !version) {
-      throw new Error('RepoDigests or airbyte version label is missing.');
-    }
-    return {digest, version};
+    return {digest: imageInfo.RepoDigests[0], version: imageInfo.Config.Labels['io.airbyte.version']};
   } catch (error: any) {
     logger.warn(`Failed to inspect docker image '${image}': ${error.message ?? JSON.stringify(error)}`);
     return {};
   }
 }
 
+function formatDstMsg(json: any): string {
+  return `[DST] - ${JSON.stringify(json)}`;
+}
+
+/**
+ * Extracts the state from an Airbyte message. Preparing for later writing to state file.
+ * Handles both the new GLOBAL state format and the legacy format.
+ * For the new state format, they are wrapped in an additional array. There can be multiple state objects
+ * but global state only has one object.
+ *
+ * Note: STREAM state types are not handled here.
+ */
+export function extractStateFromMessage(data: any): string | undefined {
+  if (!data?.state) {
+    return undefined;
+  }
+  // Handle GLOBAL state types (new format)
+  if (data.state.type === 'GLOBAL' && data.state.global) {
+    return JSON.stringify([data.state]);
+  }
+  // Legacy format
+  if (data.state.data) {
+    return JSON.stringify(data.state.data);
+  }
+  return undefined;
+}
+
+function logDstMessage(data: any): void {
+  const msg = formatDstMsg(data);
+
+  if (data?.type !== AirbyteMessageType.LOG) {
+    logger.info(msg);
+    return;
+  }
+
+  switch (data?.log?.level) {
+    case 'ERROR':
+      logger.error(msg);
+      break;
+    case 'WARN':
+      logger.warn(msg);
+      break;
+    case 'DEBUG':
+      logger.debug(msg);
+      break;
+    default:
+      logger.info(msg);
+  }
+}
+
 /**
  * Process the destination output.
  */
-export function processDstDataByLine(line: string, cfg: FarosConfig): string {
-  // reformat the JSON message
-  function formatDstMsg(json: any): string {
-    return `[DST] - ${JSON.stringify(json)}`;
-  }
-
-  let state = '';
-
-  // skip empty lines
+export function processDstDataByLine(line: string, cfg: FarosConfig): string | undefined {
   if (line.trim() === '') {
-    return state;
+    return undefined;
   }
 
   try {
     const data = JSON.parse(line);
+    let state: string | undefined;
 
-    if (data?.type === AirbyteMessageType.STATE && data?.state?.data) {
-      state = JSON.stringify(data.state.data);
+    if (data?.type === AirbyteMessageType.STATE) {
+      state = extractStateFromMessage(data);
       logger.debug(formatDstMsg(data));
     }
+
     if (cfg.rawMessages) {
       process.stdout.write(`${line}\n`);
     } else {
-      if (data?.type === AirbyteMessageType.LOG && data?.log?.level !== 'INFO') {
-        if (data?.log?.level === 'ERROR') {
-          logger.error(formatDstMsg(data));
-        } else if (data?.log?.level === 'WARN') {
-          logger.warn(formatDstMsg(data));
-        } else if (data?.log?.level === 'DEBUG') {
-          logger.debug(formatDstMsg(data));
-        }
-      } else {
-        logger.info(formatDstMsg(data));
-      }
+      logDstMessage(data);
     }
+
+    return state;
   } catch (error: any) {
-    // log as errors but not throw it
     logger.error(`Line of data: '${line}'; Error: ${error.message}`);
+    return undefined;
   }
-  return state;
 }
 
 function processAirbyteLines<T>(lines: string[], messageType: AirbyteMessageType): T | undefined {

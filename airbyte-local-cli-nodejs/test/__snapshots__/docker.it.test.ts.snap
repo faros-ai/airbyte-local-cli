@@ -295,6 +295,13 @@ exports[`runSpec should success with faros image 1`] = `
           "title": "Total Number of Buckets",
           "type": "integer",
         },
+        "check_connection": {
+          "default": true,
+          "description": "Enable connection check during setup (CHECK command). When disabled, skips setup-time checks.",
+          "order": 1002,
+          "title": "Check Connection",
+          "type": "boolean",
+        },
         "debug": {
           "default": false,
           "description": "Enable debug mode",
@@ -325,7 +332,7 @@ exports[`runSpec should success with faros image 1`] = `
           "type": "array",
         },
         "page_size": {
-          "default": 100,
+          "default": 1000,
           "description": "Page size to use when paginating through query results.",
           "order": 6,
           "title": "Page Size",
@@ -366,21 +373,21 @@ exports[`runSpec should success with faros image 1`] = `
 exports[`runSrcSync should success 1`] = `
 "{"state":{"data":{"format":"base64/gzip","data":"H4sIAAAAAAAAA6uuBQBDv6ajAgAAAA=="}},"type":"STATE","redactedConfig":{"user":"chris"},"sourceType":"example","sourceVersion":***}
 {"state":{"data":{"format":"base64/gzip","data":"H4sIAAAAAAAAA6uuBQBDv6ajAgAAAA=="}},"type":"STATE","sourceStatus":{"status":"SUCCESS"}}
-{"state":{"data":{"format":"base64/gzip","data":"H4sIAAAAAAAAA6uuBQBDv6ajAgAAAA=="}},"type":"STATE","logs":[{"timestamp":***,"message":{"level":30,"msg":"Source version: ***"}},{"timestamp":***,"message":{"level":30,"msg":"Config: {\\"user\\":\\"chris\\"}"}},{"timestamp":***,"message":{"level":30,"msg":"Catalog: {}"}},{"timestamp":***,"message":{"level":30,"msg":"State: {}"}},{"timestamp":***,"message":{"level":30,"msg":"Syncing ExampleSource"}},{"timestamp":***,"message":{"level":30,"msg":"Finished syncing ExampleSource"}}]}
+{"state":{"data":{"format":"base64/gzip","data":"H4sIAAAAAAAAA6uuBQBDv6ajAgAAAA=="}},"type":"STATE","logs":[{"timestamp":***,"message":{"level":30,"msg":"Source version: ***"}},{"timestamp":***,"message":{"level":30,"msg":"Config: {\\"user\\":\\"chris\\"}"}},{"timestamp":***,"message":{"level":30,"msg":"Catalog: {}"}},{"timestamp":***,"message":{"level":30,"msg":"State: {}"}},{"timestamp":***,"message":{"level":30,"msg":"Performing pre-read connection validation"}},{"timestamp":***,"message":{"level":30,"msg":"Pre-read connection validation succeeded"}},{"timestamp":***,"message":{"level":30,"msg":"Syncing ExampleSource"}},{"timestamp":***,"message":{"level":30,"msg":"Finished syncing ExampleSource"}}]}
 "
 `;
 
 exports[`runSrcSync should success with specified output file 1`] = `
 "{"state":{"data":{"format":"base64/gzip","data":"H4sIAAAAAAAAA6uuBQBDv6ajAgAAAA=="}},"type":"STATE","redactedConfig":{"user":"chris"},"sourceType":"example","sourceVersion":***}
 {"state":{"data":{"format":"base64/gzip","data":"H4sIAAAAAAAAA6uuBQBDv6ajAgAAAA=="}},"type":"STATE","sourceStatus":{"status":"SUCCESS"}}
-{"state":{"data":{"format":"base64/gzip","data":"H4sIAAAAAAAAA6uuBQBDv6ajAgAAAA=="}},"type":"STATE","logs":[{"timestamp":***,"message":{"level":30,"msg":"Source version: ***"}},{"timestamp":***,"message":{"level":30,"msg":"Config: {\\"user\\":\\"chris\\"}"}},{"timestamp":***,"message":{"level":30,"msg":"Catalog: {}"}},{"timestamp":***,"message":{"level":30,"msg":"State: {}"}},{"timestamp":***,"message":{"level":30,"msg":"Syncing ExampleSource"}},{"timestamp":***,"message":{"level":30,"msg":"Finished syncing ExampleSource"}}]}
+{"state":{"data":{"format":"base64/gzip","data":"H4sIAAAAAAAAA6uuBQBDv6ajAgAAAA=="}},"type":"STATE","logs":[{"timestamp":***,"message":{"level":30,"msg":"Source version: ***"}},{"timestamp":***,"message":{"level":30,"msg":"Config: {\\"user\\":\\"chris\\"}"}},{"timestamp":***,"message":{"level":30,"msg":"Catalog: {}"}},{"timestamp":***,"message":{"level":30,"msg":"State: {}"}},{"timestamp":***,"message":{"level":30,"msg":"Performing pre-read connection validation"}},{"timestamp":***,"message":{"level":30,"msg":"Pre-read connection validation succeeded"}},{"timestamp":***,"message":{"level":30,"msg":"Syncing ExampleSource"}},{"timestamp":***,"message":{"level":30,"msg":"Finished syncing ExampleSource"}}]}
 "
 `;
 
 exports[`runSrcSync should wait for write to complete 1`] = `
 "{"state":{"data":{"format":"base64/gzip","data":"H4sIAAAAAAAAA6uuBQBDv6ajAgAAAA=="}},"type":"STATE","redactedConfig":{"user":"chris"},"sourceType":"example","sourceVersion":***}
 {"state":{"data":{"format":"base64/gzip","data":"H4sIAAAAAAAAA6uuBQBDv6ajAgAAAA=="}},"type":"STATE","sourceStatus":{"status":"SUCCESS"}}
-{"state":{"data":{"format":"base64/gzip","data":"H4sIAAAAAAAAA6uuBQBDv6ajAgAAAA=="}},"type":"STATE","logs":[{"timestamp":***,"message":{"level":30,"msg":"Source version: ***"}},{"timestamp":***,"message":{"level":30,"msg":"Config: {\\"user\\":\\"chris\\"}"}},{"timestamp":***,"message":{"level":30,"msg":"Catalog: {}"}},{"timestamp":***,"message":{"level":30,"msg":"State: {}"}},{"timestamp":***,"message":{"level":30,"msg":"Syncing ExampleSource"}},{"timestamp":***,"message":{"level":30,"msg":"Finished syncing ExampleSource"}}]}
+{"state":{"data":{"format":"base64/gzip","data":"H4sIAAAAAAAAA6uuBQBDv6ajAgAAAA=="}},"type":"STATE","logs":[{"timestamp":***,"message":{"level":30,"msg":"Source version: ***"}},{"timestamp":***,"message":{"level":30,"msg":"Config: {\\"user\\":\\"chris\\"}"}},{"timestamp":***,"message":{"level":30,"msg":"Catalog: {}"}},{"timestamp":***,"message":{"level":30,"msg":"State: {}"}},{"timestamp":***,"message":{"level":30,"msg":"Performing pre-read connection validation"}},{"timestamp":***,"message":{"level":30,"msg":"Pre-read connection validation succeeded"}},{"timestamp":***,"message":{"level":30,"msg":"Syncing ExampleSource"}},{"timestamp":***,"message":{"level":30,"msg":"Finished syncing ExampleSource"}}]}
 "
 `;
 
