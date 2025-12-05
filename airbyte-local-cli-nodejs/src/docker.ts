@@ -91,20 +91,14 @@ export async function pullDockerImage(image: string): Promise<void> {
   }
 }
 
-export async function inspectDockerImage(image: string): Promise<{digest?: string; version?: string}> {
+export async function inspectDockerImage(image: string): Promise<any> {
   logger.debug(`Inspecting docker image: ${image}`);
 
   try {
     const imageInfo = await _docker.getImage(image).inspect();
     logger.debug(`Docker image inspected: ${image}`);
 
-    const digest = imageInfo.RepoDigests[0];
-    const version = imageInfo.Config.Labels['io.airbyte.version'];
-
-    if (!digest || !version) {
-      throw new Error('RepoDigests or airbyte version label is missing.');
-    }
-    return {digest, version};
+    return {digest: imageInfo.RepoDigests[0], version: imageInfo.Config.Labels['io.airbyte.version']};
   } catch (error: any) {
     logger.warn(`Failed to inspect docker image '${image}': ${error.message ?? JSON.stringify(error)}`);
     return {};
@@ -115,13 +109,21 @@ function formatDstMsg(json: any): string {
   return `[DST] - ${JSON.stringify(json)}`;
 }
 
-function extractStateFromMessage(data: any): string | undefined {
+/**
+ * Extracts the state from an Airbyte message. Preparing for later writing to state file.
+ * Handles both the new GLOBAL state format and the legacy format.
+ * For the new state format, they are wrapped in an additional array. There can be multiple state objects
+ * but global state only has one object.
+ *
+ * Note: STREAM state types are not handled here.
+ */
+export function extractStateFromMessage(data: any): string | undefined {
   if (!data?.state) {
     return undefined;
   }
-  // Handle GLOBAL and STREAM state types (new format)
-  if ((data.state.type === 'GLOBAL' && data.state.global) || (data.state.type === 'STREAM' && data.state.stream)) {
-    return JSON.stringify(data.state);
+  // Handle GLOBAL state types (new format)
+  if (data.state.type === 'GLOBAL' && data.state.global) {
+    return JSON.stringify([data.state]);
   }
   // Legacy format
   if (data.state.data) {

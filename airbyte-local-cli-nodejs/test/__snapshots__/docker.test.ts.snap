@@ -1,0 +1,5 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`extractStateFromMessage should handle GLOBAL state format and wrap in array 1`] = `"[{"type":"GLOBAL","global":{"shared_state":{"format":"base64/gzip","data":"H4sI..."},"stream_states":[]}}]"`;
+
+exports[`extractStateFromMessage should handle legacy state format with data property 1`] = `"{"format":"base64/gzip","data":"H4sIAAAAAAAAA6uuBQBDv6ajAgAAAA=="}"`;
