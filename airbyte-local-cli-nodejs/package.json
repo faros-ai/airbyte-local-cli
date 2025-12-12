@@ -40,7 +40,7 @@
     "@types/node": "^22.14.0",
     "@typescript-eslint/eslint-plugin": "^8.19.1",
     "@typescript-eslint/parser": "^8.13.0",
-    "@yao-pkg/pkg": "^6.9.0",
+    "@yao-pkg/pkg": "^6.11.0",
     "eslint": "^8.57.1",
     "eslint-config-faros": "^0.1.0",
     "eslint-config-prettier": "^9.1.0",
@@ -59,6 +59,9 @@
     "pino": "^9.14.0",
     "pino-pretty": "^13.0.0",
     "ts-essentials": "^10.0.4"
+  },
+  "overrides": {
+    "glob": "10.5.0"
   },
   "jest": {
     "silent": false,
