@@ -1,4 +1,4 @@
-// Jest Snapshot v1, https://goo.gl/fbAQLP
+// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
 
 exports[`extractStateFromMessage should handle GLOBAL state format and wrap in array 1`] = `"[{"type":"GLOBAL","global":{"shared_state":{"format":"base64/gzip","data":"H4sI..."},"stream_states":[]}}]"`;
 
