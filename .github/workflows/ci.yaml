@@ -99,7 +99,7 @@ jobs:
             TARGET="linuxstatic-x64"
           elif [ "${{ matrix.os }}" == 'ubuntu-24.04-arm' ]; then
             TARGET="linuxstatic-arm64"
-          elif [ "${{ matrix.os }}" == 'macos-13' ]; then
+          elif [ "${{ matrix.os }}" == 'macos-15-intel' ]; then
             TARGET="macos-x64"
           elif [ "${{ matrix.os }}" == 'macos-latest' ]; then
             TARGET="macos-arm64"
@@ -218,7 +218,7 @@ jobs:
         os: 
           - ubuntu-latest # linux x64
           - ubuntu-24.04-arm # linux arm64
-          - macos-13 # macos x64
+          - macos-15-intel # macos x64
           - macos-latest # macos arm64
           - windows-latest # windows x64
     runs-on: ${{ matrix.os }}
@@ -254,7 +254,7 @@ jobs:
           elif [ "${{ matrix.os }}" == 'ubuntu-24.04-arm' ]; then
             TARGET="linuxstatic-arm64"
             BINARY_NAME="linux-arm64"
-          elif [ "${{ matrix.os }}" == 'macos-13' ]; then
+          elif [ "${{ matrix.os }}" == 'macos-15-intel' ]; then
             TARGET="macos-x64"
             BINARY_NAME=$TARGET
           elif [ "${{ matrix.os }}" == 'macos-latest' ]; then
