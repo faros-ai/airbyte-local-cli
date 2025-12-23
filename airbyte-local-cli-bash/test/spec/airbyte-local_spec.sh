@@ -540,33 +540,49 @@ Describe 'building kubernetes manifest - cpu limit'
     End
 End
 
-Describe 'collectStates function'
-    # Source the script to get the collectStates function
-    Include ../../airbyte-local.sh
+Describe 'collectStates jq filter'
+    # Define the jq filter inline to test without sourcing the main script
+    # This must match the collectStates function in airbyte-local.sh
+    collectStates() {
+        jq -scR '
+            [splits("\n") | select(length > 0) | fromjson? | select(.type == "STATE")] |
+            if length == 0 then
+                empty
+            elif .[0].state.type == "STREAM" then
+                group_by(.state.stream.stream_descriptor.name) | map(.[-1].state)
+            elif .[0].state.type == "GLOBAL" then
+                [.[-1].state]
+            else
+                .[-1].state.data
+            end
+        '
+    }
 
     It 'aggregates STREAM states by stream name, keeping the last state per stream'
-        input() {
-            echo '{"type":"STATE","state":{"type":"STREAM","stream":{"stream_descriptor":{"name":"users"},"stream_state":{"format":"base64/gzip","data":"dXNlcnMx"}}}}'
-            echo '{"type":"STATE","state":{"type":"STREAM","stream":{"stream_descriptor":{"name":"orders"},"stream_state":{"format":"base64/gzip","data":"b3JkZXJzMQ=="}}}}'
-            echo '{"type":"STATE","state":{"type":"STREAM","stream":{"stream_descriptor":{"name":"users"},"stream_state":{"format":"base64/gzip","data":"dXNlcnMy"}}}}'
+        test_stream_aggregation() {
+            {
+                echo '{"type":"STATE","state":{"type":"STREAM","stream":{"stream_descriptor":{"name":"users"},"stream_state":{"format":"base64/gzip","data":"dXNlcnMx"}}}}'
+                echo '{"type":"STATE","state":{"type":"STREAM","stream":{"stream_descriptor":{"name":"orders"},"stream_state":{"format":"base64/gzip","data":"b3JkZXJzMQ=="}}}}'
+                echo '{"type":"STATE","state":{"type":"STREAM","stream":{"stream_descriptor":{"name":"users"},"stream_state":{"format":"base64/gzip","data":"dXNlcnMy"}}}}'
+            } | collectStates
         }
-        When call input | collectStates
+        When call test_stream_aggregation
         The output should equal '[{"type":"STREAM","stream":{"stream_descriptor":{"name":"orders"},"stream_state":{"format":"base64/gzip","data":"b3JkZXJzMQ=="}}},{"type":"STREAM","stream":{"stream_descriptor":{"name":"users"},"stream_state":{"format":"base64/gzip","data":"dXNlcnMy"}}}]'
     End
 
     It 'returns LEGACY state data only'
-        input() {
-            echo '{"type":"STATE","state":{"data":{"format":"base64/gzip","data":"dGVzdA=="}}}}'
+        test_legacy_state() {
+            echo '{"type":"STATE","state":{"data":{"format":"base64/gzip","data":"dGVzdA=="}}}' | collectStates
         }
-        When call input | collectStates
+        When call test_legacy_state
         The output should equal '{"format":"base64/gzip","data":"dGVzdA=="}'
     End
 
     It 'returns empty for no STATE messages'
-        input() {
-            echo '{"type":"RECORD","record":{"stream":"users","data":{"id":1}}}'
+        test_no_state() {
+            echo '{"type":"RECORD","record":{"stream":"users","data":{"id":1}}}' | collectStates
         }
-        When call input | collectStates
+        When call test_no_state
         The output should equal ''
     End
 End

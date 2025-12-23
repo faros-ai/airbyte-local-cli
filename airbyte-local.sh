@@ -1012,6 +1012,4 @@ main() {
     log "Done"
 }
 
-if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
-    main "$@"; exit
-fi
+main "$@"; exit
