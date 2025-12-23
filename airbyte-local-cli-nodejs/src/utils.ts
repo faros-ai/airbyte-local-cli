@@ -38,6 +38,9 @@ import {
   AirbyteConfig,
   AirbyteConfiguredCatalog,
   AirbyteMessageType,
+  AirbyteState,
+  AirbyteStateMessage,
+  AirbyteStateType,
   AirbyteStream,
   DestinationSyncMode,
   FarosConfig,
@@ -496,6 +499,101 @@ export function generateDstStreamPrefix(cfg: FarosConfig): void {
       logger.debug(`Using connection name: ${cfg.connectionName}`);
       logger.debug(`Using destination stream prefix: ${cfg.dstStreamPrefix}`);
     }
+  }
+}
+
+export function formatDstMsg(json: any): string {
+  return `[DST] - ${JSON.stringify(json)}`;
+}
+
+export function logDstMessage(data: any): void {
+  const msg = formatDstMsg(data);
+
+  if (data?.type !== AirbyteMessageType.LOG) {
+    logger.info(msg);
+    return;
+  }
+
+  switch (data?.log?.level) {
+    case 'ERROR':
+      logger.error(msg);
+      break;
+    case 'WARN':
+      logger.warn(msg);
+      break;
+    case 'DEBUG':
+      logger.debug(msg);
+      break;
+    default:
+      logger.info(msg);
+  }
+}
+
+/**
+ * Extracts the state from an Airbyte message. Preparing for later writing to state file.
+ * Handles the new STREAM state format and the legacy format for backward compatibility.
+ *
+ * Note: GLOBAL state types are not handled here since we don't use it.
+ */
+export function extractStateFromMessage(data: AirbyteStateMessage): AirbyteState | undefined {
+  // Handle STREAM state format
+  if (data.state.type === AirbyteStateType.STREAM && data.state.stream) {
+    return data.state;
+  }
+  // Handle legacy state format
+  else if (data.state.data) {
+    return {type: AirbyteStateType.LEGACY, data: data.state.data};
+  }
+
+  logger.warn('Received unsupported state message format.');
+  return undefined;
+}
+
+/**
+ * Collects Airbyte states by stream.
+ * For STREAM states, keeps the latest state per stream (keyed by stream name).
+ * For LEGACY states, keeps only the latest one.
+ */
+export function collectStates(
+  state: AirbyteState | undefined,
+  streamStates: Map<string, AirbyteState>,
+  legacyState: {value: AirbyteState | undefined},
+): void {
+  if (!state) {
+    return;
+  }
+  if (state.type === AirbyteStateType.STREAM) {
+    const streamName = state.stream?.stream_descriptor?.name;
+    if (streamName) {
+      streamStates.set(streamName, state);
+    }
+  } else if (state.type === AirbyteStateType.LEGACY) {
+    legacyState.value = state;
+  }
+}
+
+/**
+ * Writes the aggregated states to the state file.
+ * For STREAM states, writes all collected states as an array.
+ * For LEGACY states, writes just the data.
+ */
+export function writeStateFile(
+  streamStates: Map<string, AirbyteState>,
+  legacyState: {value: AirbyteState | undefined},
+  stateFile?: string,
+): void {
+  const stateFilePath = stateFile ?? DEFAULT_STATE_FILE;
+
+  if (streamStates.size > 0) {
+    const statesArray = Array.from(streamStates.values());
+    writeFileSync(stateFilePath, JSON.stringify(statesArray));
+    logger.info(`New state is updated in '${stateFilePath}'.`);
+  } else if (legacyState.value) {
+    writeFileSync(stateFilePath, JSON.stringify(legacyState.value.data));
+    logger.warn(`Airbyte state legacy format is deprecated. Please update your connector to use the new format.`);
+    logger.info(`New state is updated in '${stateFilePath}'.`);
+  } else {
+    logger.warn('No new state is generated.');
   }
 }
 

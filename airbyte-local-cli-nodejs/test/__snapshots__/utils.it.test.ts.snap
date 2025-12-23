@@ -313,3 +313,53 @@ exports[`write files to temporary dir writeCatalog should succeed with src overr
   ],
 }
 `;
+
+exports[`writeStateFile should prioritize STREAM states over LEGACY state 1`] = `
+[
+  {
+    "stream": {
+      "stream_descriptor": {
+        "name": "users",
+      },
+      "stream_state": {
+        "cursor": "2024-01-01",
+      },
+    },
+    "type": "STREAM",
+  },
+]
+`;
+
+exports[`writeStateFile should write LEGACY state data only 1`] = `
+{
+  "data": "dGVzdA==",
+  "format": "base64/gzip",
+}
+`;
+
+exports[`writeStateFile should write STREAM states as an array 1`] = `
+[
+  {
+    "stream": {
+      "stream_descriptor": {
+        "name": "users",
+      },
+      "stream_state": {
+        "cursor": "2024-01-01",
+      },
+    },
+    "type": "STREAM",
+  },
+  {
+    "stream": {
+      "stream_descriptor": {
+        "name": "orders",
+      },
+      "stream_state": {
+        "cursor": "2024-02-01",
+      },
+    },
+    "type": "STREAM",
+  },
+]
+`;
