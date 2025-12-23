@@ -7,15 +7,16 @@ import {
   AirbyteState,
   AirbyteStateMessage,
   AirbyteStateType,
-  FarosConfig
+  FarosConfig,
 } from '../src/types';
 import {
   checkDockerInstalled,
-  collectStates, extractStateFromMessage,
+  collectStates,
+  extractStateFromMessage,
   generateDstStreamPrefix,
   overrideCatalog,
   parseConfigFile,
-  updateSrcConfigWithFarosConfig
+  updateSrcConfigWithFarosConfig,
 } from '../src/utils';
 
 jest.mock('node:fs');

@@ -595,7 +595,6 @@ export async function runDstSync(tmpDir: string, config: FarosConfig, srcPassThr
 
     // Write the state file
     writeStateFile(streamStates, legacyState, config.stateFile);
-
   } catch (error: any) {
     throw new Error(`Failed to run destination connector: ${error.message ?? JSON.stringify(error)}`);
   }
