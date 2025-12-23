@@ -539,3 +539,34 @@ Describe 'building kubernetes manifest - cpu limit'
         The output should include '          cpu: "700m"'
     End
 End
+
+Describe 'collectStates function'
+    # Source the script to get the collectStates function
+    Include ../../airbyte-local.sh
+
+    It 'aggregates STREAM states by stream name, keeping the last state per stream'
+        input() {
+            echo '{"type":"STATE","state":{"type":"STREAM","stream":{"stream_descriptor":{"name":"users"},"stream_state":{"format":"base64/gzip","data":"dXNlcnMx"}}}}'
+            echo '{"type":"STATE","state":{"type":"STREAM","stream":{"stream_descriptor":{"name":"orders"},"stream_state":{"format":"base64/gzip","data":"b3JkZXJzMQ=="}}}}'
+            echo '{"type":"STATE","state":{"type":"STREAM","stream":{"stream_descriptor":{"name":"users"},"stream_state":{"format":"base64/gzip","data":"dXNlcnMy"}}}}'
+        }
+        When call input | collectStates
+        The output should equal '[{"type":"STREAM","stream":{"stream_descriptor":{"name":"orders"},"stream_state":{"format":"base64/gzip","data":"b3JkZXJzMQ=="}}},{"type":"STREAM","stream":{"stream_descriptor":{"name":"users"},"stream_state":{"format":"base64/gzip","data":"dXNlcnMy"}}}]'
+    End
+
+    It 'returns LEGACY state data only'
+        input() {
+            echo '{"type":"STATE","state":{"data":{"format":"base64/gzip","data":"dGVzdA=="}}}}'
+        }
+        When call input | collectStates
+        The output should equal '{"format":"base64/gzip","data":"dGVzdA=="}'
+    End
+
+    It 'returns empty for no STATE messages'
+        input() {
+            echo '{"type":"RECORD","record":{"stream":"users","data":{"id":1}}}'
+        }
+        When call input | collectStates
+        The output should equal ''
+    End
+End
