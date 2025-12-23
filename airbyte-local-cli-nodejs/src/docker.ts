@@ -24,10 +24,19 @@ import {
   AirbyteConnectionStatusMessage,
   AirbyteMessageType,
   AirbyteSpec,
+  AirbyteState,
+  AirbyteStateMessage,
   FarosConfig,
   OutputStream,
 } from './types';
-import {processSrcDataByLine} from './utils';
+import {
+  collectStates,
+  extractStateFromMessage,
+  formatDstMsg,
+  logDstMessage,
+  processSrcDataByLine,
+  writeStateFile,
+} from './utils';
 
 // Constants
 const DEFAULT_MAX_LOG_SIZE = '10m';
@@ -105,70 +114,21 @@ export async function inspectDockerImage(image: string): Promise<any> {
   }
 }
 
-function formatDstMsg(json: any): string {
-  return `[DST] - ${JSON.stringify(json)}`;
-}
-
-/**
- * Extracts the state from an Airbyte message. Preparing for later writing to state file.
- * Handles both the new GLOBAL state format and the legacy format.
- * For the new state format, they are wrapped in an additional array. There can be multiple state objects
- * but global state only has one object.
- *
- * Note: STREAM state types are not handled here.
- */
-export function extractStateFromMessage(data: any): string | undefined {
-  if (!data?.state) {
-    return undefined;
-  }
-  // Handle GLOBAL state types (new format)
-  if (data.state.type === 'GLOBAL' && data.state.global) {
-    return JSON.stringify([data.state]);
-  }
-  // Legacy format
-  if (data.state.data) {
-    return JSON.stringify(data.state.data);
-  }
-  return undefined;
-}
-
-function logDstMessage(data: any): void {
-  const msg = formatDstMsg(data);
-
-  if (data?.type !== AirbyteMessageType.LOG) {
-    logger.info(msg);
-    return;
-  }
-
-  switch (data?.log?.level) {
-    case 'ERROR':
-      logger.error(msg);
-      break;
-    case 'WARN':
-      logger.warn(msg);
-      break;
-    case 'DEBUG':
-      logger.debug(msg);
-      break;
-    default:
-      logger.info(msg);
-  }
-}
-
 /**
  * Process the destination output.
+ * Logs the messages and returns the state message if any.
  */
-export function processDstDataByLine(line: string, cfg: FarosConfig): string | undefined {
+function processDstDataByLine(line: string, cfg: FarosConfig): AirbyteState | undefined {
   if (line.trim() === '') {
     return undefined;
   }
 
   try {
     const data = JSON.parse(line);
-    let state: string | undefined;
+    let state: AirbyteState | undefined;
 
-    if (data?.type === AirbyteMessageType.STATE) {
-      state = extractStateFromMessage(data);
+    if (data?.type === AirbyteMessageType.STATE && data?.state) {
+      state = extractStateFromMessage(data as AirbyteStateMessage);
       logger.debug(formatDstMsg(data));
     }
 
@@ -185,6 +145,10 @@ export function processDstDataByLine(line: string, cfg: FarosConfig): string | u
   }
 }
 
+/**
+ * Parses Airbyte output lines and extracts the message matching the specified type.
+ * Logs any error traces or error-level log messages encountered during parsing.
+ */
 function processAirbyteLines<T>(lines: string[], messageType: AirbyteMessageType): T | undefined {
   let message: T | undefined;
   lines.forEach((line: string) => {
@@ -607,7 +571,8 @@ export async function runDstSync(tmpDir: string, config: FarosConfig, srcPassThr
 
     // create a writable stream to capture the stdout
     let buffer = '';
-    const states: string[] = [];
+    const streamStates = new Map<string, AirbyteState>();
+    const legacyState: {value: AirbyteState | undefined} = {value: undefined};
     const containerOutputStream = new Writable({
       write(chunk, _encoding, callback) {
         buffer += chunk.toString();
@@ -615,9 +580,7 @@ export async function runDstSync(tmpDir: string, config: FarosConfig, srcPassThr
         buffer = lines.pop() ?? '';
         lines.forEach((line: string) => {
           const maybeState = processDstDataByLine(line, config);
-          if (maybeState) {
-            states.push(maybeState);
-          }
+          collectStates(maybeState, streamStates, legacyState);
         });
         callback();
       },
@@ -631,13 +594,8 @@ export async function runDstSync(tmpDir: string, config: FarosConfig, srcPassThr
     logger.info('Destination connector completed.');
 
     // Write the state file
-    const lastState = states.pop();
-    if (lastState) {
-      writeFileSync(`${config.stateFile}`, lastState);
-      logger.info(`New state is updated in '${config.stateFile}'.`);
-    } else {
-      logger.warn('No new state is generated.');
-    }
+    writeStateFile(streamStates, legacyState, config.stateFile);
+
   } catch (error: any) {
     throw new Error(`Failed to run destination connector: ${error.message ?? JSON.stringify(error)}`);
   }

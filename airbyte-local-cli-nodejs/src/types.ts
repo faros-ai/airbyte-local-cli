@@ -179,3 +179,26 @@ export class AirbyteSpec implements AirbyteMessage {
   readonly type: AirbyteMessageType = AirbyteMessageType.SPEC;
   constructor(readonly spec: Spec) {}
 }
+
+export enum AirbyteStateType {
+  LEGACY = 'LEGACY',
+  STREAM = 'STREAM',
+  GLOBAL = 'GLOBAL', // Not implemented
+}
+export interface AirbyteStreamState {
+  stream_descriptor: {
+    name: string;
+    namespace?: string;
+  };
+  stream_state?: Record<string, unknown>;
+}
+
+export interface AirbyteState {
+  type?: AirbyteStateType;
+  stream?: AirbyteStreamState;
+  data?: Record<string, unknown>;
+}
+
+export interface AirbyteStateMessage extends AirbyteMessage {
+  readonly state: AirbyteState;
+}

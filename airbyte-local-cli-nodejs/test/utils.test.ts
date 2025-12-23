@@ -1,13 +1,21 @@
 import {spawnSync} from 'node:child_process';
 import {readFileSync} from 'node:fs';
 
-import {AirbyteCatalog, FarosConfig} from '../src/types';
+import {
+  AirbyteCatalog,
+  AirbyteMessageType,
+  AirbyteState,
+  AirbyteStateMessage,
+  AirbyteStateType,
+  FarosConfig
+} from '../src/types';
 import {
   checkDockerInstalled,
+  collectStates, extractStateFromMessage,
   generateDstStreamPrefix,
   overrideCatalog,
   parseConfigFile,
-  updateSrcConfigWithFarosConfig,
+  updateSrcConfigWithFarosConfig
 } from '../src/utils';
 
 jest.mock('node:fs');
@@ -279,5 +287,161 @@ describe('generateDstStreamPrefix', () => {
     generateDstStreamPrefix(testAirbyteConfig);
     expect(testAirbyteConfig.dstStreamPrefix).toEqual('custom_prefix__');
     expect(testAirbyteConfig.connectionName).toBeUndefined();
+  });
+});
+
+describe('extractStateFromMessage', () => {
+  it('should return undefined for unsupported formats', () => {
+    expect(extractStateFromMessage({state: {type: AirbyteStateType.GLOBAL}} as AirbyteStateMessage)).toBeUndefined();
+    expect(extractStateFromMessage({state: {}} as AirbyteStateMessage)).toBeUndefined();
+  });
+
+  it('should handle legacy state compressed format', () => {
+    const legacyState: AirbyteStateMessage = {
+      type: AirbyteMessageType.STATE,
+      state: {
+        data: {format: 'base64/gzip', data: 'testdata'},
+      },
+    };
+    const result = extractStateFromMessage(legacyState);
+    expect(result).toEqual({
+      type: AirbyteStateType.LEGACY,
+      data: {format: 'base64/gzip', data: 'testdata'},
+    });
+  });
+
+  it('should handle legacy state format non-compressed format', () => {
+    const legacyState: AirbyteStateMessage = {
+      type: AirbyteMessageType.STATE,
+      state: {
+        data: {cursor: '2025-01-01'},
+      },
+    };
+    const result = extractStateFromMessage(legacyState);
+    expect(result).toEqual({
+      type: AirbyteStateType.LEGACY,
+      data: {cursor: '2025-01-01'},
+    });
+  });
+
+  it('should handle STREAM state format', () => {
+    const streamState: AirbyteStateMessage = {
+      type: AirbyteMessageType.STATE,
+      state: {
+        type: AirbyteStateType.STREAM,
+        stream: {
+          stream_descriptor: {name: 'users'},
+          stream_state: {format: 'base64/gzip', data: 'testdata'},
+        },
+      },
+    };
+    const result = extractStateFromMessage(streamState);
+    expect(result).toEqual({
+      type: AirbyteStateType.STREAM,
+      stream: {
+        stream_descriptor: {name: 'users'},
+        stream_state: {format: 'base64/gzip', data: 'testdata'},
+      },
+    });
+  });
+});
+
+describe('collectStates', () => {
+  let streamStates: Map<string, AirbyteState>;
+  let legacyState: {value: any};
+
+  beforeEach(() => {
+    streamStates = new Map();
+    legacyState = {value: undefined};
+  });
+
+  it('should do nothing when state is undefined', () => {
+    collectStates(undefined, streamStates, legacyState);
+    expect(streamStates.size).toBe(0);
+    expect(legacyState.value).toBeUndefined();
+  });
+
+  it('should collect STREAM states keyed by stream name', () => {
+    const state1: AirbyteState = {
+      type: AirbyteStateType.STREAM,
+      stream: {
+        stream_descriptor: {name: 'users'},
+        stream_state: {format: 'base64/gzip', data: 'testdata'},
+      },
+    };
+    const state2: AirbyteState = {
+      type: AirbyteStateType.STREAM,
+      stream: {
+        stream_descriptor: {name: 'orders'},
+        stream_state: {format: 'base64/gzip', data: 'testdata'},
+      },
+    };
+
+    collectStates(state1, streamStates, legacyState);
+    collectStates(state2, streamStates, legacyState);
+
+    expect(streamStates.size).toBe(2);
+    expect(streamStates.get('users')).toEqual(state1);
+    expect(streamStates.get('orders')).toEqual(state2);
+  });
+
+  it('should keep only the latest STREAM state per stream', () => {
+    const state1: AirbyteState = {
+      type: AirbyteStateType.STREAM,
+      stream: {
+        stream_descriptor: {name: 'users'},
+        stream_state: {cursor: '2025-01-01'},
+      },
+    };
+    const state2: AirbyteState = {
+      type: AirbyteStateType.STREAM,
+      stream: {
+        stream_descriptor: {name: 'users'},
+        stream_state: {cursor: '2025-02-01'},
+      },
+    };
+
+    collectStates(state1, streamStates, legacyState);
+    collectStates(state2, streamStates, legacyState);
+
+    expect(streamStates.size).toBe(1);
+    expect(streamStates.get('users')).toEqual(state2);
+  });
+
+  it('should collect LEGACY state', () => {
+    const state: AirbyteState = {
+      type: AirbyteStateType.LEGACY,
+      data: {cursor: '2025-01-01'},
+    };
+
+    collectStates(state, streamStates, legacyState);
+
+    expect(legacyState.value).toEqual(state);
+  });
+
+  it('should keep only the latest LEGACY state', () => {
+    const state1: AirbyteState = {
+      type: AirbyteStateType.LEGACY,
+      data: {cursor: '2025-01-01'},
+    };
+    const state2: AirbyteState = {
+      type: AirbyteStateType.LEGACY,
+      data: {cursor: '2025-02-01'},
+    };
+
+    collectStates(state1, streamStates, legacyState);
+    collectStates(state2, streamStates, legacyState);
+
+    expect(legacyState.value).toEqual(state2);
+  });
+
+  it('should ignore STREAM state without stream name', () => {
+    const state = {
+      type: AirbyteStateType.STREAM,
+    } as AirbyteState;
+
+    collectStates(state, streamStates, legacyState);
+
+    expect(streamStates.size).toBe(0);
   });
 });

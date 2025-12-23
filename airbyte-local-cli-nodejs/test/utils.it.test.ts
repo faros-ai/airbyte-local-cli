@@ -1,4 +1,4 @@
-import {chmodSync, existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync} from 'node:fs';
+import {chmodSync, existsSync, mkdtempSync, readFileSync, rmSync, unlinkSync, writeFileSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 
 import {
@@ -10,7 +10,7 @@ import {
   SRC_OUTPUT_DATA_FILE,
 } from '../src/constants/constants';
 import {runDiscoverCatalog, runSpec, runWizard} from '../src/docker';
-import {FarosConfig, SyncMode} from '../src/types';
+import {AirbyteState, AirbyteStateType, FarosConfig, SyncMode} from '../src/types';
 import {
   checkDockerInstalled,
   cleanUp,
@@ -21,6 +21,7 @@ import {
   processSrcInputFile,
   writeCatalog,
   writeConfig,
+  writeStateFile,
 } from '../src/utils';
 
 jest.mock('../src/docker');
@@ -401,6 +402,83 @@ describe('processSrcInputFile', () => {
     await expect(processSrcInputFile(tmpDir, cfg)).rejects.toThrow(
       'Failed to process the source input file: EACCES: permission denied,',
     );
+  });
+});
+
+describe('writeStateFile', () => {
+  let streamStates: Map<string, AirbyteState>;
+  let legacyState: {value: any};
+  const testStateFile = `${process.cwd()}/test/resources/writeStateFile_test_state.json`;
+
+  beforeEach(() => {
+    streamStates = new Map();
+    legacyState = {value: undefined};
+  });
+
+  afterEach(() => {
+    try {
+      unlinkSync(testStateFile);
+    } catch (_error) {
+      // ignore
+    }
+  });
+
+  it('should write STREAM states as an array', () => {
+    const state1: AirbyteState = {
+      type: AirbyteStateType.STREAM,
+      stream: {
+        stream_descriptor: {name: 'users'},
+        stream_state: {cursor: '2024-01-01'},
+      },
+    };
+    const state2: AirbyteState = {
+      type: AirbyteStateType.STREAM,
+      stream: {
+        stream_descriptor: {name: 'orders'},
+        stream_state: {cursor: '2024-02-01'},
+      },
+    };
+    streamStates.set('users', state1);
+    streamStates.set('orders', state2);
+
+    writeStateFile(streamStates, legacyState, testStateFile);
+
+    const result = JSON.parse(readFileSync(testStateFile, 'utf8'));
+    expect(result).toMatchSnapshot();
+  });
+
+  it('should write LEGACY state data only', () => {
+    const state: AirbyteState = {
+      type: AirbyteStateType.LEGACY,
+      data: {format: 'base64/gzip', data: 'dGVzdA=='},
+    };
+    legacyState.value = state;
+
+    writeStateFile(streamStates, legacyState, testStateFile);
+
+    const result = JSON.parse(readFileSync(testStateFile, 'utf8'));
+    expect(result).toMatchSnapshot();
+  });
+
+  it('should prioritize STREAM states over LEGACY state', () => {
+    const streamState: AirbyteState = {
+      type: AirbyteStateType.STREAM,
+      stream: {
+        stream_descriptor: {name: 'users'},
+        stream_state: {cursor: '2024-01-01'},
+      },
+    };
+    const legacy: AirbyteState = {
+      type: AirbyteStateType.LEGACY,
+      data: {cursor: '2024-02-01'},
+    };
+    streamStates.set('users', streamState);
+    legacyState.value = legacy;
+
+    writeStateFile(streamStates, legacyState, testStateFile);
+
+    const result = JSON.parse(readFileSync(testStateFile, 'utf8'));
+    expect(result).toMatchSnapshot();
   });
 });
 
