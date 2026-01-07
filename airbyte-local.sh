@@ -652,7 +652,7 @@ spec:
           fi
           echo "Starting processing output of source connector"
           cat /pipes/src_out | jq -cR --unbuffered "fromjson? | select(.type == \"RECORD\" or .type == \"STATE\") | .record.stream |= \"\${DST_STREAM_PREFIX}\" + ." > /pipes/dst_in
-          cat /pipes/state | jq -cR --unbuffered 'fromjson? | select(.type == "STATE") | if .state.type == "GLOBAL" or .state.type == "STREAM" then [.state] else .state.data end' | tail -n 1 > "\$NEW_STATE"
+          cat /pipes/state | jq -scR '[splits("\n") | select(length > 0) | fromjson? | select(.type == "STATE")] | if length == 0 then empty elif .[0].state.type == "STREAM" then group_by(.state.stream.stream_descriptor.name) | map(.[-1].state) elif .[0].state.type == "GLOBAL" then [.[-1].state] else .[-1].state.data end' > "\$NEW_STATE"
           echo "Completed piping state records"
           ITERATION=0
           MAX_ITERATION=300
