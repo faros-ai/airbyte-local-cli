@@ -512,8 +512,7 @@ function loadState() {
 # For GLOBAL states: wraps the last state in an array.
 # For LEGACY states: outputs just the data object.
 function collectStates() {
-    jq -scR '
-        [splits("\n") | select(length > 0) | fromjson? | select(.type == "STATE")] |
+    jq -sc '
         if length == 0 then
             empty
         elif .[0].state.type == "STREAM" then
@@ -787,6 +786,7 @@ function sync_local() {
     if [[ "$output_filepath" != "/dev/null" ]]; then
        debug "Writing source output to $output_filepath"
     fi
+    tmp_all_states="$tempdir/all_states.jsonl"
     new_source_state_file="$tempdir/new_state.json"
     readSrc |
         tee >(jq -cR $jq_color_opt --unbuffered 'fromjson? | select(.type != "RECORD" and .type != "STATE")' |
@@ -795,10 +795,16 @@ function sync_local() {
         tee "$output_filepath" |
         docker run --name $dst_container_name $dst_use_host_network $max_memory $max_cpus --cidfile="$tempPrefix-dst_cid" -i --init -v "$tempdir:/configs" --log-opt max-size="$max_log_size" -a stdout -a stderr -a stdin --env LOG_LEVEL="$log_level" $dst_docker_options "$dst_docker_image" write \
         --config "/configs/$dst_config_filename" --catalog "/configs/$dst_catalog_filename" |
-        tee >(collectStates > "$new_source_state_file") |
+        tee >(jq -cR --unbuffered 'fromjson? | select(.type == "STATE")' > "$tmp_all_states") |
         # https://stedolan.github.io/jq/manual/#Colors
         JQ_COLORS="1;30:0;37:0;37:0;37:0;36:1;37:1;37" \
         jq -cR $jq_color_opt --unbuffered 'fromjson? | select(.type != "STATE")' | jq -rR "$jq_dst_msg"
+
+    # Wait for process substitution to finish writing states
+    sleep 1
+
+    # Process collected states after pipeline completes
+    collectStates < "$tmp_all_states" > "$new_source_state_file"
 
     if [ ! -f "$new_source_state_file" ]; then
         warn "No new state file was generated. Existing state file will not be overwritten."
