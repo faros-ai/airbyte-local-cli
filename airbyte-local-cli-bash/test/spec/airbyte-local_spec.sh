@@ -543,9 +543,9 @@ End
 Describe 'collectStates jq filter'
     # Define the jq filter inline to test without sourcing the main script
     # This must match the collectStates function in airbyte-local.sh
+    # Note: collectStates now expects pre-filtered JSONL input (only STATE messages)
     collectStates() {
-        jq -scR '
-            [splits("\n") | select(length > 0) | fromjson? | select(.type == "STATE")] |
+        jq -sc '
             if length == 0 then
                 empty
             elif .[0].state.type == "STREAM" then
@@ -580,7 +580,8 @@ Describe 'collectStates jq filter'
 
     It 'returns empty for no STATE messages'
         test_no_state() {
-            echo '{"type":"RECORD","record":{"stream":"users","data":{"id":1}}}' | collectStates
+            # collectStates expects pre-filtered input, so empty input means no states
+            echo -n '' | collectStates
         }
         When call test_no_state
         The output should equal ''
