@@ -544,7 +544,7 @@ Describe 'collectStates jq filter'
     # Define the jq filter inline to test without sourcing the main script
     # This must match the collectStates function in airbyte-local.sh
     collectStates() {
-        jq -scR '
+        jq -sc '
             [splits("\n") | select(length > 0) | fromjson? | select(.type == "STATE")] |
             if length == 0 then
                 empty
