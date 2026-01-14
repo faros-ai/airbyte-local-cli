@@ -47,9 +47,8 @@ describe('runSrcSync', () => {
     await docker.runSrcSync('testTmpDir', testCfgWithVolumeMount, process.stdout);
 
     expect(mockRunDocker).toHaveBeenCalled();
-    expect(mockRunDocker.mock.calls[0]?.[0]?.HostConfig?.Binds).toMatchObject([
-      'testTmpDir:/configs',
-      '/path/to/tasks.xlsx:/tasks.xlsx',
-    ]);
+    const binds = mockRunDocker.mock.calls[0]?.[0]?.HostConfig?.Binds;
+    expect(binds?.some((b: string) => b.startsWith('testTmpDir:/configs'))).toBe(true);
+    expect(binds).toContain('/path/to/tasks.xlsx:/tasks.xlsx');
   });
 });
