@@ -33,6 +33,7 @@ import {
   collectStates,
   extractStateFromMessage,
   formatDstMsg,
+  getUserAgent,
   logDstMessage,
   processSrcDataByLine,
   writeStateFile,
@@ -550,7 +551,11 @@ export async function runDstSync(tmpDir: string, config: FarosConfig, srcPassThr
       OpenStdin: true,
       StdinOnce: true,
       platform: getImagePlatform(config.dst.image),
-      Env: [`LOG_LEVEL=${config.logLevel}`, ...(config.dst?.dockerOptions?.additionalOptions?.Env || [])],
+      Env: [
+        `LOG_LEVEL=${config.logLevel}`,
+        `CLI_USER_AGENT=${getUserAgent()}`,
+        ...(config.dst?.dockerOptions?.additionalOptions?.Env || []),
+      ],
       HostConfig: {
         // Defautl host config: can be overridden by users
         NanoCpus: maxNanoCpus,
