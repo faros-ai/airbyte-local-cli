@@ -67,12 +67,18 @@ function getImagePlatform(image: string): string | undefined {
 /**
  * This is a workaround for running tests on Windows with Windows images.
  * IRL, users should run linux images even on Windows.
+ *
+ * On Linux, we add the `:z` suffix for SELinux compatibility (required on Fedora, RHEL, etc.).
+ * The `:z` suffix tells Docker to relabel the volume content with a shared label.
+ * This is safe to use on non-SELinux systems as it's simply ignored.
  */
 function getBindsLocation(image: string): string {
   if (image.includes(':windows')) {
     return `C:${sep}configs`;
   }
-  return `/configs`;
+  // Add :z suffix for SELinux compatibility on Linux hosts
+  const selinuxSuffix = process.platform === 'linux' ? ':z' : '';
+  return `/configs${selinuxSuffix}`;
 }
 
 export async function checkDockerInstalled(): Promise<void> {
