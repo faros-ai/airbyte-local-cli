@@ -52,13 +52,17 @@ import {
 import {CLI_VERSION} from './version';
 
 /**
- * Constructs a user agent string following RFC 7231 best practices.
+ * Constructs a user agent string
  * Format: ProductName/Version (OS; Arch)
  *
  * Example: airbyte-local-cli/0.0.18 (darwin; arm64)
  */
 export function getUserAgent(): string {
-  return `airbyte-local-cli/${CLI_VERSION} (${process.platform}; ${process.arch})`;
+  try {
+    return `airbyte-local-cli/${CLI_VERSION} (${process.platform}; ${process.arch})`;
+  } catch {
+    return `airbyte-local-cli/${CLI_VERSION}`;
+  }
 }
 
 export function updateLogLevel(debug: boolean | undefined): void {
