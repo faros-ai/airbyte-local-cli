@@ -183,14 +183,14 @@ export function loadStateFile(tempDir: string, filePath?: string, connectionName
   return path;
 }
 
-export async function cleanUp(ctx: AirbyteCliContext): Promise<void> {
+export async function cleanUp(context: AirbyteCliContext): Promise<void> {
   logger.debug('Cleaning up...');
-  if (ctx.tmpDir !== undefined) {
+  if (context.tmpDir !== undefined) {
     try {
-      rmSync(ctx.tmpDir, {recursive: true, force: true});
-      logger.debug(`Temporary directory ${ctx.tmpDir} removed.`);
+      rmSync(context.tmpDir, {recursive: true, force: true});
+      logger.debug(`Temporary directory ${context.tmpDir} removed.`);
     } catch (error: any) {
-      logger.error(`Failed to remove temporary directory ${ctx.tmpDir}: ${error.message}`);
+      logger.error(`Failed to remove temporary directory ${context.tmpDir}: ${error.message}`);
     }
   }
   await stopAllContainers();
