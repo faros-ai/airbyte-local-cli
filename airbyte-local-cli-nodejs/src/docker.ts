@@ -16,7 +16,6 @@ import {
 } from './constants/constants';
 // Self-reference for unit test mocking
 import * as docker from './docker';
-import {ctx} from './index';
 import {logger} from './logger';
 import {
   AirbyteCatalog,
@@ -46,21 +45,28 @@ const DEFAULT_MAX_LOG_SIZE = '10m';
 // Create a new Docker instance
 let _docker = new Docker();
 
+// Track running containers for cleanup on exit
+const runningContainers = new Set<string>();
+
 // For testing purposes
 export function setDocker(testDocker: Docker): void {
   _docker = testDocker;
 }
 
-export function stopContainers(containers: string[]): void {
-  if (containers) {
-    containers.forEach(async (containerId) => {
-      try {
-        await _docker.getContainer(containerId).stop();
-        logger.debug(`Container ${containerId} stopped.`);
-      } catch (error: any) {
-        logger.warn(`Failed to stop container ${containerId}: ${error.message}`);
-      }
-    });
+export async function stopAllContainers(): Promise<void> {
+  if (runningContainers.size > 0) {
+    const containers = [...runningContainers];
+    await Promise.all(
+      containers.map(async (containerId) => {
+        try {
+          await _docker.getContainer(containerId).stop();
+          logger.debug(`Container ${containerId} stopped.`);
+        } catch (error: any) {
+          logger.warn(`Failed to stop container ${containerId}: ${error.message}`);
+        }
+      })
+    );
+    runningContainers.clear();
   }
 }
 
@@ -235,11 +241,11 @@ export async function runDocker(
 
   // Start the container
   await container.start();
-  ctx.containers?.add(container.id);
+  runningContainers.add(container.id);
 
   // Wait for the container to finish
   const res = await container.wait();
-  ctx.containers?.delete(container.id);
+  runningContainers.delete(container.id);
   logger.debug(`Container exit code: ${JSON.stringify(res)}`);
 
   // Close docker attached stream explicitly
