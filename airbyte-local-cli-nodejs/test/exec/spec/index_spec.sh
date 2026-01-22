@@ -387,6 +387,47 @@ Describe 'Run source and destination sync' 'docker'
   End
 End
 
+Describe 'Container cleanup' 'docker'
+  It 'should cleanup containers after normal completion'
+    airbyte_local_test() {
+      ./airbyte-local \
+        --config-file './resources/test_config_file_src_only.json' \
+        --src-only
+
+      # Check no containers left from our source image
+      count=$(docker ps -q --filter "ancestor=farosai/airbyte-example-source" | wc -l | tr -d ' ')
+      [ "$count" -eq 0 ]
+    }
+    When call airbyte_local_test
+    The output should include "Source connector completed."
+    The status should equal 0
+  End
+
+  It 'should cleanup containers on SIGINT'
+    airbyte_local_test() {
+      # Start CLI in background
+      ./airbyte-local \
+        --config-file './resources/test_config_file_graph_copy.json' &
+      CLI_PID=$!
+
+      # Wait for container to start
+      sleep 3
+
+      # Send SIGINT
+      kill -INT $CLI_PID 2>/dev/null || true
+
+      # Wait for cleanup
+      sleep 2
+
+      # Verify no containers running
+      count=$(docker ps -q --filter "ancestor=farosai/airbyte-faros-graphql-source" | wc -l | tr -d ' ')
+      [ "$count" -eq 0 ]
+    }
+    When call airbyte_local_test
+    The status should equal 0
+  End
+End
+
 # Clean up temeporary test files
 cleanup() {
   find . -maxdepth 1 -name 'faros_airbyte_cli_config.json' -delete

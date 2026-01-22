@@ -48,7 +48,7 @@ let _docker = new Docker();
 // Track running containers for cleanup on exit
 const runningContainers = new Set<string>();
 
-// For testing purposes
+// For testing purpose only
 export function setDocker(testDocker: Docker): void {
   _docker = testDocker;
 }

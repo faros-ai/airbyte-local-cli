@@ -1,6 +1,7 @@
 import * as command from '../src/command';
 import * as docker from '../src/docker';
 import {FarosConfig} from '../src/types';
+import * as utils from '../src/utils';
 
 jest.mock('../src/command');
 jest.mock('../src/docker');
@@ -125,5 +126,33 @@ describe('main', () => {
 
     expect(docker.runSrcSync).toHaveBeenCalled();
     expect(docker.runDstSync).not.toHaveBeenCalled();
+  });
+
+  it('should call cleanUp after completion', async () => {
+    const testConfig = {
+      srcPull: false,
+      dstPull: false,
+      src: {image: 'bar'},
+      dst: {image: 'baz'},
+    } as FarosConfig;
+    process.argv = testCommand;
+    (command.parseAndValidateInputs as jest.Mock).mockReturnValue(testConfig);
+
+    const {main} = await import('../src/index');
+    await main();
+
+    expect(utils.cleanUp).toHaveBeenCalled();
+  });
+
+  it('should call cleanUp even when error occurs', async () => {
+    process.argv = testCommand;
+    (command.parseAndValidateInputs as jest.Mock).mockImplementation(() => {
+      throw new Error('Test error');
+    });
+
+    const {main} = await import('../src/index');
+    await expect(main()).rejects.toThrow('Test error');
+
+    expect(utils.cleanUp).toHaveBeenCalled();
   });
 });
