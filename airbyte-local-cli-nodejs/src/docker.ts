@@ -64,7 +64,7 @@ export async function stopAllContainers(): Promise<void> {
         } catch (error: any) {
           logger.warn(`Failed to stop container ${containerId}: ${error.message}`);
         }
-      })
+      }),
     );
     runningContainers.clear();
   }
