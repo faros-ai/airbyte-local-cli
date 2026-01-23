@@ -53,6 +53,11 @@ export function setDocker(testDocker: Docker): void {
   _docker = testDocker;
 }
 
+// For testing purpose only
+export function addRunningContainerForTest(containerId: string): void {
+  runningContainers.add(containerId);
+}
+
 export async function stopAllContainers(): Promise<void> {
   if (runningContainers.size > 0) {
     const containers = [...runningContainers];
