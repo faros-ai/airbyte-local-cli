@@ -62,7 +62,12 @@ export async function stopAllContainers(): Promise<void> {
           await _docker.getContainer(containerId).stop();
           logger.debug(`Container ${containerId} stopped.`);
         } catch (error: any) {
-          logger.warn(`Failed to stop container ${containerId}: ${error.message}`);
+          // Ignore 304 "container already stopped" - this is expected during cleanup
+          if (error.statusCode === 304) {
+            logger.debug(`Container ${containerId} already stopped.`);
+          } else {
+            logger.warn(`Failed to stop container ${containerId}: ${error.message}`);
+          }
         }
       }),
     );

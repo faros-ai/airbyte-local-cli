@@ -413,8 +413,8 @@ Describe 'Container cleanup' 'docker'
       # Wait for container to start
       sleep 3
 
-      # Send SIGINT
-      kill -INT $CLI_PID 2>/dev/null || true
+      # Send SIGTERM
+      kill -TERM $CLI_PID 2>/dev/null || true
 
       # Wait for cleanup
       sleep 2
@@ -424,6 +424,7 @@ Describe 'Container cleanup' 'docker'
       [ "$count" -eq 0 ]
     }
     When call airbyte_local_test
+    The output should include "Cleaning up..."
     The status should equal 0
   End
 End
