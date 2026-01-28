@@ -15,15 +15,16 @@ import {
   writeConfig,
 } from './utils';
 
-export const ctx: AirbyteCliContext = {};
+const ctx: AirbyteCliContext = {};
 
 // Handle `Ctrl+C` (SIGINT) and `SIGTERM`
 ['SIGINT', 'SIGTERM'].forEach((signal) => {
-  process.on(signal, async () => {
+  process.on(signal, () => {
     logger.info(`Received ${signal}. Cleaning up...`);
-    await cleanUp(ctx);
-    logger.info('Exit Airbyte CLI.');
-    process.exit(1);
+    void cleanUp(ctx).finally(() => {
+      logger.info('Exit Airbyte CLI.');
+      process.exit(1);
+    });
   });
 });
 

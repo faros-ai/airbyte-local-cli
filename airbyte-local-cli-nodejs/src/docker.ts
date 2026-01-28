@@ -254,8 +254,12 @@ export async function runDocker(
   runningContainers.add(container.id);
 
   // Wait for the container to finish
-  const res = await container.wait();
-  runningContainers.delete(container.id);
+  let res: {StatusCode: number};
+  try {
+    res = await container.wait();
+  } finally {
+    runningContainers.delete(container.id);
+  }
   logger.debug(`Container exit code: ${JSON.stringify(res)}`);
 
   // Close docker attached stream explicitly

@@ -403,7 +403,7 @@ Describe 'Container cleanup' 'docker'
     The status should equal 0
   End
 
-  It 'should cleanup containers on SIGINT'
+  It 'should cleanup containers on SIGTERM'
     airbyte_local_test() {
       # Start CLI in background
       ./airbyte-local \
