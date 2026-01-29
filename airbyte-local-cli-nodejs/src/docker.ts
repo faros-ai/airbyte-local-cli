@@ -45,9 +45,39 @@ const DEFAULT_MAX_LOG_SIZE = '10m';
 // Create a new Docker instance
 let _docker = new Docker();
 
-// For testing purposes
+// Track running containers for cleanup on exit
+const runningContainers = new Set<string>();
+
+// For testing purpose only
 export function setDocker(testDocker: Docker): void {
   _docker = testDocker;
+}
+
+// For testing purpose only
+export function addRunningContainerForTest(containerId: string): void {
+  runningContainers.add(containerId);
+}
+
+export async function stopAllContainers(): Promise<void> {
+  if (runningContainers.size > 0) {
+    const containers = [...runningContainers];
+    await Promise.all(
+      containers.map(async (containerId) => {
+        try {
+          await _docker.getContainer(containerId).stop();
+          logger.debug(`Container ${containerId} stopped.`);
+        } catch (error: any) {
+          // Ignore 304 "container already stopped" - this is expected during cleanup
+          if (error.statusCode === 304) {
+            logger.debug(`Container ${containerId} already stopped.`);
+          } else {
+            logger.warn(`Failed to stop container ${containerId}: ${error.message}`);
+          }
+        }
+      }),
+    );
+    runningContainers.clear();
+  }
 }
 
 /**
@@ -221,9 +251,15 @@ export async function runDocker(
 
   // Start the container
   await container.start();
+  runningContainers.add(container.id);
 
   // Wait for the container to finish
-  const res = await container.wait();
+  let res: {StatusCode: number};
+  try {
+    res = await container.wait();
+  } finally {
+    runningContainers.delete(container.id);
+  }
   logger.debug(`Container exit code: ${JSON.stringify(res)}`);
 
   // Close docker attached stream explicitly

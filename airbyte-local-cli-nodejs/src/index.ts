@@ -15,8 +15,20 @@ import {
   writeConfig,
 } from './utils';
 
+const ctx: AirbyteCliContext = {};
+
+// Handle `Ctrl+C` (SIGINT) and `SIGTERM`
+['SIGINT', 'SIGTERM'].forEach((signal) => {
+  process.on(signal, () => {
+    logger.info(`Received ${signal}. Cleaning up...`);
+    void cleanUp(ctx).finally(() => {
+      logger.info('Exit Airbyte CLI.');
+      process.exit(1);
+    });
+  });
+});
+
 export async function main(): Promise<void> {
-  const context: AirbyteCliContext = {};
   try {
     // Parse and validate cli arguments
     const cfg = parseAndValidateInputs(process.argv);
@@ -26,7 +38,7 @@ export async function main(): Promise<void> {
 
     // Create temporary directory
     const tmpDir = createTmpDir();
-    context.tmpDir = tmpDir;
+    ctx.tmpDir = tmpDir;
 
     // Run generate config
     if (cfg.generateConfig) {
@@ -87,7 +99,7 @@ export async function main(): Promise<void> {
     logger.error(error.message, 'Error');
     throw error;
   } finally {
-    cleanUp(context);
+    await cleanUp(ctx);
   }
 }
 
