@@ -10,6 +10,13 @@ exports[`runDiscoverCatalog should success with example source 1`] = `
       "json_schema": {
         "$schema": "http://json-schema.org/draft-07/schema#",
         "properties": {
+          "__faros_data": {
+            "additionalProperties": true,
+            "type": [
+              "object",
+              "null",
+            ],
+          },
           "fields": {
             "properties": {
               "command": {
@@ -88,6 +95,13 @@ exports[`runDiscoverCatalog should success with graphql source 1`] = `
       "json_schema": {
         "$schema": "http://json-schema.org/draft-07/schema#",
         "properties": {
+          "__faros_data": {
+            "additionalProperties": true,
+            "type": [
+              "object",
+              "null",
+            ],
+          },
           "message": {
             "type": "string",
           },
