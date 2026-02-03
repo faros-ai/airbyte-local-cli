@@ -666,8 +666,8 @@ export async function runSpec(image: string): Promise<AirbyteSpec> {
  * Run the wizard to generate the configuration file.
  * Utilize the `--autofill` flag to generate the configuration file.
  *
- * Always use the placeholder image for the wizard.
- * This allows us to generate configs for any source connectors.
+ * For feeds sources, use the actual source image with `--feed <feedName>`.
+ * For other sources, use the placeholder image.
  *
  * Raw docker command:
  * docker run -it --rm \
@@ -675,13 +675,17 @@ export async function runSpec(image: string): Promise<AirbyteSpec> {
  *  airbyte-local-cli-wizard --autofill \
  *  --json "/configs/$config_filename"
  *  --spec-file "/configs/$spec_filename"
+ *  [--feed <feedName>]
  */
 const DEFAULT_PLACEHOLDER_WIZARD_IMAGE = 'farosai/airbyte-faros-graphql-source';
-export async function runWizard(tmpDir: string, image: string, spec: AirbyteSpec): Promise<any> {
+export async function runWizard(tmpDir: string, image: string, spec: AirbyteSpec, feedName?: string): Promise<any> {
   logger.info('Retrieving Airbyte auto generated configuration...');
 
-  logger.info(`Pulling placeholder image to generate configuration...`);
-  await pullDockerImage(DEFAULT_PLACEHOLDER_WIZARD_IMAGE);
+  const wizardImage = feedName ? image : DEFAULT_PLACEHOLDER_WIZARD_IMAGE;
+  if (!feedName) {
+    logger.info(`Pulling placeholder image to generate configuration...`);
+    await pullDockerImage(DEFAULT_PLACEHOLDER_WIZARD_IMAGE);
+  }
 
   // Write the spec to a file
   writeFileSync(`${tmpDir}/${TMP_SPEC_CONFIG_FILENAME}`, JSON.stringify(spec));
@@ -694,9 +698,10 @@ export async function runWizard(tmpDir: string, image: string, spec: AirbyteSpec
       `/configs/${TMP_WIZARD_CONFIG_FILENAME}`,
       '--spec-file',
       `/configs/${TMP_SPEC_CONFIG_FILENAME}`,
+      ...(feedName ? ['--feed', feedName] : []),
     ];
     const createOptions: Docker.ContainerCreateOptions = {
-      Image: DEFAULT_PLACEHOLDER_WIZARD_IMAGE,
+      Image: wizardImage,
       Cmd: cmd,
       AttachStderr: true,
       AttachStdout: true,
