@@ -682,10 +682,8 @@ export async function runWizard(tmpDir: string, image: string, spec: AirbyteSpec
   logger.info('Retrieving Airbyte auto generated configuration...');
 
   const wizardImage = feedName ? image : DEFAULT_PLACEHOLDER_WIZARD_IMAGE;
-  if (!feedName) {
-    logger.info(`Pulling placeholder image to generate configuration...`);
-    await pullDockerImage(DEFAULT_PLACEHOLDER_WIZARD_IMAGE);
-  }
+  logger.info(`Pulling image to generate configuration...`);
+  await pullDockerImage(wizardImage);
 
   // Write the spec to a file
   writeFileSync(`${tmpDir}/${TMP_SPEC_CONFIG_FILENAME}`, JSON.stringify(spec));
