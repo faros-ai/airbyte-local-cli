@@ -788,7 +788,8 @@ export async function generateConfig(tmpDir: string, cfg: FarosConfig): Promise<
   // run wizard if the config is not generated
   const srcSpec = await runSpec(srcImage);
   if (!srcConfig) {
-    srcConfig = await runWizard(tmpDir, srcImage, srcSpec);
+    const feedName = srcImage?.startsWith('farosai/airbyte-faros-feeds-source') ? srcType : undefined;
+    srcConfig = await runWizard(tmpDir, srcImage, srcSpec, feedName);
   }
   const dstSpec = await runSpec(dstImage);
   if (!dstConfig) {

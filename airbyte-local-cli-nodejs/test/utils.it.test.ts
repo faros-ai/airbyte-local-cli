@@ -542,6 +542,55 @@ describe('generateConfig', () => {
     expect(resultCfg).toMatchSnapshot();
   });
 
+  it('should pass feed name to wizard for feeds source', async () => {
+    (runSpec as jest.Mock).mockResolvedValue({});
+    (runWizard as jest.Mock).mockResolvedValue({foo: 'bar'});
+
+    const testGenCfg = {
+      ...testConfig,
+      silent: true,
+      generateConfig: {
+        src: 'changeset',
+        dst: 'faros',
+      },
+    };
+    await expect(generateConfig(tmpDir, testGenCfg)).resolves.not.toThrow();
+
+    // Verify runWizard was called with feedName for the feeds source
+    expect(runWizard).toHaveBeenCalledWith(
+      tmpDir,
+      'farosai/airbyte-faros-feeds-source',
+      expect.anything(),
+      'changeset',
+    );
+
+    const resultCfg = JSON.parse(readFileSync(CONFIG_FILE, 'utf8'));
+    expect(resultCfg.src.image).toBe('farosai/airbyte-faros-feeds-source');
+  });
+
+  it('should not pass feed name to wizard for non-feeds source', async () => {
+    (runSpec as jest.Mock).mockResolvedValue({});
+    (runWizard as jest.Mock).mockResolvedValue({foo: 'bar'});
+
+    const testGenCfg = {
+      ...testConfig,
+      silent: true,
+      generateConfig: {
+        src: 'faros-graphql',
+        dst: 'faros',
+      },
+    };
+    await expect(generateConfig(tmpDir, testGenCfg)).resolves.not.toThrow();
+
+    // Verify runWizard was called without feedName for non-feeds source
+    expect(runWizard).toHaveBeenCalledWith(
+      tmpDir,
+      'farosai/airbyte-faros-graphql-source',
+      expect.anything(),
+      undefined,
+    );
+  });
+
   it('should fail with invalid config', async () => {
     const testGenCfg = {
       ...testConfig,
