@@ -55,13 +55,13 @@ import {CLI_VERSION} from './version';
  * Constructs a user agent string
  * Format: ProductName/Version (OS; Arch)
  *
- * Example: airbyte-local-cli/0.0.18 (darwin; arm64)
+ * Example: faros-airbyte-local-cli/x.y.z (darwin; arm64)
  */
 export function getUserAgent(): string {
   try {
-    return `airbyte-local-cli/${CLI_VERSION} (${process.platform}; ${process.arch})`;
+    return `faros-airbyte-local-cli/${CLI_VERSION} (${process.platform}; ${process.arch})`;
   } catch {
-    return `airbyte-local-cli/${CLI_VERSION}`;
+    return `faros-airbyte-local-cli/${CLI_VERSION}`;
   }
 }
 
