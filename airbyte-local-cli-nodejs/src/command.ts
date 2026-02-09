@@ -57,7 +57,12 @@ function command() {
     .option('--dst-use-host-network', 'Use the host network when running the Airbyte destination')
     .option('--log-level <level>', 'Set level of source and destination loggers', 'info')
     .option('--raw-messages', 'Output raw Airbyte messages')
-    .option('--connection-name <name>', 'Connection name used in various places')
+    .option(
+      '--connection-name <name>',
+      'Sets the origin for data in Faros (used to namespace, query, and delete data by source) ' +
+        'and the default state file name (overridden by --state-file). ' +
+        'Must be unique per source instance to prevent data overwrites or conflicts.',
+    )
     .option('--keep-containers', 'Do not remove source and destination containers after they exit')
 
     // Options: Cli settings

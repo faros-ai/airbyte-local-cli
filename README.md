@@ -207,7 +207,7 @@ We provide some more CLI optional arguments and optional fields in the Airbyte c
 | `--dst-use-host-network`   |          | Use the host network when running the Airbyte destination                                                  |
 | `--log-level <level>`      |          | Set level of source and destination loggers (default: "info")                                              |
 | `--raw-messages`           |          | Output raw Airbyte messages                                                                                |
-| `--connection-name <name>` |          | Connection name used in various places                                                                     |
+| `--connection-name <name>` |          | Sets the origin for data in Faros (used to namespace, query, and delete data by source) and the default state file name (overridden by `--state-file`). Must be unique per source instance to prevent data overwrites or conflicts. |
 | `--keep-containers`        |          | Do not remove source and destination containers after they exit                                            |
 | `--debug`                  |          | Enable debug logging                                                                                       |
 | `--src <image>`            |          | [Deprecated] Airbyte source Docker image                                                                   |
