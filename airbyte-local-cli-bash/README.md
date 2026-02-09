@@ -124,7 +124,7 @@ and/or destination:
 | --dst-wizard                      |          | Run the Airbyte destination configuration  wizard                                                 |
 | --src-only                        |          | Only run the Airbyte source                                                                       |
 | --dst-only \<file\>               |          | Use a file for destination input instead of a source                                              |
-| --connection-name                 |          | Connection name used in various places                                                            |
+| --connection-name                 |          | Sets the origin for data in Faros (used to namespace, query, and delete data by source) and the default state file name. Must be unique per source instance to prevent data overwrites or conflicts. |
 | --raw-messages                    |          | Output raw Airbyte messages, i.e., without a log prefix or colors                                 |
 | --max-log-size \<size\>           |          | Set Docker maximum log size                                                                       |
 | --max-mem \<mem\>                 |          | Set the maximum amount of memory for Docker or Kubernetes container, e.g., `"1g"` or `"1024Mi"`   |
