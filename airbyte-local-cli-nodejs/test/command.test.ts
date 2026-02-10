@@ -105,6 +105,49 @@ describe('Check src and dst config parsing', () => {
     });
   });
 
+  it('should parse connectionName from config file', () => {
+    const mockedParseConfigFile = parseConfigFile as jest.Mock;
+    mockedParseConfigFile.mockReturnValue({
+      src: {image: 'source-image', config: {}},
+      dst: {image: 'destination-image', config: {}},
+      connectionName: 'my-connection',
+    });
+
+    const argv = ['./airbyte-local-cli', 'index.js', '--config-file', 'config-file-path'];
+    const result = parseAndValidateInputs(argv);
+    expect(result).toEqual({
+      ...defaultConfig,
+      src: {image: 'source-image', config: {}},
+      dst: {image: 'destination-image', config: {}},
+      connectionName: 'my-connection',
+    });
+  });
+
+  it('should prefer CLI --connection-name over config file connectionName', () => {
+    const mockedParseConfigFile = parseConfigFile as jest.Mock;
+    mockedParseConfigFile.mockReturnValue({
+      src: {image: 'source-image', config: {}},
+      dst: {image: 'destination-image', config: {}},
+      connectionName: 'config-connection',
+    });
+
+    const argv = [
+      './airbyte-local-cli',
+      'index.js',
+      '--config-file',
+      'config-file-path',
+      '--connection-name',
+      'cli-connection',
+    ];
+    const result = parseAndValidateInputs(argv);
+    expect(result).toEqual({
+      ...defaultConfig,
+      src: {image: 'source-image', config: {}},
+      dst: {image: 'destination-image', config: {}},
+      connectionName: 'cli-connection',
+    });
+  });
+
   it('should parse and validate options: src.* and dst.*', () => {
     const argv = [
       './airbyte-local-cli',

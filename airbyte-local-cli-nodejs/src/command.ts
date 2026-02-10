@@ -303,6 +303,16 @@ export function parseAndValidateInputs(argv: string[]): FarosConfig {
     const airbyteConfig = parseConfigFile(cliOptions.configFile);
     farosConfig.src = airbyteConfig.src;
     farosConfig.dst = airbyteConfig.dst;
+
+    // CLI --connection-name takes precedence over config file
+    if (cliOptions.connectionName && airbyteConfig.connectionName) {
+      logger.warn(
+        `Both CLI --connection-name and config file connectionName provided. ` +
+          `Using CLI value: '${cliOptions.connectionName}'`,
+      );
+    }
+    farosConfig.connectionName = cliOptions.connectionName ?? airbyteConfig.connectionName;
+
     validateConfigFileInput(farosConfig, AirbyteConfigInputType.FILE);
   }
   return farosConfig;
