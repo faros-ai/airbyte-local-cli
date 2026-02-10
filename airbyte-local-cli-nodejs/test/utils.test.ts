@@ -1,6 +1,7 @@
 import {spawnSync} from 'node:child_process';
 import {readFileSync} from 'node:fs';
 
+import {logger} from '../src/logger';
 import {
   AirbyteCatalog,
   AirbyteMessageType,
@@ -21,6 +22,14 @@ import {
 
 jest.mock('node:fs');
 jest.mock('node:child_process');
+jest.mock('../src/logger', () => ({
+  logger: {
+    info: jest.fn(),
+    warn: jest.fn(),
+    error: jest.fn(),
+    debug: jest.fn(),
+  },
+}));
 
 describe('parseConfigFile', () => {
   it('should pass if config file is valid json', () => {
@@ -36,6 +45,58 @@ describe('parseConfigFile', () => {
     };
     (readFileSync as jest.Mock).mockReturnValue(Buffer.from(JSON.stringify(airbyteConfig)));
     expect(parseConfigFile('test-config-file')).toEqual(airbyteConfig);
+  });
+
+  it('should parse connectionName from config file', () => {
+    const airbyteConfig = {
+      connectionName: 'my-connection',
+      src: {
+        image: 'source-image',
+        config: {},
+      },
+      dst: {
+        image: 'destination-image',
+        config: {},
+      },
+    };
+    (readFileSync as jest.Mock).mockReturnValue(Buffer.from(JSON.stringify(airbyteConfig)));
+    expect(parseConfigFile('test-config-file')).toEqual(airbyteConfig);
+  });
+
+  it('should fail if connectionName is not a string', () => {
+    const airbyteConfig = {
+      connectionName: 123,
+      src: {image: 'source-image', config: {}},
+      dst: {image: 'destination-image', config: {}},
+    };
+    (readFileSync as jest.Mock).mockReturnValue(Buffer.from(JSON.stringify(airbyteConfig)));
+    expect(() => parseConfigFile('test-config-file')).toThrow(
+      'Failed to read or parse config file: Invalid config file: "connectionName" must be a non-empty string.',
+    );
+  });
+
+  it('should fail if connectionName is an empty string', () => {
+    const airbyteConfig = {
+      connectionName: '',
+      src: {image: 'source-image', config: {}},
+      dst: {image: 'destination-image', config: {}},
+    };
+    (readFileSync as jest.Mock).mockReturnValue(Buffer.from(JSON.stringify(airbyteConfig)));
+    expect(() => parseConfigFile('test-config-file')).toThrow(
+      'Failed to read or parse config file: Invalid config file: "connectionName" must be a non-empty string.',
+    );
+  });
+
+  it('should fail if connectionName is whitespace only', () => {
+    const airbyteConfig = {
+      connectionName: '   ',
+      src: {image: 'source-image', config: {}},
+      dst: {image: 'destination-image', config: {}},
+    };
+    (readFileSync as jest.Mock).mockReturnValue(Buffer.from(JSON.stringify(airbyteConfig)));
+    expect(() => parseConfigFile('test-config-file')).toThrow(
+      'Failed to read or parse config file: Invalid config file: "connectionName" must be a non-empty string.',
+    );
   });
 
   it('should fail if config file is not valid json', () => {
@@ -288,6 +349,22 @@ describe('generateDstStreamPrefix', () => {
     generateDstStreamPrefix(testAirbyteConfig);
     expect(testAirbyteConfig.dstStreamPrefix).toEqual('custom_prefix__');
     expect(testAirbyteConfig.connectionName).toBeUndefined();
+  });
+
+  it('should warn when both connectionName and dstStreamPrefix are set', () => {
+    const testAirbyteConfig = {
+      src: {image: 'farosai/airbyte-example-source:latest'},
+      dst: {image: 'farosai/airbyte-faros-destination:latest'},
+      connectionName: 'my-connection',
+      dstStreamPrefix: 'custom_prefix__',
+    } as FarosConfig;
+    generateDstStreamPrefix(testAirbyteConfig);
+    expect(testAirbyteConfig.dstStreamPrefix).toEqual('custom_prefix__');
+    expect(testAirbyteConfig.connectionName).toEqual('my-connection');
+    expect(logger.warn).toHaveBeenCalledWith(
+      `Both connectionName and dstStreamPrefix are set. ` +
+        `Records will have origin derived from 'custom_prefix__' instead of 'my-connection'.`,
+    );
   });
 });
 

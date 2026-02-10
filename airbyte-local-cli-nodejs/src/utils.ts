@@ -110,8 +110,11 @@ export function parseConfigFile(configFilePath: string): {
       dst: configJson.dst as AirbyteConfig,
     };
 
-    if (configJson.connectionName) {
-      config.connectionName = configJson.connectionName as string;
+    if (configJson.connectionName != null) {
+      if (typeof configJson.connectionName !== 'string' || configJson.connectionName.trim().length === 0) {
+        throw new Error(`Invalid config file: "connectionName" must be a non-empty string.`);
+      }
+      config.connectionName = configJson.connectionName;
     }
 
     const validateConfig = (cfg: AirbyteConfig) => {
