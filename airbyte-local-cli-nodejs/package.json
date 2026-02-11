@@ -36,7 +36,7 @@
     "@tsconfig/strictest": "^2.0.5",
     "@types/dockerode": "^3.3.37",
     "@types/jest": "^29.5.14",
-    "@types/lodash": "^4.17.14",
+    "@types/lodash": "^4.17.23",
     "@types/node": "^22.14.0",
     "@typescript-eslint/eslint-plugin": "^8.19.1",
     "@typescript-eslint/parser": "^8.13.0",
@@ -55,7 +55,7 @@
     "commander": "^13.1.0",
     "didyoumean2": "^7.0.4",
     "dockerode": "^4.0.9",
-    "lodash": "^4.17.21",
+    "lodash": "^4.17.23",
     "pino": "^9.14.0",
     "pino-pretty": "^13.0.0",
     "ts-essentials": "^10.0.4"
