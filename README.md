@@ -17,6 +17,7 @@ A command line tool for running Airbyte sources & destinations **locally** with 
   - [Step 3. Run it!](#-step-3-run-it)
 - [Advanced Settings](#️-advanced-settings)
   - [CLI Arguments](#cli-arguments)
+  - [Connection Name](#connection-name)
   - [Airbyte Configuration - Override Airbyte Catalog](#airbyte-configuration---override-airbyte-catalog)
   - [Airbyte Configuration - Customize Docker Settings](#airbyte-configuration---customize-docker-settings)
 - [FAQ](#-faq)
@@ -121,6 +122,7 @@ If you already know your way around Airbyte and want full control, you can craft
 
 ```json
 {
+  "connectionName": "<YOUR_CONNECTION_NAME>",
   "src": {
     "image": "<YOUR_SOURCE_IMAGE_NAME>",
     "config": {...YOUR_SOURCE_CONFIG...}
@@ -270,6 +272,40 @@ We provide some more CLI optional arguments and optional fields in the Airbyte c
   --config-file 'faros_airbyte_cli_config.json' `
   --connection-name 'test-connection'
 ```
+
+### Connection Name
+
+The connection name identifies the origin of your data in Faros. It's used to namespace, query, and delete data by source. It also determines the default state file name for incremental syncs.
+
+You can set the connection name in the config file:
+
+```json
+{
+  "connectionName": "my-github-prod",
+  "src": { ... },
+  "dst": { ... }
+}
+```
+
+Or via CLI argument:
+
+```bash
+./airbyte-local --config-file config.json --connection-name my-github-prod
+```
+
+#### Precedence
+
+The connection name is resolved in the following order (highest to lowest priority):
+
+| Priority | Method | Example |
+|----------|--------|---------|
+| 1 | CLI `--connection-name` | `--connection-name cli-conn` |
+| 2 | Config file `connectionName` | `"connectionName": "cfg-conn"` |
+| 3 | Auto-generated from image | `mygithubsrc` (from `farosai/airbyte-github-source`) |
+
+If both CLI and config file specify a connection name, a warning is logged and the CLI value is used.
+
+> **Note:** The hidden `--dst-stream-prefix` option overrides the stream prefix directly. If used together with `connectionName`, records will have their origin derived from the stream prefix, not the connection name. A warning will be shown in this case.
 
 ### Airbyte Configuration - Override Airbyte Catalog
 

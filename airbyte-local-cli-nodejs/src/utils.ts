@@ -97,14 +97,25 @@ function readFile(filePath: string): string {
 }
 
 // Read the config file and covert to AirbyteConfig
-export function parseConfigFile(configFilePath: string): {src: AirbyteConfig; dst: AirbyteConfig} {
+export function parseConfigFile(configFilePath: string): {
+  src: AirbyteConfig;
+  dst: AirbyteConfig;
+  connectionName?: string;
+} {
   try {
     const data = readFile(configFilePath);
     const configJson = JSON.parse(data);
-    const config = {
+    const config: {src: AirbyteConfig; dst: AirbyteConfig; connectionName?: string} = {
       src: configJson.src as AirbyteConfig,
       dst: configJson.dst as AirbyteConfig,
     };
+
+    if (!isNil(configJson.connectionName)) {
+      if (typeof configJson.connectionName !== 'string' || configJson.connectionName.trim().length === 0) {
+        throw new Error(`Invalid config file: "connectionName" must be a non-empty string.`);
+      }
+      config.connectionName = configJson.connectionName;
+    }
 
     const validateConfig = (cfg: AirbyteConfig) => {
       if (!cfg) {
@@ -280,10 +291,13 @@ export function updateSrcConfigWithFarosConfig(airbyteConfig: {src: AirbyteConfi
  * Write Airbyte config to temporary dir and a json file
  */
 export function writeConfig(tmpDir: string, config: FarosConfig): void {
-  const airbyteConfig = {
+  const airbyteConfig: {src: AirbyteConfig; dst: AirbyteConfig; connectionName?: string} = {
     src: config.src ?? ({} as AirbyteConfig),
     dst: config.dst ?? ({} as AirbyteConfig),
   };
+  if (config.connectionName) {
+    airbyteConfig.connectionName = config.connectionName;
+  }
 
   // write Airbyte config for user's reference
   // TODO: @FAI-14122 React secrets
@@ -490,6 +504,12 @@ export async function processSrcInputFile(tmpDir: string, cfg: FarosConfig): Pro
 export function generateDstStreamPrefix(cfg: FarosConfig): void {
   // If dstStreamPrefix is already set via CLI flag, skip generation
   if (cfg.dstStreamPrefix) {
+    if (cfg.connectionName) {
+      logger.warn(
+        `Both connectionName and dstStreamPrefix are set. ` +
+          `Records will have origin derived from '${cfg.dstStreamPrefix}' instead of '${cfg.connectionName}'.`,
+      );
+    }
     logger.info(`Using provided destination stream prefix: ${cfg.dstStreamPrefix}`);
     return;
   }
