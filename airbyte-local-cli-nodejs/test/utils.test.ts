@@ -17,6 +17,7 @@ import {
   generateDstStreamPrefix,
   overrideCatalog,
   parseConfigFile,
+  resolveEnvVars,
   updateSrcConfigWithFarosConfig,
 } from '../src/utils';
 
@@ -521,5 +522,117 @@ describe('collectStates', () => {
     collectStates(state, streamStates, legacyState);
 
     expect(streamStates.size).toBe(0);
+  });
+});
+
+describe('resolveEnvVars', () => {
+  const originalEnv = process.env;
+
+  beforeEach(() => {
+    process.env = {...originalEnv};
+  });
+
+  afterEach(() => {
+    process.env = originalEnv;
+  });
+
+  describe('basic substitution', () => {
+    it('should replace ${VAR} with env value', () => {
+      process.env['VAR'] = 'hello';
+      expect(resolveEnvVars('${VAR}')).toBe('hello');
+    });
+
+    it('should replace ${VAR} in middle of string', () => {
+      process.env['VAR'] = 'mid';
+      expect(resolveEnvVars('prefix_${VAR}_suffix')).toBe('prefix_mid_suffix');
+    });
+
+    it('should replace multiple placeholders', () => {
+      process.env['A'] = 'x';
+      process.env['B'] = 'y';
+      expect(resolveEnvVars('${A}_${B}')).toBe('x_y');
+    });
+
+    it('should return string as-is when no placeholders', () => {
+      expect(resolveEnvVars('no placeholders')).toBe('no placeholders');
+    });
+  });
+
+  describe('missing variable', () => {
+    it('should throw error when env var is not set', () => {
+      delete process.env['VAR'];
+      expect(() => resolveEnvVars('${VAR}')).toThrow(/Environment variable 'VAR' is not set/);
+    });
+
+    it('should throw error for first missing var in multiple placeholders', () => {
+      process.env['A'] = 'x';
+      delete process.env['B'];
+      expect(() => resolveEnvVars('${A}_${B}')).toThrow(/Environment variable 'B' is not set/);
+    });
+  });
+
+  describe('nested objects and arrays', () => {
+    it('should resolve in simple object', () => {
+      process.env['VAR'] = 'x';
+      expect(resolveEnvVars({key: '${VAR}'})).toEqual({key: 'x'});
+    });
+
+    it('should resolve in nested object', () => {
+      process.env['VAR'] = 'x';
+      expect(resolveEnvVars({a: {b: '${VAR}'}})).toEqual({a: {b: 'x'}});
+    });
+
+    it('should resolve in array', () => {
+      process.env['A'] = 'x';
+      process.env['B'] = 'y';
+      expect(resolveEnvVars({arr: ['${A}', '${B}']})).toEqual({arr: ['x', 'y']});
+    });
+
+    it('should resolve in array of objects', () => {
+      process.env['VAR'] = 'x';
+      expect(resolveEnvVars([{key: '${VAR}'}])).toEqual([{key: 'x'}]);
+    });
+  });
+
+  describe('non-string passthrough', () => {
+    it('should pass through numbers', () => {
+      expect(resolveEnvVars({num: 123})).toEqual({num: 123});
+    });
+
+    it('should pass through booleans', () => {
+      expect(resolveEnvVars({bool: true})).toEqual({bool: true});
+    });
+
+    it('should pass through null', () => {
+      expect(resolveEnvVars({nil: null})).toEqual({nil: null});
+    });
+
+    it('should handle mixed object with placeholders and non-strings', () => {
+      process.env['VAR'] = 'x';
+      expect(resolveEnvVars({mixed: '${VAR}', num: 42})).toEqual({mixed: 'x', num: 42});
+    });
+  });
+
+  describe('edge cases', () => {
+    it('should handle empty object', () => {
+      expect(resolveEnvVars({})).toEqual({});
+    });
+
+    it('should handle empty array', () => {
+      expect(resolveEnvVars([])).toEqual([]);
+    });
+
+    it('should handle null', () => {
+      expect(resolveEnvVars(null)).toBeNull();
+    });
+
+    it('should handle undefined', () => {
+      expect(resolveEnvVars(undefined)).toBeUndefined();
+    });
+
+    it('should not substitute $VAR without braces', () => {
+      process.env['VAR'] = 'x';
+      expect(resolveEnvVars('$VAR')).toBe('$VAR');
+    });
   });
 });

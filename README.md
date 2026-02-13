@@ -18,6 +18,7 @@ A command line tool for running Airbyte sources & destinations **locally** with 
 - [Advanced Settings](#️-advanced-settings)
   - [CLI Arguments](#cli-arguments)
   - [Connection Name](#connection-name)
+  - [Environment Variables in Config](#environment-variables-in-config)
   - [Airbyte Configuration - Override Airbyte Catalog](#airbyte-configuration---override-airbyte-catalog)
   - [Airbyte Configuration - Customize Docker Settings](#airbyte-configuration---customize-docker-settings)
 - [FAQ](#-faq)
@@ -306,6 +307,50 @@ The connection name is resolved in the following order (highest to lowest priori
 If both CLI and config file specify a connection name, a warning is logged and the CLI value is used.
 
 > **Note:** The hidden `--dst-stream-prefix` option overrides the stream prefix directly. If used together with `connectionName`, records will have their origin derived from the stream prefix, not the connection name. A warning will be shown in this case.
+
+### Environment Variables in Config
+
+To safely version control your config files without leaking secrets, you can reference environment variables using `${VAR_NAME}` syntax. Secrets like API keys and tokens are injected at runtime, keeping your config files clean and secure.
+
+```json
+{
+  "src": {
+    "image": "farosai/airbyte-github-source",
+    "config": {
+      "authentication": {
+        "personal_access_token": "${GITHUB_TOKEN}"
+      },
+      "organizations": ["my-org"]
+    }
+  },
+  "dst": {
+    "image": "farosai/airbyte-faros-destination",
+    "config": {
+      "edition_configs": {
+        "api_key": "${FAROS_API_KEY}",
+        "graph": "default"
+      }
+    }
+  }
+}
+```
+
+Then run with the environment variables set:
+
+```bash
+export GITHUB_TOKEN="ghp_xxxx"
+export FAROS_API_KEY="sk_xxxx"
+./airbyte-local --config-file config.json
+```
+
+**Notes:**
+- Environment variable substitution only works for string values in `src.config` and `dst.config`
+- Resolved values are always strings (e.g., `PORT=8080` becomes `"8080"`, not the number `8080`)
+- There is no type checking against the connector spec — ensure substituted values are used for string fields only
+- The config file keeps the `${VAR}` placeholders (safe to commit to version control)
+- Resolved values are written to temporary files that are deleted after the sync completes
+- If an environment variable is not set, the CLI will exit with an error
+- Each resolved variable is logged (e.g., `Resolved environment variable: GITHUB_TOKEN`)
 
 ### Airbyte Configuration - Override Airbyte Catalog
 
