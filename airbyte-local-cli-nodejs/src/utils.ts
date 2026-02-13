@@ -51,8 +51,8 @@ import {
 } from './types';
 import {CLI_VERSION} from './version';
 
-// Regex to match ${VAR} placeholders
-const ENV_VAR_PATTERN = /\$\{([^}]+)\}/g;
+// Regex to match ${VAR} placeholders with POSIX-style env var names
+const ENV_VAR_PATTERN = /\$\{([A-Za-z_][A-Za-z0-9_]*)\}/g;
 
 /**
  * Resolves environment variable placeholders in an object.
@@ -66,10 +66,10 @@ export function resolveEnvVars<T>(obj: T): T {
   if (typeof obj === 'string') {
     return obj.replace(ENV_VAR_PATTERN, (_, varName: string) => {
       const value = process.env[varName];
-      if (value === undefined) {
-        throw new Error(`Environment variable '${varName}' is not set`);
+      if (value === undefined || value === '') {
+        throw new Error(`Environment variable '${varName}' is not set or is empty`);
       }
-      logger.info(`Resolved environment variable: ${varName}`);
+      logger.debug(`Resolved environment variable: ${varName}`);
       return value;
     }) as T;
   }

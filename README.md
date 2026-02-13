@@ -349,8 +349,8 @@ export FAROS_API_KEY="sk_xxxx"
 - There is no type checking against the connector spec — ensure substituted values are used for string fields only
 - The config file keeps the `${VAR}` placeholders (safe to commit to version control)
 - Resolved values are written to temporary files that are deleted after the sync completes
-- If an environment variable is not set, the CLI will exit with an error
-- Each resolved variable is logged (e.g., `Resolved environment variable: GITHUB_TOKEN`)
+- If an environment variable is not set or is empty, the CLI will exit with an error
+- Variable names must follow POSIX conventions (letters, numbers, underscores; cannot start with a number)
 
 ### Airbyte Configuration - Override Airbyte Catalog
 

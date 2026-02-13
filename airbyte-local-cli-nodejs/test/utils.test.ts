@@ -558,16 +558,21 @@ describe('resolveEnvVars', () => {
     });
   });
 
-  describe('missing variable', () => {
+  describe('missing or empty variable', () => {
     it('should throw error when env var is not set', () => {
       delete process.env['VAR'];
-      expect(() => resolveEnvVars('${VAR}')).toThrow(/Environment variable 'VAR' is not set/);
+      expect(() => resolveEnvVars('${VAR}')).toThrow(/Environment variable 'VAR' is not set or is empty/);
+    });
+
+    it('should throw error when env var is empty string', () => {
+      process.env['VAR'] = '';
+      expect(() => resolveEnvVars('${VAR}')).toThrow(/Environment variable 'VAR' is not set or is empty/);
     });
 
     it('should throw error for first missing var in multiple placeholders', () => {
       process.env['A'] = 'x';
       delete process.env['B'];
-      expect(() => resolveEnvVars('${A}_${B}')).toThrow(/Environment variable 'B' is not set/);
+      expect(() => resolveEnvVars('${A}_${B}')).toThrow(/Environment variable 'B' is not set or is empty/);
     });
   });
 
@@ -633,6 +638,13 @@ describe('resolveEnvVars', () => {
     it('should not substitute $VAR without braces', () => {
       process.env['VAR'] = 'x';
       expect(resolveEnvVars('$VAR')).toBe('$VAR');
+    });
+
+    it('should not substitute invalid POSIX var names', () => {
+      // Hyphenated names are not valid POSIX
+      expect(resolveEnvVars('${MY-VAR}')).toBe('${MY-VAR}');
+      // Names starting with numbers are not valid POSIX
+      expect(resolveEnvVars('${123VAR}')).toBe('${123VAR}');
     });
   });
 });
