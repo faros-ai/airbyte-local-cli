@@ -64,7 +64,7 @@ const ENV_VAR_PATTERN = /\$\{([A-Za-z_][A-Za-z0-9_]*)\}/g;
  */
 export function resolveEnvVars<T>(obj: T): T {
   if (typeof obj === 'string') {
-    return obj.replace(ENV_VAR_PATTERN, (_, varName: string) => {
+    return obj.replaceAll(ENV_VAR_PATTERN, (_, varName: string) => {
       const value = process.env[varName];
       if (value === undefined || value === '') {
         throw new Error(`Environment variable '${varName}' is not set or is empty`);
