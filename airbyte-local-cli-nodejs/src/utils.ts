@@ -17,7 +17,7 @@ import {promisify} from 'node:util';
 
 import Table from 'cli-table3';
 import didYouMean from 'didyoumean2';
-import {isNil, omitBy} from 'lodash';
+import {isNil, isPlainObject, omitBy} from 'lodash';
 
 import {staticAirbyteConfig} from './constants/airbyteConfig';
 import {airbyteTypes} from './constants/airbyteTypes';
@@ -50,6 +50,39 @@ import {
   SyncMode,
 } from './types';
 import {CLI_VERSION} from './version';
+
+// Regex to match ${VAR} placeholders with POSIX-style env var names
+const ENV_VAR_PATTERN = /\$\{([A-Za-z_][A-Za-z0-9_]*)\}/g;
+
+/**
+ * Resolves environment variable placeholders in an object.
+ * Recursively processes nested objects and arrays.
+ * Throws an error if an environment variable is not set.
+ *
+ * @param obj - The object containing potential ${VAR} placeholders
+ * @returns A new object with all env vars resolved
+ */
+export function resolveEnvVars<T>(obj: T): T {
+  if (typeof obj === 'string') {
+    return obj.replaceAll(ENV_VAR_PATTERN, (_, varName: string) => {
+      const value = process.env[varName];
+      if (value === undefined || value === '') {
+        throw new Error(`Environment variable '${varName}' is not set or is empty`);
+      }
+      logger.debug(`Resolved environment variable: ${varName}`);
+      return value;
+    }) as T;
+  }
+  if (Array.isArray(obj)) {
+    return obj.map((item) => resolveEnvVars(item)) as T;
+  }
+  if (isPlainObject(obj)) {
+    return Object.fromEntries(
+      Object.entries(obj as Record<string, unknown>).map(([key, value]) => [key, resolveEnvVars(value)]),
+    ) as T;
+  }
+  return obj;
+}
 
 /**
  * Constructs a user agent string
@@ -321,11 +354,14 @@ export function writeConfig(tmpDir: string, config: FarosConfig): void {
   }
 
   // write config to temporary directory config files
+  // resolve env vars for temp files only (CONFIG_FILE keeps placeholders)
   logger.debug(`Writing Airbyte config to files...`);
   const srcConfigFilePath = `${tmpDir}${sep}${SRC_CONFIG_FILENAME}`;
   const dstConfigFilePath = `${tmpDir}${sep}${DST_CONFIG_FILENAME}`;
-  writeFileSync(srcConfigFilePath, JSON.stringify(airbyteConfig.src.config ?? {}));
-  writeFileSync(dstConfigFilePath, JSON.stringify(airbyteConfig.dst.config ?? {}));
+  const resolvedSrcConfig = resolveEnvVars(airbyteConfig.src.config ?? {});
+  const resolvedDstConfig = resolveEnvVars(airbyteConfig.dst.config ?? {});
+  writeFileSync(srcConfigFilePath, JSON.stringify(resolvedSrcConfig));
+  writeFileSync(dstConfigFilePath, JSON.stringify(resolvedDstConfig));
   logger.debug(`Source config: ${JSON.stringify(airbyteConfig.src.config ?? {})}`);
   logger.debug(`Destination config: ${JSON.stringify(airbyteConfig.dst.config ?? {})}`);
   logger.debug(`Airbyte config files written to: ${srcConfigFilePath}, ${dstConfigFilePath}`);
