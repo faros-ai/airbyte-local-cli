@@ -3,7 +3,7 @@
 This is the manaual for developers
 
 ```sh
-nvm use           # Use Node v22
+nvm use           # Use Node v24
 npm run build     # Build src
 npm run lint      # Check formatting
 npm run bundle    # Bundle typescripts source codes to a single Javascript file
