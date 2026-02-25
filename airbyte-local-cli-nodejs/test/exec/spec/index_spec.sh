@@ -1,14 +1,3 @@
-injectApiKey() {
-  jq --arg api_key "$FAROS_API_KEY" '
-        .dst.config.edition_configs.api_key = $api_key
-      ' ./resources/test_config_file_dst_only.json.template > ./resources/test_config_file_dst_only.json
-  jq --arg api_key "$FAROS_API_KEY" '
-    .src.config.api_key = $api_key |
-    .dst.config.edition_configs.api_key = $api_key
-  ' ./resources/test_config_file_graph_copy.json.template > ./resources/test_config_file_graph_copy.json
-}
-BeforeAll 'injectApiKey'
-
 Describe 'Cli argv validation' 'argvParsing'
   # Option conflict failures
   It 'fails if using both --config-file and --src'
@@ -429,13 +418,10 @@ Describe 'Container cleanup' 'docker'
   End
 End
 
-# Clean up temeporary test files
+# Clean up temporary test files
 cleanup() {
   find . -maxdepth 1 -name 'faros_airbyte_cli_config.json' -delete
   find . -maxdepth 1 -name 'test_src_output_file' -delete
   find . -maxdepth 1 -name '*state.json' -delete
-  find ./resources/ -name 'test_config_file_dst_only.json' -delete
-  find ./resources/ -name 'test_config_file_graph_copy.json' -delete
-
 }
 AfterAll 'cleanup'

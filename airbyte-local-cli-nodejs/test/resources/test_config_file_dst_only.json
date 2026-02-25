@@ -7,7 +7,7 @@
         "graph": "jennie-test",
         "graphql_api": "v2",
         "api_url": "https://dev.api.faros.ai",
-        "api_key": ""
+        "api_key": "${FAROS_API_KEY}"
       }
     },
     "catalog": {
