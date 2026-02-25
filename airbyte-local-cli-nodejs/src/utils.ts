@@ -714,7 +714,7 @@ function schemaToTable(spec: Spec, srcType?: string, dstType?: string): void {
         name,
         formatValue(value.type) ?? 'object',
         required?.includes(propertyName) ? '✅' : undefined,
-        propValues ?? '-',
+        propValues || '-',
         value.description ?? '-',
       ]);
 
