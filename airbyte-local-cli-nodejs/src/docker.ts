@@ -457,7 +457,7 @@ export async function runSrcSync(tmpDir: string, config: FarosConfig, srcOutputS
       platform: getImagePlatform(config.src.image),
       Env: [`LOG_LEVEL=${config.logLevel}`, ...(config.src?.dockerOptions?.additionalOptions?.Env ?? [])],
       HostConfig: {
-        // Defautl host config: can be overridden by users
+        // Default host config: can be overridden by users
         NanoCpus: maxNanoCpus,
         Memory: maxMemory,
         LogConfig: {
