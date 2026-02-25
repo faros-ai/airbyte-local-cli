@@ -19,13 +19,14 @@ BeforeAll {
       '.src.image = $src_image' `
       ./resources/test_config_file_src_only.json > ./resources/windows/test_config_file_src_only.json
 
-    & jq --arg api_key "$FAROS_API_KEY" --arg dst_image "$FAROS_DST_IMAGE" `
-      '.dst.config.edition_configs.api_key = $api_key | .dst.image = $dst_image' `
-      ./resources/test_config_file_dst_only.json.template > ./resources/windows/test_config_file_dst_only.json
+    # Config files use ${FAROS_API_KEY} env var substitution, only need to replace image names for Windows
+    & jq --arg dst_image "$FAROS_DST_IMAGE" `
+      '.dst.image = $dst_image' `
+      ./resources/test_config_file_dst_only.json > ./resources/windows/test_config_file_dst_only.json
 
-    & jq --arg api_key "$FAROS_API_KEY" --arg src_image "$FAROS_GRAPHQL_SOURCE_IMAGE" --arg dst_image "$FAROS_DST_IMAGE" `
-      '.src.config.api_key = $api_key | .dst.config.edition_configs.api_key = $api_key | .src.image = $src_image | .dst.image = $dst_image' `
-      ./resources/test_config_file_graph_copy.json.template > ./resources/windows/test_config_file_graph_copy.json    
+    & jq --arg src_image "$FAROS_GRAPHQL_SOURCE_IMAGE" --arg dst_image "$FAROS_DST_IMAGE" `
+      '.src.image = $src_image | .dst.image = $dst_image' `
+      ./resources/test_config_file_graph_copy.json > ./resources/windows/test_config_file_graph_copy.json    
 
     Write-Host "Pulling images..."
     & docker pull $EXAMPLE_SOURCE_IMAGE
@@ -307,8 +308,6 @@ AfterAll {
     Get-ChildItem -Path . -Filter 'faros_airbyte_cli_config.json' | Remove-Item -Force
     Get-ChildItem -Path . -Filter 'test_src_output_file' | Remove-Item -Force
     Get-ChildItem -Path . -Filter '*state.json' | Remove-Item -Force
-    Get-ChildItem -Path ./resources -Filter 'test_config_file_dst_only.json' | Remove-Item -Force
-    Get-ChildItem -Path ./resources -Filter 'test_config_file_graph_copy.json' | Remove-Item -Force
     if (Test-Path './resources/windows') {
         Remove-Item -Path './resources/windows' -Recurse -Force
     }
