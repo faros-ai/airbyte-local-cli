@@ -1,6 +1,6 @@
 # Airbyte Local CLI
 
-This is the manaual for developers
+This is the manual for developers
 
 ```sh
 nvm use           # Use Node v24
