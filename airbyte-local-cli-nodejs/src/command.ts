@@ -148,9 +148,8 @@ function parseSrcAndDstConfig(argv: string[]) {
         }
         current[key] = parsedValue;
       } else {
-        if (!current[key]) {
-          current[key] = {};
-        }
+        current[key] ??= {};
+
         current = current[key];
       }
     });

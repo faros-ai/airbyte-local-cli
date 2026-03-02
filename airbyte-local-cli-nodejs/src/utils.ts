@@ -17,7 +17,7 @@ import {promisify} from 'node:util';
 
 import Table from 'cli-table3';
 import didYouMean from 'didyoumean2';
-import {isNil, isPlainObject, omitBy} from 'lodash';
+import {isEmpty, isNil, isPlainObject, omitBy} from 'lodash';
 
 import {staticAirbyteConfig} from './constants/airbyteConfig';
 import {airbyteTypes} from './constants/airbyteTypes';
@@ -712,10 +712,10 @@ function schemaToTable(spec: Spec, srcType?: string, dstType?: string): void {
       }
       table.push([
         name,
-        formatValue(value.type) || 'object',
+        isEmpty(formatValue(value.type)) ? 'object' : formatValue(value.type),
         required?.includes(propertyName) ? '✅' : undefined,
         propValues || '-',
-        value.description || '-',
+        isEmpty(value.description) ? '-' : value.description,
       ]);
 
       // source_specific_configs: special handling in faros destination
@@ -744,7 +744,13 @@ function schemaToTable(spec: Spec, srcType?: string, dstType?: string): void {
       // oneOf: traverse each property in the oneOf array
       else if (value.oneOf) {
         value.oneOf.forEach((option: any, index: number) => {
-          table.push([`↳ ${prefix}Option ${index + 1}: ${option.title || 'Unnamed'}`, 'object', '', '-', '-']);
+          table.push([
+            `↳ ${prefix}Option ${index + 1}: ${isEmpty(option.title) ? 'Unnamed' : option.title}`,
+            'object',
+            '',
+            '-',
+            '-',
+          ]);
           addRows(option, `${prefix}    `);
         });
       }
@@ -848,9 +854,7 @@ export async function generateConfig(tmpDir: string, cfg: FarosConfig): Promise<
     srcConfig = await runWizard(tmpDir, srcImage, srcSpec, feedName);
   }
   const dstSpec = await runSpec(dstImage);
-  if (!dstConfig) {
-    dstConfig = await runWizard(tmpDir, dstImage, dstSpec);
-  }
+  dstConfig ??= await runWizard(tmpDir, dstImage, dstSpec);
 
   // write config to temporary directory config files
   const genCfg = {

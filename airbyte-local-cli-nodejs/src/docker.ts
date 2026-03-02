@@ -455,9 +455,9 @@ export async function runSrcSync(tmpDir: string, config: FarosConfig, srcOutputS
       AttachStdout: true,
       AttachStderr: true,
       platform: getImagePlatform(config.src.image),
-      Env: [`LOG_LEVEL=${config.logLevel}`, ...(config.src?.dockerOptions?.additionalOptions?.Env || [])],
+      Env: [`LOG_LEVEL=${config.logLevel}`, ...(config.src?.dockerOptions?.additionalOptions?.Env ?? [])],
       HostConfig: {
-        // Defautl host config: can be overridden by users
+        // Default host config: can be overridden by users
         NanoCpus: maxNanoCpus,
         Memory: maxMemory,
         LogConfig: {
@@ -471,7 +471,7 @@ export async function runSrcSync(tmpDir: string, config: FarosConfig, srcOutputS
         // Allow users to add bind mount but not override the default one
         Binds: [
           `${tmpDir}:${getBindsLocation(config.src.image)}`,
-          ...(config.src?.dockerOptions?.additionalOptions?.HostConfig?.Binds || []),
+          ...(config.src?.dockerOptions?.additionalOptions?.HostConfig?.Binds ?? []),
         ],
 
         // Default options: cannot be overridden by users
@@ -590,7 +590,7 @@ export async function runDstSync(tmpDir: string, config: FarosConfig, srcPassThr
       Env: [
         `LOG_LEVEL=${config.logLevel}`,
         `CLI_USER_AGENT=${getUserAgent()}`,
-        ...(config.dst?.dockerOptions?.additionalOptions?.Env || []),
+        ...(config.dst?.dockerOptions?.additionalOptions?.Env ?? []),
       ],
       HostConfig: {
         // Defautl host config: can be overridden by users
@@ -607,7 +607,7 @@ export async function runDstSync(tmpDir: string, config: FarosConfig, srcPassThr
         // Allow users to add bind mount but not override the default one
         Binds: [
           `${tmpDir}:${getBindsLocation(config.dst.image)}`,
-          ...(config.dst?.dockerOptions?.additionalOptions?.HostConfig?.Binds || []),
+          ...(config.dst?.dockerOptions?.additionalOptions?.HostConfig?.Binds ?? []),
         ],
 
         // Default options: cannot be overridden by users
