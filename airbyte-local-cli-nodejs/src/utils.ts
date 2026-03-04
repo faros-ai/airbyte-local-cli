@@ -107,7 +107,7 @@ export function getUserAgent(): string {
 export async function validateAndConfirmTenant(cfg: FarosConfig): Promise<void> {
   const dstConfig = cfg.dst?.config as any;
   const apiKey = dstConfig?.edition_configs?.api_key;
-  const apiUrl = dstConfig?.edition_configs?.api_url;
+  const apiUrl = dstConfig?.edition_configs?.api_url ?? 'https://prod.api.faros.ai';
   const graph = dstConfig?.edition_configs?.graph ?? 'default';
   let tenantId = cfg.tenantId ?? dstConfig?.edition_configs?.tenant_id;
 

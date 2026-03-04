@@ -2,6 +2,7 @@
 
 exports[`generateConfig should succeed 1`] = `
 "{
+  "tenantId": "<UPDATE_YOUR_TENANT_ID>",
   "src": {
     "image": "farosai/airbyte-faros-graphql-source",
     "config": {
@@ -16,14 +17,14 @@ exports[`generateConfig should succeed 1`] = `
         "edition": "cloud"
       }
     }
-  },
-  "tenantId": "<UPDATE_YOUR_TENANT_ID>"
+  }
 }
 "
 `;
 
 exports[`generateConfig should succeed with image inputs 1`] = `
 "{
+  "tenantId": "<UPDATE_YOUR_TENANT_ID>",
   "src": {
     "image": "farosai/airbyte-faros-graphql-source",
     "config": {
@@ -35,14 +36,14 @@ exports[`generateConfig should succeed with image inputs 1`] = `
     "config": {
       "foo": "bar"
     }
-  },
-  "tenantId": "<UPDATE_YOUR_TENANT_ID>"
+  }
 }
 "
 `;
 
 exports[`generateConfig should succeed with static configs 1`] = `
 "{
+  "tenantId": "<UPDATE_YOUR_TENANT_ID>",
   "src": {
     "image": "farosai/airbyte-github-source",
     "config": {
@@ -64,8 +65,7 @@ exports[`generateConfig should succeed with static configs 1`] = `
         "edition": "cloud"
       }
     }
-  },
-  "tenantId": "<UPDATE_YOUR_TENANT_ID>"
+  }
 }
 "
 `;
@@ -77,7 +77,7 @@ exports[`parseConfigFile should parse crlf 1`] = `
     "config": {
       "edition_config": {
         "api_key": "***",
-        "api_url": "https://prod.api.faros.ai",
+        "api_url": "https://dev.api.faros.ai",
         "edition": "cloud",
         "graph": "default",
       },
@@ -119,7 +119,7 @@ exports[`parseConfigFile should parse utf16 encoding 1`] = `
     "config": {
       "edition_config": {
         "api_key": "***",
-        "api_url": "https://prod.api.faros.ai",
+        "api_url": "https://dev.api.faros.ai",
         "edition": "cloud",
         "graph": "default",
       },
@@ -154,7 +154,7 @@ exports[`parseConfigFile should pass 1`] = `
     "config": {
       "edition_config": {
         "api_key": "***",
-        "api_url": "https://prod.api.faros.ai",
+        "api_url": "https://dev.api.faros.ai",
         "edition": "cloud",
         "graph": "default",
       },
