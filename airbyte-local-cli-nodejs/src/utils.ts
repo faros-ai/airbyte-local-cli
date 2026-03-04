@@ -17,6 +17,7 @@ import {promisify} from 'node:util';
 
 import Table from 'cli-table3';
 import didYouMean from 'didyoumean2';
+import {FarosClient} from 'faros-js-client';
 import {isEmpty, isNil, isPlainObject, omitBy} from 'lodash';
 
 import {staticAirbyteConfig} from './constants/airbyteConfig';
@@ -98,6 +99,80 @@ export function getUserAgent(): string {
   }
 }
 
+/**
+ * Validate that the tenant ID in the config matches the API key's tenant.
+ * Prompts the user for confirmation before writing data to the destination.
+ * Only applies when using the Faros destination image.
+ */
+export async function validateAndConfirmTenant(cfg: FarosConfig): Promise<void> {
+  const dstConfig = cfg.dst?.config as any;
+  const apiKey = dstConfig?.edition_configs?.api_key;
+  const apiUrl = dstConfig?.edition_configs?.api_url;
+  const graph = dstConfig?.edition_configs?.graph ?? 'default';
+  let tenantId = cfg.tenantId ?? dstConfig?.edition_configs?.tenant_id;
+
+  if (!apiKey || !apiUrl) {
+    logger.debug('Skipping tenant validation: missing api_key or api_url in destination config.');
+    return;
+  }
+
+  // Resolve env vars in api_key and api_url for the API call
+  const resolvedApiKey = resolveEnvVars(apiKey);
+  const resolvedApiUrl = resolveEnvVars(apiUrl);
+
+  const client = new FarosClient({url: resolvedApiUrl, apiKey: resolvedApiKey});
+  const apiTenantId = await client.tenant();
+
+  if (tenantId) {
+    if (tenantId !== apiTenantId) {
+      throw new Error(
+        `Tenant ID mismatch: config file specifies '${tenantId}' ` +
+          `but the API key belongs to tenant '${apiTenantId}'. ` +
+          `Please verify your configuration.`,
+      );
+    }
+  } else {
+    logger.warn(
+      `No 'tenantId' found in config file. Consider adding '"tenantId": "${apiTenantId}"' to your config file ` +
+        `to prevent accidentally writing data to the wrong tenant.`,
+    );
+    tenantId = apiTenantId;
+  }
+
+  if (!cfg.yes) {
+    const resolvedGraph = resolveEnvVars(graph);
+    const yellow = '\x1b[33m';
+    const bold = '\x1b[1m';
+    const reset = '\x1b[0m';
+    const answer = await promptUser(
+      `\n` +
+        `${yellow}===========================================================${reset}\n` +
+        `${yellow}${bold}  ATTENTION: You are about to write data into:${reset}\n` +
+        `${yellow}    Tenant:    ${apiTenantId}${reset}\n` +
+        `${yellow}    Workspace: ${resolvedGraph}${reset}\n` +
+        `${yellow}===========================================================${reset}\n` +
+        `Would you like to proceed? (yes/No): `,
+    );
+    if (!answer.toLowerCase().startsWith('y')) {
+      logger.info('Operation cancelled by user.');
+      process.exit(0);
+    }
+  }
+}
+
+function promptUser(question: string): Promise<string> {
+  const rl = readline.createInterface({
+    input: process.stdin,
+    output: process.stderr,
+  });
+  return new Promise((resolve) => {
+    rl.question(question, (answer) => {
+      rl.close();
+      resolve(answer.trim());
+    });
+  });
+}
+
 export function updateLogLevel(debug: boolean | undefined): void {
   logger.level = debug ? 'debug' : 'info';
 }
@@ -134,11 +209,12 @@ export function parseConfigFile(configFilePath: string): {
   src: AirbyteConfig;
   dst: AirbyteConfig;
   connectionName?: string;
+  tenantId?: string;
 } {
   try {
     const data = readFile(configFilePath);
     const configJson = JSON.parse(data);
-    const config: {src: AirbyteConfig; dst: AirbyteConfig; connectionName?: string} = {
+    const config: {src: AirbyteConfig; dst: AirbyteConfig; connectionName?: string; tenantId?: string} = {
       src: configJson.src as AirbyteConfig,
       dst: configJson.dst as AirbyteConfig,
     };
@@ -148,6 +224,13 @@ export function parseConfigFile(configFilePath: string): {
         throw new Error(`Invalid config file: "connectionName" must be a non-empty string.`);
       }
       config.connectionName = configJson.connectionName;
+    }
+
+    if (!isNil(configJson.tenantId)) {
+      if (typeof configJson.tenantId !== 'string' || configJson.tenantId.trim().length === 0) {
+        throw new Error(`Invalid config file: "tenantId" must be a non-empty string.`);
+      }
+      config.tenantId = configJson.tenantId;
     }
 
     const validateConfig = (cfg: AirbyteConfig) => {
@@ -324,12 +407,15 @@ export function updateSrcConfigWithFarosConfig(airbyteConfig: {src: AirbyteConfi
  * Write Airbyte config to temporary dir and a json file
  */
 export function writeConfig(tmpDir: string, config: FarosConfig): void {
-  const airbyteConfig: {src: AirbyteConfig; dst: AirbyteConfig; connectionName?: string} = {
+  const airbyteConfig: {src: AirbyteConfig; dst: AirbyteConfig; connectionName?: string; tenantId?: string} = {
     src: config.src ?? ({} as AirbyteConfig),
     dst: config.dst ?? ({} as AirbyteConfig),
   };
   if (config.connectionName) {
     airbyteConfig.connectionName = config.connectionName;
+  }
+  if (config.tenantId) {
+    airbyteConfig.tenantId = config.tenantId;
   }
 
   // write Airbyte config for user's reference
@@ -857,7 +943,10 @@ export async function generateConfig(tmpDir: string, cfg: FarosConfig): Promise<
   dstConfig ??= await runWizard(tmpDir, dstImage, dstSpec);
 
   // write config to temporary directory config files
-  const genCfg = {
+  const genCfg: Record<string, any> = {
+    ...(dstImage?.includes('faros-destination') && {
+      tenantId: '<UPDATE_YOUR_TENANT_ID>',
+    }),
     src: {image: srcImage, config: srcConfig},
     dst: {image: dstImage, config: dstConfig},
   };

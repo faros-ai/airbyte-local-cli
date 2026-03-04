@@ -1,4 +1,5 @@
 {
+  "tenantId": "faros",
   "dst": {
     "image": "farosai/airbyte-faros-destination",
     "config": {

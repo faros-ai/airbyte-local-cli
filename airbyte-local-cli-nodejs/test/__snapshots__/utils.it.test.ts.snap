@@ -16,7 +16,8 @@ exports[`generateConfig should succeed 1`] = `
         "edition": "cloud"
       }
     }
-  }
+  },
+  "tenantId": "<UPDATE_YOUR_TENANT_ID>"
 }
 "
 `;
@@ -34,7 +35,8 @@ exports[`generateConfig should succeed with image inputs 1`] = `
     "config": {
       "foo": "bar"
     }
-  }
+  },
+  "tenantId": "<UPDATE_YOUR_TENANT_ID>"
 }
 "
 `;
@@ -62,7 +64,8 @@ exports[`generateConfig should succeed with static configs 1`] = `
         "edition": "cloud"
       }
     }
-  }
+  },
+  "tenantId": "<UPDATE_YOUR_TENANT_ID>"
 }
 "
 `;
@@ -105,6 +108,7 @@ exports[`parseConfigFile should parse crlf 1`] = `
     },
     "image": "farosai/airbyte-servicenow-source",
   },
+  "tenantId": "faros",
 }
 `;
 
@@ -139,6 +143,7 @@ exports[`parseConfigFile should parse utf16 encoding 1`] = `
     },
     "image": "farosai/airbyte-servicenow-source",
   },
+  "tenantId": "faros",
 }
 `;
 
@@ -180,6 +185,7 @@ exports[`parseConfigFile should pass 1`] = `
     },
     "image": "farosai/airbyte-servicenow-source",
   },
+  "tenantId": "faros",
 }
 `;
 

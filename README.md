@@ -123,6 +123,7 @@ If you already know your way around Airbyte and want full control, you can craft
 
 ```json
 {
+  "tenantId": "<YOUR_TENANT_ID>",
   "connectionName": "<YOUR_CONNECTION_NAME>",
   "src": {
     "image": "<YOUR_SOURCE_IMAGE_NAME>",
@@ -147,6 +148,7 @@ Assuming you want to pull data from Github org `my-org` by using GitHub PAT and 
 
 ```json
 {
+  "tenantId": "<YOUR_TENANT_ID>",                                     <-- Your Faros tenant Id
   "src": {
     "image": "farosai/airbyte-github-source",
     "config": {
@@ -181,9 +183,25 @@ More resources you can find it in [Faros Documentation](https://docs.faros.ai/),
 ### 🏁 Step 3. Run it!
 
 ```sh
-./airbyte-local --config-file 'faros_airbyte_cli_config.json'
-./airbyte-local -c 'faros_airbyte_cli_config.json'
+./airbyte-local --config-file faros_airbyte_cli_config.json
+./airbyte-local -c faros_airbyte_cli_config.json
 ```
+
+> **Starting from v0.2.0**, when running with a Faros destination, the CLI will prompt you to confirm before writing data:
+> ```
+> ===========================================================
+>   ATTENTION: You are about to write data into:
+>     Tenant:    Acme
+>     Workspace: default
+> ===========================================================
+> Would you like to proceed? (yes/No):
+> ```
+> This is a safety check to prevent accidentally writing data to the wrong tenant or workspace.
+>
+> **Running programmatically (CI/CD)?** Use the `-y` flag to suppress the prompt — but only after you have verified your config file targets the correct tenant and workspace:
+> ```sh
+> ./airbyte-local --config-file ‘faros_airbyte_cli_config.json’ -y
+> ```
 
 You’ll see logs and sync progress in the terminal and in the **Faros App** (Data Control > Sources).
 
@@ -212,6 +230,7 @@ We provide some more CLI optional arguments and optional fields in the Airbyte c
 | `--raw-messages`           |          | Output raw Airbyte messages                                                                                |
 | `--connection-name <name>` |          | Sets the origin for data in Faros (used to namespace, query, and delete data by source) and the default state file name (overridden by `--state-file`). Must be unique per source instance to prevent data overwrites or conflicts. |
 | `--keep-containers`        |          | Do not remove source and destination containers after they exit                                            |
+| `-y, --yes`                |          | Skip confirmation prompts (e.g., tenant verification). Use only after verifying your config is correct     |
 | `--debug`                  |          | Enable debug logging                                                                                       |
 | `--src <image>`            |          | [Deprecated] Airbyte source Docker image                                                                   |
 | `--dst <image>`            |          | [Deprecated] Airbyte destination Docker image                                                              |

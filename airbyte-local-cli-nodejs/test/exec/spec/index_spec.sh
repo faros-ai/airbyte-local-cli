@@ -329,7 +329,8 @@ Describe 'Run destination sync' 'docker'
       ./airbyte-local \
         --config-file './resources/test_config_file_dst_only.json' \
         --dst-only './resources/dockerIt_runDstSync/faros_airbyte_cli_src_output' \
-        --debug
+        --debug \
+        --yes
     }
     When call airbyte_local_test
     The output should include '[DST] - {"log":{"level":"INFO","message":"Errored 0 records"},"type":"LOG"}'
@@ -343,7 +344,8 @@ Describe 'Run source and destination sync' 'docker'
   It 'should succeed with src and dst'
     airbyte_local_test() {
       ./airbyte-local \
-        --config-file './resources/test_config_file_graph_copy.json'
+        --config-file './resources/test_config_file_graph_copy.json' \
+        --yes
     }
     When call airbyte_local_test
     The output should include "Source connector completed."
@@ -361,7 +363,8 @@ Describe 'Run source and destination sync' 'docker'
     airbyte_local_test() {
       ./airbyte-local \
         --config-file './resources/test_config_file_graph_copy.json' \
-        --full-refresh
+        --full-refresh \
+        --yes
     }
     When call airbyte_local_test
     The output should include "Source connector completed."
@@ -379,7 +382,7 @@ End
 Describe 'Container cleanup' 'docker'
   It 'should cleanup containers after normal completion'
     airbyte_local_test() {
-      ./airbyte-local \
+      ./airbyte-local --yes \
         --config-file './resources/test_config_file_src_only.json' \
         --src-only
 
@@ -396,7 +399,8 @@ Describe 'Container cleanup' 'docker'
     airbyte_local_test() {
       # Start CLI in background
       ./airbyte-local \
-        --config-file './resources/test_config_file_graph_copy.json' &
+        --config-file './resources/test_config_file_graph_copy.json' \
+        --yes &
       CLI_PID=$!
 
       # Wait for container to start
