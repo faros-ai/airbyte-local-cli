@@ -2,28 +2,12 @@ import Docker from 'dockerode';
 
 import * as docker from '../src/docker';
 import {FarosConfig} from '../src/types';
+import {createTestCfg} from './helpers';
 
 describe('runSrcSync', () => {
-  const testCfg: FarosConfig = {
-    src: {
-      image: 'farosai/airbyte-example-source',
-    },
-    srcCheckConnection: false,
-    dstUseHostNetwork: false,
-    srcPull: false,
-    dstPull: false,
-    fullRefresh: false,
-    rawMessages: false,
-    keepContainers: false,
-    logLevel: 'info',
-    debug: false,
-    stateFile: undefined,
-    connectionName: undefined,
-    srcOutputFile: undefined,
-    srcInputFile: undefined,
-    silent: false,
-    image: false,
-  };
+  const testCfg = createTestCfg({
+    src: {image: 'farosai/airbyte-example-source'},
+  });
 
   afterEach(() => {
     jest.clearAllMocks();

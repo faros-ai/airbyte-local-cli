@@ -107,7 +107,13 @@ jobs:
             TARGET="win-x64"
           fi
           npm run pkg -- --target $TARGET
-      
+
+      - name: Upload binary artifact # For PR test only: WILL REMOVE
+        uses: actions/upload-artifact@v4
+        with:
+          name: airbyte-local-${{ matrix.os }}
+          path: airbyte-local-cli-nodejs/out/pkg/airbyte-local*
+
       # Run the binary: make sure the binary executes fine on the system/arch
       - name: Run binary
         working-directory: airbyte-local-cli-nodejs/out/pkg

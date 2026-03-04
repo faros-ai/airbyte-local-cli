@@ -23,10 +23,11 @@ import {
   writeConfig,
   writeStateFile,
 } from '../src/utils';
+import {createTestCfg} from './helpers';
 
 jest.mock('../src/docker');
 
-const testConfig: FarosConfig = {
+const testConfig = createTestCfg({
   src: {
     image: 'farosai/airbyte-test-source',
     config: {
@@ -51,24 +52,7 @@ const testConfig: FarosConfig = {
       },
     },
   },
-
-  // default values
-  srcCheckConnection: false,
-  dstUseHostNetwork: false,
-  srcPull: false,
-  dstPull: false,
-  fullRefresh: false,
-  rawMessages: false,
-  keepContainers: false,
-  logLevel: 'info',
-  debug: false,
-  stateFile: undefined,
-  connectionName: undefined,
-  srcOutputFile: undefined,
-  srcInputFile: undefined,
-  silent: false,
-  image: false,
-};
+});
 
 describe('parseConfigFile', () => {
   it('should pass', () => {

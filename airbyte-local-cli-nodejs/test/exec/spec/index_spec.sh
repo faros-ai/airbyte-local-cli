@@ -307,6 +307,7 @@ Describe 'Run source sync only' 'docker'
     }
     When call airbyte_local_test
     The status should equal 0
+    The output should not include "Would you like to proceed?"
     The output should include "Source connector completed."
   End
   It 'should succeed with srcOnly and output file'
@@ -318,7 +319,26 @@ Describe 'Run source sync only' 'docker'
       grep -q '"uid":"5"' test_src_output_file
     }
     When call airbyte_local_test
+    The output should not include "Would you like to proceed?"
     The output should include "Source connector completed."
+    The status should equal 0
+  End
+End
+
+Describe 'Tenant confirmation prompt' 'docker'
+  It 'should show tenant prompt when --yes is not provided'
+    airbyte_local_test() {
+      echo "no" | ./airbyte-local \
+        --config-file './resources/test_config_file_dst_only.json' \
+        --dst-only './resources/dockerIt_runDstSync/faros_airbyte_cli_src_output' \
+        2>&1
+    }
+    When call airbyte_local_test
+    The output should include "ATTENTION: You are about to write data into"
+    The output should include "Tenant:    faros"
+    The output should include "Workspace: jennie-test"
+    The output should include "Would you like to proceed?"
+    The output should include "Operation cancelled by user."
     The status should equal 0
   End
 End
@@ -354,6 +374,7 @@ Describe 'Run source and destination sync' 'docker'
     The output should include '[SRC] - {"log":{"level":"INFO","message":"Catalog: {\"streams\":[{\"stream\":{\"name\":\"faros_graph\",\"json_schema\":{},\"supported_sync_modes\":[\"full_refresh\",\"incremental\"]},\"sync_mode\":\"incremental\",\"destination_sync_mode\":\"append\"}]}"},"type":"LOG"}'
     The output should include '[DST] - {"log":{"level":"INFO","message":"Catalog: {\"streams\":[{\"stream\":{\"name\":\"myfarosgraphqlsrc__faros_graphql__faros_graph\",\"json_schema\":{},\"supported_sync_modes\":[\"full_refresh\",\"incremental\"]},\"sync_mode\":\"incremental\",\"destination_sync_mode\":\"append\"}]}"},"type":"LOG"}'
 
+    The output should not include "Would you like to proceed?"
     The output should include '[DST] - {"log":{"level":"INFO","message":"Errored 0 records"},"type":"LOG"}'
     The output should include "Destination connector completed."
     The output should include "Airbyte CLI completed."

@@ -26,24 +26,9 @@ import {
 } from '../src/docker';
 import {AirbyteSpec, FarosConfig, OutputStream} from '../src/types';
 import {setupStreams} from '../src/utils';
+import {createTestCfg} from './helpers';
 
-const defaultConfig: FarosConfig = {
-  srcCheckConnection: false,
-  dstUseHostNetwork: false,
-  srcPull: false,
-  dstPull: false,
-  fullRefresh: false,
-  rawMessages: false,
-  keepContainers: false,
-  logLevel: 'info',
-  debug: false,
-  stateFile: undefined,
-  connectionName: undefined,
-  srcOutputFile: undefined,
-  srcInputFile: undefined,
-  silent: false,
-  image: false,
-};
+const defaultConfig = createTestCfg();
 
 beforeAll(async () => {
   await pullDockerImage('farosai/airbyte-example-source');

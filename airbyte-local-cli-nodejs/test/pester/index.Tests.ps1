@@ -256,6 +256,23 @@ Describe 'Run source sync only' {
     }
 }
 
+Describe 'Tenant confirmation prompt' {
+    It 'should show tenant prompt when --yes is not provided' {
+        $result = "no" | & ./airbyte-local --config-file './resources/windows/test_config_file_dst_only.json' --dst-only './resources/dockerIt_runDstSync/faros_airbyte_cli_src_output' 2>&1
+        $matchingLine = $result | Where-Object { $_ -match "ATTENTION: You are about to write data into" }
+        $matchingLine | Should -Not -BeNullOrEmpty
+        $matchingLine = $result | Where-Object { $_ -match "Tenant:    faros" }
+        $matchingLine | Should -Not -BeNullOrEmpty
+        $matchingLine = $result | Where-Object { $_ -match "Workspace: jennie-test" }
+        $matchingLine | Should -Not -BeNullOrEmpty
+        $matchingLine = $result | Where-Object { $_ -match "Would you like to proceed\?" }
+        $matchingLine | Should -Not -BeNullOrEmpty
+        $matchingLine = $result | Where-Object { $_ -match "Operation cancelled by user\." }
+        $matchingLine | Should -Not -BeNullOrEmpty
+        $LASTEXITCODE | Should -Be 0
+    }
+}
+
 Describe 'Run destination sync' {
     It 'should succeed with dstOnly' {
         $result = & ./airbyte-local --config-file './resources/windows/test_config_file_dst_only.json' --dst-only './resources/dockerIt_runDstSync/faros_airbyte_cli_src_output' --debug --yes 2>&1
