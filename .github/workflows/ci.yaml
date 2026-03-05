@@ -107,7 +107,7 @@ jobs:
             TARGET="win-x64"
           fi
           npm run pkg -- --target $TARGET
-
+      
       # Run the binary: make sure the binary executes fine on the system/arch
       - name: Run binary
         working-directory: airbyte-local-cli-nodejs/out/pkg

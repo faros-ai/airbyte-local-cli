@@ -111,22 +111,23 @@ export async function validateAndConfirmTenant(cfg: FarosConfig): Promise<void> 
   const graph = dstConfig?.edition_configs?.graph ?? 'default';
   const tenantId = cfg.tenantId ?? dstConfig?.edition_configs?.tenant_id;
 
-  if (!apiKey || !apiUrl) {
-    logger.debug('Skipping tenant validation: missing api_key or api_url in destination config.');
+  if (!apiKey) {
+    logger.debug('Skipping tenant validation: missing api_key in destination config.');
     return;
   }
 
-  // Resolve env vars in api_key and api_url for the API call
+  // Resolve env vars in api_key, api_url, and tenantId for the API call
   const resolvedApiKey = resolveEnvVars(apiKey);
   const resolvedApiUrl = resolveEnvVars(apiUrl);
+  const resolvedTenantId = tenantId ? resolveEnvVars(tenantId) : undefined;
 
   const client = new FarosClient({url: resolvedApiUrl, apiKey: resolvedApiKey});
   const apiTenantId = await client.tenant();
 
-  if (tenantId) {
-    if (tenantId !== apiTenantId) {
+  if (resolvedTenantId) {
+    if (resolvedTenantId !== apiTenantId) {
       throw new Error(
-        `Tenant ID mismatch: config file specifies '${tenantId}' ` +
+        `Tenant ID mismatch: config file specifies '${resolvedTenantId}' ` +
           `but the API key belongs to tenant '${apiTenantId}'. ` +
           `Please verify your configuration.`,
       );

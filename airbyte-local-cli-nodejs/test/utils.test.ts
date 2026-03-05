@@ -679,7 +679,7 @@ describe('validateAndConfirmTenant', () => {
     const cfg = createTestCfg({
       dst: {
         image: 'farosai/airbyte-faros-destination',
-        config: {edition_configs: {api_url: 'https://test.api.faros.ai'}},
+        config: {edition_configs: {}},
       },
     });
     await validateAndConfirmTenant(cfg);
