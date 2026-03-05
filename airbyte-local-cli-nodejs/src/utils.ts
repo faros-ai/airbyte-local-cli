@@ -146,7 +146,8 @@ export async function validateAndConfirmTenant(cfg: FarosConfig): Promise<void> 
     const answer = await promptUser(
       `\n` +
         `${yellow}===========================================================${reset}\n` +
-        `${yellow}${bold}  ATTENTION: You are about to write data into:${reset}\n` +
+        `${yellow}${bold}                   !!! ATTENTION !!!                       ${reset}\n` +
+        `${yellow}  You are about to write data into:${reset}\n` +
         `${yellow}    Tenant:    ${apiTenantId}${reset}\n` +
         `${yellow}    Workspace: ${resolvedGraph}${reset}\n` +
         `${yellow}===========================================================${reset}\n` +
