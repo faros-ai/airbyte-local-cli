@@ -109,7 +109,7 @@ export async function validateAndConfirmTenant(cfg: FarosConfig): Promise<void> 
   const apiKey = dstConfig?.edition_configs?.api_key;
   const apiUrl = dstConfig?.edition_configs?.api_url ?? 'https://prod.api.faros.ai';
   const graph = dstConfig?.edition_configs?.graph ?? 'default';
-  let tenantId = cfg.tenantId ?? dstConfig?.edition_configs?.tenant_id;
+  const tenantId = cfg.tenantId ?? dstConfig?.edition_configs?.tenant_id;
 
   if (!apiKey || !apiUrl) {
     logger.debug('Skipping tenant validation: missing api_key or api_url in destination config.');
@@ -136,7 +136,6 @@ export async function validateAndConfirmTenant(cfg: FarosConfig): Promise<void> 
       `No 'tenantId' found in config file. Consider adding '"tenantId": "${apiTenantId}"' to your config file ` +
         `to prevent accidentally writing data to the wrong tenant.`,
     );
-    tenantId = apiTenantId;
   }
 
   if (!cfg.yes) {
