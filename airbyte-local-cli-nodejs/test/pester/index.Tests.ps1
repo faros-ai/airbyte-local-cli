@@ -257,7 +257,7 @@ Describe 'Run source sync only' {
 }
 
 Describe 'Tenant confirmation prompt' {
-    It 'should show tenant prompt when --yes is not provided' {
+    It 'should show tenant prompt when --assume-yes is not provided' {
         $result = "no" | & ./airbyte-local --config-file './resources/windows/test_config_file_dst_only.json' --dst-only './resources/dockerIt_runDstSync/faros_airbyte_cli_src_output' 2>&1
         $matchingLine = $result | Where-Object { $_ -match "ATTENTION: You are about to write data into" }
         $matchingLine | Should -Not -BeNullOrEmpty
@@ -275,7 +275,7 @@ Describe 'Tenant confirmation prompt' {
 
 Describe 'Run destination sync' {
     It 'should succeed with dstOnly' {
-        $result = & ./airbyte-local --config-file './resources/windows/test_config_file_dst_only.json' --dst-only './resources/dockerIt_runDstSync/faros_airbyte_cli_src_output' --debug --yes 2>&1
+        $result = & ./airbyte-local --config-file './resources/windows/test_config_file_dst_only.json' --dst-only './resources/dockerIt_runDstSync/faros_airbyte_cli_src_output' --debug --assume-yes 2>&1
         $matchingLine = $result | Where-Object { $_ -match '\[DST\] - {"log":{"level":"INFO","message":"Errored 0 records"},"type":"LOG"}' }
         $matchingLine | Should -Not -BeNullOrEmpty
         $matchingLine = $result | Where-Object { $_ -match "Destination connector completed." }
@@ -288,7 +288,7 @@ Describe 'Run destination sync' {
 
 Describe 'Run source and destination sync' {
     It 'should succeed with src and dst' {
-        $result = & ./airbyte-local --config-file './resources/windows/test_config_file_graph_copy.json' --yes 2>&1
+        $result = & ./airbyte-local --config-file './resources/windows/test_config_file_graph_copy.json' --assume-yes 2>&1
         $matchingLine = $result | Where-Object { $_ -match "Source connector completed." }
         $matchingLine | Should -Not -BeNullOrEmpty
         $matchingLine = $result | Where-Object { $_ -match '\[SRC\] - {"log":{"level":"INFO","message":"Catalog:.*\\"sync_mode\\":\\"incremental\\",\\"destination_sync_mode\\":\\"append\\"' }
@@ -305,7 +305,7 @@ Describe 'Run source and destination sync' {
     }
 
     It 'should succeed with full refresh' {
-        $result = & ./airbyte-local --config-file './resources/windows/test_config_file_graph_copy.json' --full-refresh --yes 2>&1
+        $result = & ./airbyte-local --config-file './resources/windows/test_config_file_graph_copy.json' --full-refresh --assume-yes 2>&1
         $matchingLine = $result | Where-Object { $_ -match "Source connector completed." }
         $matchingLine | Should -Not -BeNullOrEmpty
         $matchingLine = $result | Where-Object { $_ -match '\[SRC\] - {"log":{"level":"INFO","message":"Catalog:.*\\"sync_mode\\":\\"full_refresh\\",\\"destination_sync_mode\\":\\"overwrite\\"' }

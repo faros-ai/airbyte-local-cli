@@ -109,7 +109,7 @@ export async function validateAndConfirmTenant(cfg: FarosConfig): Promise<void> 
   const apiKey = dstConfig?.edition_configs?.api_key;
   const apiUrl = dstConfig?.edition_configs?.api_url ?? 'https://prod.api.faros.ai';
   const graph = dstConfig?.edition_configs?.graph ?? 'default';
-  const tenantId = cfg.tenantId ?? dstConfig?.edition_configs?.tenant_id;
+  const tenantId = dstConfig?.edition_configs?.tenant_id;
 
   if (!apiKey) {
     logger.debug('Skipping tenant validation: missing api_key in destination config.');
@@ -119,27 +119,26 @@ export async function validateAndConfirmTenant(cfg: FarosConfig): Promise<void> 
   // Resolve env vars in api_key, api_url, and tenantId for the API call
   const resolvedApiKey = resolveEnvVars(apiKey);
   const resolvedApiUrl = resolveEnvVars(apiUrl);
-  const resolvedTenantId = tenantId ? resolveEnvVars(tenantId) : undefined;
+  if (tenantId && ENV_VAR_PATTERN.test(tenantId)) {
+    throw new Error(`Environment variables are not allowed for 'tenant_id'. Please use a literal value instead.`);
+  }
 
   const client = new FarosClient({url: resolvedApiUrl, apiKey: resolvedApiKey});
   const apiTenantId = await client.tenant();
 
-  if (resolvedTenantId) {
-    if (resolvedTenantId !== apiTenantId) {
+  if (tenantId) {
+    if (tenantId !== apiTenantId) {
       throw new Error(
-        `Tenant ID mismatch: config file specifies '${resolvedTenantId}' ` +
+        `Tenant ID mismatch: config file specifies '${tenantId}' ` +
           `but the API key belongs to tenant '${apiTenantId}'. ` +
           `Please verify your configuration.`,
       );
     }
   } else {
-    logger.warn(
-      `No 'tenantId' found in config file. Consider adding '"tenantId": "${apiTenantId}"' to your config file ` +
-        `to prevent accidentally writing data to the wrong tenant.`,
-    );
+    logger.warn(`No 'tenant_id' found in config file. Skipping tenant validation.`);
   }
 
-  if (!cfg.yes) {
+  if (!cfg.assumeYes) {
     const resolvedGraph = resolveEnvVars(graph);
     const yellow = '\x1b[33m';
     const bold = '\x1b[1m';
@@ -209,12 +208,11 @@ export function parseConfigFile(configFilePath: string): {
   src: AirbyteConfig;
   dst: AirbyteConfig;
   connectionName?: string;
-  tenantId?: string;
 } {
   try {
     const data = readFile(configFilePath);
     const configJson = JSON.parse(data);
-    const config: {src: AirbyteConfig; dst: AirbyteConfig; connectionName?: string; tenantId?: string} = {
+    const config: {src: AirbyteConfig; dst: AirbyteConfig; connectionName?: string} = {
       src: configJson.src as AirbyteConfig,
       dst: configJson.dst as AirbyteConfig,
     };
@@ -224,13 +222,6 @@ export function parseConfigFile(configFilePath: string): {
         throw new Error(`Invalid config file: "connectionName" must be a non-empty string.`);
       }
       config.connectionName = configJson.connectionName;
-    }
-
-    if (!isNil(configJson.tenantId)) {
-      if (typeof configJson.tenantId !== 'string' || configJson.tenantId.trim().length === 0) {
-        throw new Error(`Invalid config file: "tenantId" must be a non-empty string.`);
-      }
-      config.tenantId = configJson.tenantId;
     }
 
     const validateConfig = (cfg: AirbyteConfig) => {
@@ -407,15 +398,12 @@ export function updateSrcConfigWithFarosConfig(airbyteConfig: {src: AirbyteConfi
  * Write Airbyte config to temporary dir and a json file
  */
 export function writeConfig(tmpDir: string, config: FarosConfig): void {
-  const airbyteConfig: {src: AirbyteConfig; dst: AirbyteConfig; connectionName?: string; tenantId?: string} = {
+  const airbyteConfig: {src: AirbyteConfig; dst: AirbyteConfig; connectionName?: string} = {
     src: config.src ?? ({} as AirbyteConfig),
     dst: config.dst ?? ({} as AirbyteConfig),
   };
   if (config.connectionName) {
     airbyteConfig.connectionName = config.connectionName;
-  }
-  if (config.tenantId) {
-    airbyteConfig.tenantId = config.tenantId;
   }
 
   // write Airbyte config for user's reference
@@ -943,12 +931,21 @@ export async function generateConfig(tmpDir: string, cfg: FarosConfig): Promise<
   dstConfig ??= await runWizard(tmpDir, dstImage, dstSpec);
 
   // write config to temporary directory config files
+  // Add tenant_id placeholder to dst.config.edition_configs for Faros destination
+  let finalDstConfig = dstConfig;
+  if (dstImage?.includes('faros-destination') && dstConfig && typeof dstConfig === 'object') {
+    const dc = dstConfig as Record<string, any>;
+    finalDstConfig = {
+      ...dc,
+      edition_configs: {
+        tenant_id: '<UPDATE_YOUR_TENANT_ID>',
+        ...dc['edition_configs'],
+      },
+    };
+  }
   const genCfg: Record<string, any> = {
-    ...(dstImage?.includes('faros-destination') && {
-      tenantId: '<UPDATE_YOUR_TENANT_ID>',
-    }),
     src: {image: srcImage, config: srcConfig},
-    dst: {image: dstImage, config: dstConfig},
+    dst: {image: dstImage, config: finalDstConfig},
   };
   writeFileSync(CONFIG_FILE, JSON.stringify(genCfg, null, 2) + '\n');
 

@@ -326,7 +326,7 @@ Describe 'Run source sync only' 'docker'
 End
 
 Describe 'Tenant confirmation prompt' 'docker'
-  It 'should show tenant prompt when --yes is not provided'
+  It 'should show tenant prompt when --assume-yes is not provided'
     airbyte_local_test() {
       echo "no" | ./airbyte-local \
         --config-file './resources/test_config_file_dst_only.json' \
@@ -350,7 +350,7 @@ Describe 'Run destination sync' 'docker'
         --config-file './resources/test_config_file_dst_only.json' \
         --dst-only './resources/dockerIt_runDstSync/faros_airbyte_cli_src_output' \
         --debug \
-        --yes
+        --assume-yes
     }
     When call airbyte_local_test
     The output should include '[DST] - {"log":{"level":"INFO","message":"Errored 0 records"},"type":"LOG"}'
@@ -365,7 +365,7 @@ Describe 'Run source and destination sync' 'docker'
     airbyte_local_test() {
       ./airbyte-local \
         --config-file './resources/test_config_file_graph_copy.json' \
-        --yes
+        --assume-yes
     }
     When call airbyte_local_test
     The output should include "Source connector completed."
@@ -385,7 +385,7 @@ Describe 'Run source and destination sync' 'docker'
       ./airbyte-local \
         --config-file './resources/test_config_file_graph_copy.json' \
         --full-refresh \
-        --yes
+        --assume-yes
     }
     When call airbyte_local_test
     The output should include "Source connector completed."
@@ -403,7 +403,7 @@ End
 Describe 'Container cleanup' 'docker'
   It 'should cleanup containers after normal completion'
     airbyte_local_test() {
-      ./airbyte-local --yes \
+      ./airbyte-local --assume-yes \
         --config-file './resources/test_config_file_src_only.json' \
         --src-only
 
@@ -421,7 +421,7 @@ Describe 'Container cleanup' 'docker'
       # Start CLI in background
       ./airbyte-local \
         --config-file './resources/test_config_file_graph_copy.json' \
-        --yes &
+        --assume-yes &
       CLI_PID=$!
 
       # Wait for container to start

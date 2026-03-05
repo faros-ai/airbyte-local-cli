@@ -657,16 +657,17 @@ describe('resolveEnvVars', () => {
 
 describe('validateAndConfirmTenant', () => {
   const mockTenant = jest.fn();
-  const farosDst = {
+  const farosDst = (tenantId?: string) => ({
     image: 'farosai/airbyte-faros-destination',
     config: {
       edition_configs: {
+        ...(tenantId && {tenant_id: tenantId}),
         api_key: 'test-api-key',
         api_url: 'https://test.api.faros.ai',
         graph: 'default',
       },
     },
-  };
+  });
 
   beforeEach(() => {
     jest.clearAllMocks();
@@ -686,9 +687,9 @@ describe('validateAndConfirmTenant', () => {
     expect(FarosClient).not.toHaveBeenCalled();
   });
 
-  it('should pass when tenantId matches API key tenant', async () => {
+  it('should pass when tenant_id matches API key tenant', async () => {
     mockTenant.mockResolvedValue('acme');
-    const cfg = createTestCfg({dst: farosDst, tenantId: 'acme', yes: true});
+    const cfg = createTestCfg({dst: farosDst('acme'), assumeYes: true});
     await expect(validateAndConfirmTenant(cfg)).resolves.not.toThrow();
     expect(FarosClient).toHaveBeenCalledWith({
       url: 'https://test.api.faros.ai',
@@ -696,25 +697,27 @@ describe('validateAndConfirmTenant', () => {
     });
   });
 
-  it('should throw when tenantId does not match API key tenant', async () => {
+  it('should throw when tenant_id does not match API key tenant', async () => {
     mockTenant.mockResolvedValue('other-tenant');
-    const cfg = createTestCfg({dst: farosDst, tenantId: 'acme'});
+    const cfg = createTestCfg({dst: farosDst('acme')});
     await expect(validateAndConfirmTenant(cfg)).rejects.toThrow(
       `Tenant ID mismatch: config file specifies 'acme' but the API key belongs to tenant 'other-tenant'`,
     );
   });
 
-  it('should warn and set tenantId when not provided in config', async () => {
+  it('should warn when tenant_id is not provided in config', async () => {
     mockTenant.mockResolvedValue('acme');
-    const cfg = createTestCfg({dst: farosDst, yes: true});
+    const cfg = createTestCfg({dst: farosDst(), assumeYes: true});
     await validateAndConfirmTenant(cfg);
-    expect(logger.warn).toHaveBeenCalledWith(expect.stringContaining(`No 'tenantId' found in config file`));
+    expect(logger.warn).toHaveBeenCalledWith(
+      expect.stringContaining(`No 'tenant_id' found in config file. Skipping tenant validation.`),
+    );
   });
 
-  it('should not prompt when --yes is set', async () => {
+  it('should not prompt when --assume-yes is set', async () => {
     mockTenant.mockResolvedValue('acme');
     const rlSpy = jest.spyOn(readline, 'createInterface');
-    const cfg = createTestCfg({dst: farosDst, tenantId: 'acme', yes: true});
+    const cfg = createTestCfg({dst: farosDst('acme'), assumeYes: true});
     await validateAndConfirmTenant(cfg);
     expect(rlSpy).not.toHaveBeenCalled();
     rlSpy.mockRestore();
@@ -727,7 +730,7 @@ describe('validateAndConfirmTenant', () => {
       question: (_q: string, cb: (answer: string) => void) => cb('yes'),
       close: mockClose,
     } as any);
-    const cfg = createTestCfg({dst: farosDst, tenantId: 'acme', yes: false});
+    const cfg = createTestCfg({dst: farosDst('acme'), assumeYes: false});
     await expect(validateAndConfirmTenant(cfg)).resolves.not.toThrow();
     expect(mockClose).toHaveBeenCalled();
   });
@@ -741,7 +744,7 @@ describe('validateAndConfirmTenant', () => {
     const exitSpy = jest.spyOn(process, 'exit').mockImplementation(() => {
       throw new Error('process.exit called');
     });
-    const cfg = createTestCfg({dst: farosDst, tenantId: 'acme', yes: false});
+    const cfg = createTestCfg({dst: farosDst('acme'), assumeYes: false});
     await expect(validateAndConfirmTenant(cfg)).rejects.toThrow('process.exit called');
     expect(exitSpy).toHaveBeenCalledWith(0);
     exitSpy.mockRestore();
@@ -756,7 +759,7 @@ describe('validateAndConfirmTenant', () => {
     const exitSpy = jest.spyOn(process, 'exit').mockImplementation(() => {
       throw new Error('process.exit called');
     });
-    const cfg = createTestCfg({dst: farosDst, tenantId: 'acme', yes: false});
+    const cfg = createTestCfg({dst: farosDst('acme'), assumeYes: false});
     await expect(validateAndConfirmTenant(cfg)).rejects.toThrow('process.exit called');
     expect(exitSpy).toHaveBeenCalledWith(0);
     exitSpy.mockRestore();

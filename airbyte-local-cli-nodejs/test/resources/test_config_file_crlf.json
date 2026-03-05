@@ -1,5 +1,4 @@
 {
-  "tenantId": "faros",
   "src": {
     "image": "farosai/airbyte-servicenow-source",
     "config": {

@@ -13,7 +13,7 @@ export function createTestCfg(overrides: Partial<FarosConfig> = {}): FarosConfig
     keepContainers: false,
     logLevel: 'info',
     debug: false,
-    yes: false,
+    assumeYes: false,
     silent: false,
     image: false,
     connectionName: undefined,

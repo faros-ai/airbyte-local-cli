@@ -1,5 +1,4 @@
 {
-  "tenantId": "faros",
   "src": {
     "image": "farosai/airbyte-faros-graphql-source",
     "config": {
@@ -15,6 +14,7 @@
     "image": "farosai/airbyte-faros-destination",
     "config": {
       "edition_configs": {
+        "tenant_id": "faros",
         "edition": "cloud",
         "graph": "jennie-test",
         "graphql_api": "v2",

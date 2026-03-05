@@ -67,7 +67,7 @@ function command() {
 
     // Options: Cli settings
     .option('-d, --debug', 'Enable debug logging')
-    .option('-y, --yes', 'Skip confirmation prompts')
+    .option('--assume-yes', 'Skip confirmation prompts')
 
     // Options: deprecated options
     .option('--src <image>', '[Deprecated] Airbyte source Docker image')
@@ -285,7 +285,7 @@ export function parseAndValidateInputs(argv: string[]): FarosConfig {
     keepContainers: cliOptions.keepContainers ?? false,
     logLevel: cliOptions.logLevel ?? 'info',
     debug: cliOptions.debug ?? false,
-    yes: cliOptions.yes ?? false,
+    assumeYes: cliOptions.assumeYes ?? false,
     dstStreamPrefix: cliOptions.dstStreamPrefix,
   };
 
@@ -313,9 +313,6 @@ export function parseAndValidateInputs(argv: string[]): FarosConfig {
       );
     }
     farosConfig.connectionName = cliOptions.connectionName ?? airbyteConfig.connectionName;
-    if (airbyteConfig.tenantId) {
-      farosConfig.tenantId = airbyteConfig.tenantId;
-    }
 
     validateConfigFileInput(farosConfig, AirbyteConfigInputType.FILE);
   }
