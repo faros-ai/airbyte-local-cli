@@ -334,7 +334,8 @@ Describe 'Tenant confirmation prompt' 'docker'
         2>&1
     }
     When call airbyte_local_test
-    The output should include "ATTENTION: You are about to write data into"
+    The output should include "!!! ATTENTION !!!"
+    The output should include "You are about to write data into"
     The output should include "Tenant:    faros"
     The output should include "Workspace: jennie-test"
     The output should include "Would you like to proceed?"
