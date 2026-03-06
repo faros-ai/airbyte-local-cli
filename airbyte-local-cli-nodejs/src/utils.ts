@@ -99,6 +99,15 @@ export function getUserAgent(): string {
   }
 }
 
+async function fetchTenantId(apiUrl: string, apiKey: string): Promise<string> {
+  try {
+    const client = new FarosClient({url: apiUrl, apiKey});
+    return await client.tenant();
+  } catch (error: any) {
+    throw new Error(`Failed to validate tenant: ${error.message}. Check your API key and network connection.`);
+  }
+}
+
 /**
  * Validate that the tenant ID in the config matches the API key's tenant.
  * Prompts the user for confirmation before writing data to the destination.
@@ -123,8 +132,7 @@ export async function validateAndConfirmTenant(cfg: FarosConfig): Promise<void> 
     throw new Error(`Environment variables are not allowed for 'tenant_id'. Please use a literal value instead.`);
   }
 
-  const client = new FarosClient({url: resolvedApiUrl, apiKey: resolvedApiKey});
-  const apiTenantId = await client.tenant();
+  const apiTenantId = await fetchTenantId(resolvedApiUrl, resolvedApiKey);
 
   if (tenantId) {
     if (tenantId !== apiTenantId) {
@@ -153,7 +161,7 @@ export async function validateAndConfirmTenant(cfg: FarosConfig): Promise<void> 
         `${yellow}===========================================================${reset}\n` +
         `Would you like to proceed? (yes/No): `,
     );
-    if (!answer.toLowerCase().startsWith('y')) {
+    if (answer.toLowerCase() !== 'yes') {
       logger.info('Operation cancelled by user.');
       process.exit(0);
     }
