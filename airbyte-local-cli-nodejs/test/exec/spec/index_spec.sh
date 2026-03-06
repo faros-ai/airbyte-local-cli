@@ -307,6 +307,7 @@ Describe 'Run source sync only' 'docker'
     }
     When call airbyte_local_test
     The status should equal 0
+    The output should not include "Would you like to proceed?"
     The output should include "Source connector completed."
   End
   It 'should succeed with srcOnly and output file'
@@ -318,7 +319,27 @@ Describe 'Run source sync only' 'docker'
       grep -q '"uid":"5"' test_src_output_file
     }
     When call airbyte_local_test
+    The output should not include "Would you like to proceed?"
     The output should include "Source connector completed."
+    The status should equal 0
+  End
+End
+
+Describe 'Tenant confirmation prompt' 'docker'
+  It 'should show tenant prompt when --assume-yes is not provided'
+    airbyte_local_test() {
+      echo "no" | ./airbyte-local \
+        --config-file './resources/test_config_file_dst_only.json' \
+        --dst-only './resources/dockerIt_runDstSync/faros_airbyte_cli_src_output' \
+        2>&1
+    }
+    When call airbyte_local_test
+    The output should include "!!! ATTENTION !!!"
+    The output should include "You are about to write data into"
+    The output should include "Tenant:    faros"
+    The output should include "Workspace: jennie-test"
+    The output should include "Would you like to proceed?"
+    The output should include "Operation cancelled by user."
     The status should equal 0
   End
 End
@@ -329,7 +350,8 @@ Describe 'Run destination sync' 'docker'
       ./airbyte-local \
         --config-file './resources/test_config_file_dst_only.json' \
         --dst-only './resources/dockerIt_runDstSync/faros_airbyte_cli_src_output' \
-        --debug
+        --debug \
+        --assume-yes
     }
     When call airbyte_local_test
     The output should include '[DST] - {"log":{"level":"INFO","message":"Errored 0 records"},"type":"LOG"}'
@@ -343,7 +365,8 @@ Describe 'Run source and destination sync' 'docker'
   It 'should succeed with src and dst'
     airbyte_local_test() {
       ./airbyte-local \
-        --config-file './resources/test_config_file_graph_copy.json'
+        --config-file './resources/test_config_file_graph_copy.json' \
+        --assume-yes
     }
     When call airbyte_local_test
     The output should include "Source connector completed."
@@ -352,6 +375,7 @@ Describe 'Run source and destination sync' 'docker'
     The output should include '[SRC] - {"log":{"level":"INFO","message":"Catalog: {\"streams\":[{\"stream\":{\"name\":\"faros_graph\",\"json_schema\":{},\"supported_sync_modes\":[\"full_refresh\",\"incremental\"]},\"sync_mode\":\"incremental\",\"destination_sync_mode\":\"append\"}]}"},"type":"LOG"}'
     The output should include '[DST] - {"log":{"level":"INFO","message":"Catalog: {\"streams\":[{\"stream\":{\"name\":\"myfarosgraphqlsrc__faros_graphql__faros_graph\",\"json_schema\":{},\"supported_sync_modes\":[\"full_refresh\",\"incremental\"]},\"sync_mode\":\"incremental\",\"destination_sync_mode\":\"append\"}]}"},"type":"LOG"}'
 
+    The output should not include "Would you like to proceed?"
     The output should include '[DST] - {"log":{"level":"INFO","message":"Errored 0 records"},"type":"LOG"}'
     The output should include "Destination connector completed."
     The output should include "Airbyte CLI completed."
@@ -361,7 +385,8 @@ Describe 'Run source and destination sync' 'docker'
     airbyte_local_test() {
       ./airbyte-local \
         --config-file './resources/test_config_file_graph_copy.json' \
-        --full-refresh
+        --full-refresh \
+        --assume-yes
     }
     When call airbyte_local_test
     The output should include "Source connector completed."
@@ -379,7 +404,7 @@ End
 Describe 'Container cleanup' 'docker'
   It 'should cleanup containers after normal completion'
     airbyte_local_test() {
-      ./airbyte-local \
+      ./airbyte-local --assume-yes \
         --config-file './resources/test_config_file_src_only.json' \
         --src-only
 
@@ -396,7 +421,8 @@ Describe 'Container cleanup' 'docker'
     airbyte_local_test() {
       # Start CLI in background
       ./airbyte-local \
-        --config-file './resources/test_config_file_graph_copy.json' &
+        --config-file './resources/test_config_file_graph_copy.json' \
+        --assume-yes &
       CLI_PID=$!
 
       # Wait for container to start

@@ -67,6 +67,7 @@ function command() {
 
     // Options: Cli settings
     .option('-d, --debug', 'Enable debug logging')
+    .option('--assume-yes', 'Skip confirmation prompts')
 
     // Options: deprecated options
     .option('--src <image>', '[Deprecated] Airbyte source Docker image')
@@ -284,6 +285,7 @@ export function parseAndValidateInputs(argv: string[]): FarosConfig {
     keepContainers: cliOptions.keepContainers ?? false,
     logLevel: cliOptions.logLevel ?? 'info',
     debug: cliOptions.debug ?? false,
+    assumeYes: cliOptions.assumeYes ?? false,
     dstStreamPrefix: cliOptions.dstStreamPrefix,
   };
 

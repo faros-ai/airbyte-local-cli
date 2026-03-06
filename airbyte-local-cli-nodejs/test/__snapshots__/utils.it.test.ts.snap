@@ -12,6 +12,7 @@ exports[`generateConfig should succeed 1`] = `
     "image": "farosai/airbyte-faros-destination",
     "config": {
       "edition_configs": {
+        "tenant_id": "<UPDATE_YOUR_TENANT_ID>",
         "api_key": "<UPDATE_YOUR_FAROS_API_KEY>",
         "edition": "cloud"
       }
@@ -32,7 +33,10 @@ exports[`generateConfig should succeed with image inputs 1`] = `
   "dst": {
     "image": "farosai/airbyte-faros-destination",
     "config": {
-      "foo": "bar"
+      "foo": "bar",
+      "edition_configs": {
+        "tenant_id": "<UPDATE_YOUR_TENANT_ID>"
+      }
     }
   }
 }
@@ -58,6 +62,7 @@ exports[`generateConfig should succeed with static configs 1`] = `
     "image": "farosai/airbyte-faros-destination",
     "config": {
       "edition_configs": {
+        "tenant_id": "<UPDATE_YOUR_TENANT_ID>",
         "api_key": "<UPDATE_YOUR_FAROS_API_KEY>",
         "edition": "cloud"
       }
@@ -74,7 +79,7 @@ exports[`parseConfigFile should parse crlf 1`] = `
     "config": {
       "edition_config": {
         "api_key": "***",
-        "api_url": "https://prod.api.faros.ai",
+        "api_url": "https://dev.api.faros.ai",
         "edition": "cloud",
         "graph": "default",
       },
@@ -115,9 +120,10 @@ exports[`parseConfigFile should parse utf16 encoding 1`] = `
     "config": {
       "edition_config": {
         "api_key": "***",
-        "api_url": "https://prod.api.faros.ai",
+        "api_url": "https://dev.api.faros.ai",
         "edition": "cloud",
         "graph": "default",
+        "tenant_id": "faros",
       },
     },
     "dockerOptions": {
@@ -149,7 +155,7 @@ exports[`parseConfigFile should pass 1`] = `
     "config": {
       "edition_config": {
         "api_key": "***",
-        "api_url": "https://prod.api.faros.ai",
+        "api_url": "https://dev.api.faros.ai",
         "edition": "cloud",
         "graph": "default",
       },

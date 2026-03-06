@@ -1,21 +1,13 @@
 import {parseAndValidateInputs} from '../src/command';
 import {parseConfigFile} from '../src/utils';
+import {createTestCfg} from './helpers';
 
 jest.mock('../src/utils');
 
-const defaultConfig = {
+const defaultConfig = createTestCfg({
   srcPull: true,
   dstPull: true,
-  srcCheckConnection: false,
-  dstUseHostNetwork: false,
-  fullRefresh: false,
-  rawMessages: false,
-  keepContainers: false,
-  logLevel: 'info',
-  debug: false,
-  silent: false,
-  image: false,
-};
+});
 
 afterEach(() => {
   jest.resetAllMocks();

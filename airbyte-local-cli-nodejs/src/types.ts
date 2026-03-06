@@ -37,6 +37,9 @@ export interface CliOptions {
   // logging
   debug?: boolean;
 
+  // confirmation
+  assumeYes?: boolean;
+
   // generate config
   generateConfig?: any;
   silent?: boolean;
@@ -83,6 +86,7 @@ export interface FarosConfig {
   keepContainers: boolean;
   logLevel: string;
   debug: boolean;
+  assumeYes: boolean;
 
   // generate config
   generateConfig?: any;

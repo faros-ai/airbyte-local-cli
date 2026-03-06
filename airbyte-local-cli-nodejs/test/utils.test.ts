@@ -1,5 +1,8 @@
 import {spawnSync} from 'node:child_process';
 import {readFileSync} from 'node:fs';
+import readline from 'node:readline';
+
+import {FarosClient} from 'faros-js-client';
 
 import {logger} from '../src/logger';
 import {
@@ -19,10 +22,13 @@ import {
   parseConfigFile,
   resolveEnvVars,
   updateSrcConfigWithFarosConfig,
+  validateAndConfirmTenant,
 } from '../src/utils';
+import {createTestCfg} from './helpers';
 
 jest.mock('node:fs');
 jest.mock('node:child_process');
+jest.mock('faros-js-client');
 jest.mock('../src/logger', () => ({
   logger: {
     info: jest.fn(),
@@ -646,5 +652,116 @@ describe('resolveEnvVars', () => {
       // Names starting with numbers are not valid POSIX
       expect(resolveEnvVars('${123VAR}')).toBe('${123VAR}');
     });
+  });
+});
+
+describe('validateAndConfirmTenant', () => {
+  const mockTenant = jest.fn();
+  const farosDst = (tenantId?: string) => ({
+    image: 'farosai/airbyte-faros-destination',
+    config: {
+      edition_configs: {
+        ...(tenantId && {tenant_id: tenantId}),
+        api_key: 'test-api-key',
+        api_url: 'https://test.api.faros.ai',
+        graph: 'default',
+      },
+    },
+  });
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    (FarosClient as jest.Mock).mockImplementation(() => ({
+      tenant: mockTenant,
+    }));
+  });
+
+  it('should skip validation when api_key is missing', async () => {
+    const cfg = createTestCfg({
+      dst: {
+        image: 'farosai/airbyte-faros-destination',
+        config: {edition_configs: {}},
+      },
+    });
+    await validateAndConfirmTenant(cfg);
+    expect(FarosClient).not.toHaveBeenCalled();
+  });
+
+  it('should pass when tenant_id matches API key tenant', async () => {
+    mockTenant.mockResolvedValue('acme');
+    const cfg = createTestCfg({dst: farosDst('acme'), assumeYes: true});
+    await expect(validateAndConfirmTenant(cfg)).resolves.not.toThrow();
+    expect(FarosClient).toHaveBeenCalledWith({
+      url: 'https://test.api.faros.ai',
+      apiKey: 'test-api-key',
+    });
+  });
+
+  it('should throw when tenant_id does not match API key tenant', async () => {
+    mockTenant.mockResolvedValue('other-tenant');
+    const cfg = createTestCfg({dst: farosDst('acme')});
+    await expect(validateAndConfirmTenant(cfg)).rejects.toThrow(
+      `Tenant ID mismatch: config file specifies 'acme' but the API key belongs to tenant 'other-tenant'`,
+    );
+  });
+
+  it('should warn when tenant_id is not provided in config', async () => {
+    mockTenant.mockResolvedValue('acme');
+    const cfg = createTestCfg({dst: farosDst(), assumeYes: true});
+    await validateAndConfirmTenant(cfg);
+    expect(logger.warn).toHaveBeenCalledWith(
+      expect.stringContaining(`No 'tenant_id' found in config file. Skipping tenant validation.`),
+    );
+  });
+
+  it('should not prompt when --assume-yes is set', async () => {
+    mockTenant.mockResolvedValue('acme');
+    const rlSpy = jest.spyOn(readline, 'createInterface');
+    const cfg = createTestCfg({dst: farosDst('acme'), assumeYes: true});
+    await validateAndConfirmTenant(cfg);
+    expect(rlSpy).not.toHaveBeenCalled();
+    rlSpy.mockRestore();
+  });
+
+  it('should prompt and proceed when user answers yes', async () => {
+    mockTenant.mockResolvedValue('acme');
+    const mockClose = jest.fn();
+    jest.spyOn(readline, 'createInterface').mockReturnValue({
+      question: (_q: string, cb: (answer: string) => void) => cb('yes'),
+      close: mockClose,
+    } as any);
+    const cfg = createTestCfg({dst: farosDst('acme'), assumeYes: false});
+    await expect(validateAndConfirmTenant(cfg)).resolves.not.toThrow();
+    expect(mockClose).toHaveBeenCalled();
+  });
+
+  it('should exit when user answers no', async () => {
+    mockTenant.mockResolvedValue('acme');
+    jest.spyOn(readline, 'createInterface').mockReturnValue({
+      question: (_q: string, cb: (answer: string) => void) => cb('no'),
+      close: jest.fn(),
+    } as any);
+    const exitSpy = jest.spyOn(process, 'exit').mockImplementation(() => {
+      throw new Error('process.exit called');
+    });
+    const cfg = createTestCfg({dst: farosDst('acme'), assumeYes: false});
+    await expect(validateAndConfirmTenant(cfg)).rejects.toThrow('process.exit called');
+    expect(exitSpy).toHaveBeenCalledWith(0);
+    exitSpy.mockRestore();
+  });
+
+  it('should exit when user presses enter (empty input defaults to No)', async () => {
+    mockTenant.mockResolvedValue('acme');
+    jest.spyOn(readline, 'createInterface').mockReturnValue({
+      question: (_q: string, cb: (answer: string) => void) => cb(''),
+      close: jest.fn(),
+    } as any);
+    const exitSpy = jest.spyOn(process, 'exit').mockImplementation(() => {
+      throw new Error('process.exit called');
+    });
+    const cfg = createTestCfg({dst: farosDst('acme'), assumeYes: false});
+    await expect(validateAndConfirmTenant(cfg)).rejects.toThrow('process.exit called');
+    expect(exitSpy).toHaveBeenCalledWith(0);
+    exitSpy.mockRestore();
   });
 });

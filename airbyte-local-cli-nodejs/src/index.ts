@@ -11,6 +11,7 @@ import {
   logImageVersion,
   processSrcInputFile,
   setupStreams,
+  validateAndConfirmTenant,
   writeCatalog,
   writeConfig,
 } from './utils';
@@ -32,6 +33,13 @@ export async function main(): Promise<void> {
   try {
     // Parse and validate cli arguments
     const cfg = parseAndValidateInputs(process.argv);
+
+    // Validate tenant and confirm with user before writing to Faros destination
+    const isDstRunning = !cfg.srcOutputFile;
+    const isFarosDst = cfg.dst?.image?.startsWith('farosai/airbyte-faros-destination');
+    if (isDstRunning && isFarosDst) {
+      await validateAndConfirmTenant(cfg);
+    }
 
     // Prerequisites check: docker
     await checkDockerInstalled();

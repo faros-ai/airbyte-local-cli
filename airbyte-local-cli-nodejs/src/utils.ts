@@ -17,6 +17,7 @@ import {promisify} from 'node:util';
 
 import Table from 'cli-table3';
 import didYouMean from 'didyoumean2';
+import {FarosClient} from 'faros-js-client';
 import {isEmpty, isNil, isPlainObject, omitBy} from 'lodash';
 
 import {staticAirbyteConfig} from './constants/airbyteConfig';
@@ -96,6 +97,88 @@ export function getUserAgent(): string {
   } catch {
     return `faros-airbyte-local-cli/${CLI_VERSION}`;
   }
+}
+
+async function fetchTenantId(apiUrl: string, apiKey: string): Promise<string> {
+  try {
+    const client = new FarosClient({url: apiUrl, apiKey});
+    return await client.tenant();
+  } catch (error: any) {
+    throw new Error(`Failed to validate tenant: ${error.message}. Check your API key and network connection.`);
+  }
+}
+
+/**
+ * Validate that the tenant ID in the config matches the API key's tenant.
+ * Prompts the user for confirmation before writing data to the destination.
+ * Only applies when using the Faros destination image.
+ */
+export async function validateAndConfirmTenant(cfg: FarosConfig): Promise<void> {
+  const dstConfig = cfg.dst?.config as any;
+  const apiKey = dstConfig?.edition_configs?.api_key;
+  const apiUrl = dstConfig?.edition_configs?.api_url ?? 'https://prod.api.faros.ai';
+  const graph = dstConfig?.edition_configs?.graph ?? 'default';
+  const tenantId = dstConfig?.edition_configs?.tenant_id;
+
+  if (!apiKey) {
+    logger.debug('Skipping tenant validation: missing api_key in destination config.');
+    return;
+  }
+
+  // Resolve env vars in api_key, api_url, and tenantId for the API call
+  const resolvedApiKey = resolveEnvVars(apiKey);
+  const resolvedApiUrl = resolveEnvVars(apiUrl);
+  if (tenantId && ENV_VAR_PATTERN.test(tenantId)) {
+    throw new Error(`Environment variables are not allowed for 'tenant_id'. Please use a literal value instead.`);
+  }
+
+  const apiTenantId = await fetchTenantId(resolvedApiUrl, resolvedApiKey);
+
+  if (tenantId) {
+    if (tenantId !== apiTenantId) {
+      throw new Error(
+        `Tenant ID mismatch: config file specifies '${tenantId}' ` +
+          `but the API key belongs to tenant '${apiTenantId}'. ` +
+          `Please verify your configuration.`,
+      );
+    }
+  } else {
+    logger.warn(`No 'tenant_id' found in config file. Skipping tenant validation.`);
+  }
+
+  if (!cfg.assumeYes) {
+    const resolvedGraph = resolveEnvVars(graph);
+    const yellow = '\x1b[33m';
+    const bold = '\x1b[1m';
+    const reset = '\x1b[0m';
+    const answer = await promptUser(
+      `\n` +
+        `${yellow}===========================================================${reset}\n` +
+        `${yellow}${bold}                   !!! ATTENTION !!!                       ${reset}\n` +
+        `${yellow}  You are about to write data into:${reset}\n` +
+        `${yellow}    Tenant:    ${apiTenantId}${reset}\n` +
+        `${yellow}    Workspace: ${resolvedGraph}${reset}\n` +
+        `${yellow}===========================================================${reset}\n` +
+        `Would you like to proceed? (yes/No): `,
+    );
+    if (answer.toLowerCase() !== 'yes') {
+      logger.info('Operation cancelled by user.');
+      process.exit(0);
+    }
+  }
+}
+
+function promptUser(question: string): Promise<string> {
+  const rl = readline.createInterface({
+    input: process.stdin,
+    output: process.stderr,
+  });
+  return new Promise((resolve) => {
+    rl.question(question, (answer) => {
+      rl.close();
+      resolve(answer.trim());
+    });
+  });
 }
 
 export function updateLogLevel(debug: boolean | undefined): void {
@@ -857,9 +940,21 @@ export async function generateConfig(tmpDir: string, cfg: FarosConfig): Promise<
   dstConfig ??= await runWizard(tmpDir, dstImage, dstSpec);
 
   // write config to temporary directory config files
-  const genCfg = {
+  // Add tenant_id placeholder to dst.config.edition_configs for Faros destination
+  let finalDstConfig = dstConfig;
+  if (dstImage?.includes('faros-destination') && dstConfig && typeof dstConfig === 'object') {
+    const dc = dstConfig as Record<string, any>;
+    finalDstConfig = {
+      ...dc,
+      edition_configs: {
+        tenant_id: '<UPDATE_YOUR_TENANT_ID>',
+        ...dc['edition_configs'],
+      },
+    };
+  }
+  const genCfg: Record<string, any> = {
     src: {image: srcImage, config: srcConfig},
-    dst: {image: dstImage, config: dstConfig},
+    dst: {image: dstImage, config: finalDstConfig},
   };
   writeFileSync(CONFIG_FILE, JSON.stringify(genCfg, null, 2) + '\n');
 
