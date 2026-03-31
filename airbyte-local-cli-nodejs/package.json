@@ -3,7 +3,7 @@
   "version": "0.2.0",
   "description": "Airbyte local cli node js version",
   "private": true,
-  "packageManager": "^npm@10.8.2",
+  "packageManager": "^npm@11.10.0",
   "scripts": {
     "version": "node -p \"'export const CLI_VERSION = \\'' + require('./package.json').version + '\\';'\" > src/version.ts",
     "bump-beta": "npm version prerelease --preid=beta ",
@@ -28,7 +28,8 @@
     "url": "https://github.com/faros-ai/airbyte-local-cli/issues"
   },
   "engines": {
-    "node": ">=24.0.0"
+    "node": ">=24.0.0",
+    "npm": ">=11.10.0"
   },
   "main": "lib/",
   "devDependencies": {
