@@ -22,3 +22,10 @@ spec_helper_configure() {
   # Available functions: import, before_each, after_each, before_all, after_all
   : import 'support/custom_matcher'
 }
+
+# Accept any stderr output without failing the "unexpected stderr" warning.
+# Airbyte connector containers emit node DeprecationWarnings (e.g. DEP0169
+# from url.parse) that we cannot suppress from outside the container.
+ignore_stderr() {
+  true
+}
