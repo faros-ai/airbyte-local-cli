@@ -23,9 +23,18 @@ spec_helper_configure() {
   : import 'support/custom_matcher'
 }
 
-# Accept any stderr output without failing the "unexpected stderr" warning.
-# Airbyte connector containers emit node DeprecationWarnings (e.g. DEP0169
-# from url.parse) that we cannot suppress from outside the container.
+# Accept stderr that is empty or contains only the known DEP0169 noise from
+# Airbyte connector containers (url.parse DeprecationWarning), which we
+# cannot suppress from outside the container. Any other stderr content
+# causes the matcher to fail so real errors still surface.
 ignore_stderr() {
-  true
+  stderr_content="$1"
+  [ -z "$stderr_content" ] && return 0
+
+  unexpected=$(printf '%s' "$stderr_content" | grep -Fv \
+    -e 'DEP0169' \
+    -e '(Use `node --trace-deprecation ...` to show where the warning was created)' \
+    | grep -v '^[[:space:]]*$')
+
+  [ -z "$unexpected" ]
 }
