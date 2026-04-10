@@ -1,6 +1,6 @@
 {
   "name": "@faros-ai/airbyte-local-cli-nodejs",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Airbyte local cli node js version",
   "private": true,
   "packageManager": "^npm@11.10.0",
