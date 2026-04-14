@@ -75,6 +75,25 @@ describe('main', () => {
     expect(docker.runCheckSrcConnection).toHaveBeenCalled();
   });
 
+  it('should check source connection standalone without destination', async () => {
+    const testConfig = {
+      srcPull: true,
+      dstPull: false,
+      src: {image: 'bar'},
+      srcCheckConnection: true,
+    } as FarosConfig;
+    process.argv = testCommand;
+    (command.parseAndValidateInputs as jest.Mock).mockReturnValue(testConfig);
+
+    const {main} = await import('../src/index');
+    await main();
+
+    expect(docker.runCheckSrcConnection).toHaveBeenCalled();
+    expect(utils.writeCatalog).not.toHaveBeenCalled();
+    expect(docker.runSrcSync).not.toHaveBeenCalled();
+    expect(docker.runDstSync).not.toHaveBeenCalled();
+  });
+
   it('should run sync', async () => {
     const testConfig = {
       srcPull: true,

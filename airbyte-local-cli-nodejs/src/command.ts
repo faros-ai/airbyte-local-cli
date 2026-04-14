@@ -203,7 +203,8 @@ function validateConfigFileInput(config: FarosConfig, inputType: AirbyteConfigIn
       throw new Error('Missing source image. Please make sure you provide it in the config file.');
     }
   }
-  if (!config.dst?.image && !config.srcOutputFile) {
+  // Skip destination image validation when only checking source connection
+  if (!config.dst?.image && !config.srcOutputFile && !config.srcCheckConnection) {
     if (inputType === AirbyteConfigInputType.OPTION) {
       throw new Error(`Missing destination image. Please use '--dst <image>' to provide the destination image`);
     } else {

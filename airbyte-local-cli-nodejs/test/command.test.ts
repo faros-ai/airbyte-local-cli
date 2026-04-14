@@ -321,6 +321,18 @@ describe('Check other options', () => {
     });
   });
 
+  it('should not fail on src-check-connection without providing dst image', () => {
+    const argv = ['./airbyte-local-cli', 'index.js', '--src', 'source-image', '--src-check-connection'];
+    const result = parseAndValidateInputs(argv);
+    expect(result).toEqual({
+      ...defaultConfig,
+      src: {image: 'source-image', config: {}},
+      dst: {image: undefined, config: {}},
+      srcCheckConnection: true,
+      srcPull: true,
+    });
+  });
+
   it('should not fail on dst-only without providing src image', () => {
     const argv = ['./airbyte-local-cli', 'index.js', '--dst', 'destination-image', '--dst-only', 'test_src_input_file'];
     const result = parseAndValidateInputs(argv);

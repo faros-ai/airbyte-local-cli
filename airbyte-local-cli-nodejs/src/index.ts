@@ -62,6 +62,15 @@ export async function main(): Promise<void> {
     if (cfg.srcPull && cfg.src?.image) {
       await pullDockerImage(cfg.src.image);
     }
+
+    // Check source connection (run before catalog discovery so it works standalone)
+    if (cfg.srcCheckConnection && cfg.src?.image) {
+      writeConfig(tmpDir, cfg);
+      await runCheckSrcConnection(tmpDir, cfg.src.image);
+      logger.info('Airbyte CLI completed.');
+      return;
+    }
+
     // Pull destination docker image
     if (cfg.dstPull && cfg.dst?.image) {
       await pullDockerImage(cfg.dst.image);
@@ -70,11 +79,6 @@ export async function main(): Promise<void> {
     // Write config and catalog to files
     writeConfig(tmpDir, cfg);
     await writeCatalog(tmpDir, cfg);
-
-    // Check source connection
-    if (cfg.srcCheckConnection && cfg.src?.image) {
-      await runCheckSrcConnection(tmpDir, cfg.src.image);
-    }
 
     // Run airbyte source connector
     // Run both src and dst
