@@ -234,6 +234,7 @@ Describe 'Generate config' 'docker'
     When call airbyte_local_test
     The output should include "Configuration file generated successfully"
     The status should equal 0
+    The stderr should satisfy ignore_stderr
   End
   It 'should succeed with static config'
     airbyte_local_test() {
@@ -242,6 +243,7 @@ Describe 'Generate config' 'docker'
     When call airbyte_local_test
     The output should include "Configuration file generated successfully"
     The status should equal 0
+    The stderr should satisfy ignore_stderr
   End
   It 'should succeed with slient option'
     airbyte_local_test() {
@@ -251,6 +253,7 @@ Describe 'Generate config' 'docker'
     The output should not include "Source Airbyte Configuration Spec"
     The output should include "Configuration file generated successfully"
     The status should equal 0
+    The stderr should satisfy ignore_stderr
   End
   It 'should succeed with custom image'
     airbyte_local_test() {
@@ -259,6 +262,7 @@ Describe 'Generate config' 'docker'
     When call airbyte_local_test
     The output should include "Configuration file generated successfully"
     The status should equal 0
+    The stderr should satisfy ignore_stderr
   End
 End
 
@@ -309,6 +313,7 @@ Describe 'Run source sync only' 'docker'
     The status should equal 0
     The output should not include "Would you like to proceed?"
     The output should include "Source connector completed."
+    The stderr should satisfy ignore_stderr
   End
   It 'should succeed with srcOnly and output file'
     airbyte_local_test() {
@@ -322,6 +327,7 @@ Describe 'Run source sync only' 'docker'
     The output should not include "Would you like to proceed?"
     The output should include "Source connector completed."
     The status should equal 0
+    The stderr should satisfy ignore_stderr
   End
 End
 
@@ -358,6 +364,7 @@ Describe 'Run destination sync' 'docker'
     The output should include "Destination connector completed."
     The output should include "Airbyte CLI completed."
     The status should equal 0
+    The stderr should satisfy ignore_stderr
   End
 End
 
@@ -380,6 +387,7 @@ Describe 'Run source and destination sync' 'docker'
     The output should include "Destination connector completed."
     The output should include "Airbyte CLI completed."
     The status should equal 0
+    The stderr should satisfy ignore_stderr
   End
   It 'should succeed with full refresh'
     airbyte_local_test() {
@@ -398,6 +406,7 @@ Describe 'Run source and destination sync' 'docker'
     The output should include "Destination connector completed."
     The output should include "Airbyte CLI completed."
     The status should equal 0
+    The stderr should satisfy ignore_stderr
   End
 End
 
@@ -415,6 +424,7 @@ Describe 'Container cleanup' 'docker'
     When call airbyte_local_test
     The output should include "Source connector completed."
     The status should equal 0
+    The stderr should satisfy ignore_stderr
   End
 
   It 'should cleanup containers on SIGTERM'
@@ -441,6 +451,7 @@ Describe 'Container cleanup' 'docker'
     When call airbyte_local_test
     The output should include "Cleaning up..."
     The status should equal 0
+    The stderr should satisfy ignore_stderr
   End
 End
 
