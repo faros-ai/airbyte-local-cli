@@ -1,6 +1,7 @@
 import {spawnSync} from 'node:child_process';
 import {
   accessSync,
+  chmodSync,
   constants,
   createReadStream,
   createWriteStream,
@@ -277,6 +278,9 @@ export function createTmpDir(absTmpDir?: string): string {
   try {
     logger.debug(`Creating temporary directory for temporary Airbyte files...`);
     const tmpDirPath = mkdtempSync(absTmpDir ?? `${tmpdir()}${sep}`);
+    // mkdtempSync creates with mode 0700; widen to 0755 so Docker containers
+    // running as a non-root user (e.g. node/UID 1000) can read bind-mounted files.
+    chmodSync(tmpDirPath, 0o755);
     logger.debug(`Temporary directory created: ${tmpDirPath}.`);
     return tmpDirPath;
   } catch (error: any) {
