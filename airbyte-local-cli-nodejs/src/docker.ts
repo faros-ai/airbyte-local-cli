@@ -49,7 +49,8 @@ const DEFAULT_MAX_LOG_SIZE = '10m';
  */
 function getContainerUser(): string | undefined {
   const uid = process.getuid?.();
-  return uid !== undefined ? `${uid}:${process.getgid!()}` : undefined;
+  const gid = process.getgid?.();
+  return uid !== undefined && gid !== undefined ? `${uid}:${gid}` : undefined;
 }
 
 // Create a new Docker instance

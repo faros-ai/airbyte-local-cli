@@ -1,16 +1,20 @@
 import {
+  chmodSync,
   copyFileSync,
   createReadStream,
   createWriteStream,
+  mkdtempSync,
   readFileSync,
   rmSync,
   unlinkSync,
   writeFileSync,
 } from 'node:fs';
+import {tmpdir} from 'node:os';
 import {PassThrough, Writable} from 'node:stream';
 
 import {
   DST_CONFIG_FILENAME,
+  SRC_CONFIG_FILENAME,
   SRC_OUTPUT_DATA_FILE,
   TMP_SPEC_CONFIG_FILENAME,
   TMP_WIZARD_CONFIG_FILENAME,
@@ -33,8 +37,10 @@ const defaultConfig = createTestCfg();
 beforeAll(async () => {
   await pullDockerImage('farosai/airbyte-example-source');
   await pullDockerImage('farosai/airbyte-faros-graphql-source');
+  await pullDockerImage('farosai/airbyte-faros-graphql-source:0.21.57');
   await pullDockerImage('farosai/airbyte-faros-destination');
   await pullDockerImage('airbyte/destination-databricks');
+  await pullDockerImage('airbyte/source-faker');
 }, 120000);
 
 describe('runDiscoverCatalog', () => {
@@ -48,6 +54,44 @@ describe('runDiscoverCatalog', () => {
     const res = await runDiscoverCatalog(`${process.cwd()}/test/resources`, 'farosai/airbyte-faros-graphql-source');
 
     expect(res).toMatchSnapshot();
+  });
+});
+
+describe('runDiscoverCatalog - user mapping', () => {
+  // Simulate the real tmpDir: mode 0700 (mkdtempSync default).
+  // On Linux this means only the owner can access the directory, so the container
+  // must run as the current user (via --user) to read the config file.
+  let testTmpDir: string;
+
+  beforeEach(() => {
+    testTmpDir = mkdtempSync(`${tmpdir()}/`);
+    chmodSync(testTmpDir, 0o700);
+    copyFileSync(
+      `${process.cwd()}/test/resources/${SRC_CONFIG_FILENAME}`,
+      `${testTmpDir}/${SRC_CONFIG_FILENAME}`,
+    );
+  });
+
+  afterEach(() => {
+    rmSync(testTmpDir, {recursive: true, force: true});
+  });
+
+  it('should succeed with 0700 tmpDir using current image (runs as node)', async () => {
+    const res = await runDiscoverCatalog(testTmpDir, 'farosai/airbyte-example-source');
+    expect(res.streams).toBeDefined();
+  });
+
+  it('should succeed with 0700 tmpDir using older image (runs as root)', async () => {
+    const res = await runDiscoverCatalog(testTmpDir, 'farosai/airbyte-faros-graphql-source:0.21.57');
+    expect(res.streams).toBeDefined();
+  });
+
+  it('should succeed with 0700 tmpDir using non-Faros image (runs as airbyte user)', async () => {
+    // airbyte/source-faker runs as the 'airbyte' user — a third distinct UID from both
+    // 'node' (Faros images) and root. Verifies --user mapping works across image types.
+    writeFileSync(`${testTmpDir}/${SRC_CONFIG_FILENAME}`, '{}');
+    const res = await runDiscoverCatalog(testTmpDir, 'airbyte/source-faker');
+    expect(res.streams).toBeDefined();
   });
 });
 
