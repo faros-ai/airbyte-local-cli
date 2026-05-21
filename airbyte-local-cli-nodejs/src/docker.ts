@@ -42,6 +42,16 @@ import {
 // Constants
 const DEFAULT_MAX_LOG_SIZE = '10m';
 
+/**
+ * On Unix, run containers as the current user so the bind-mounted tmpDir (mode 0700,
+ * owned by the CLI process user) remains accessible without widening its permissions.
+ * process.getuid is not available on Windows.
+ */
+function getContainerUser(): string | undefined {
+  const uid = process.getuid?.();
+  return uid !== undefined ? `${uid}:${process.getgid!()}` : undefined;
+}
+
 // Create a new Docker instance
 let _docker = new Docker();
 
@@ -305,6 +315,7 @@ export async function runCheckSrcConnection(tmpDir: string, image: string, srcCo
       Cmd: command,
       AttachStderr: true,
       AttachStdout: true,
+      User: getContainerUser(),
       HostConfig: {
         Binds: [`${tmpDir}:${getBindsLocation(image)}`],
         AutoRemove: true,
@@ -365,6 +376,7 @@ export async function runDiscoverCatalog(tmpDir: string, image: string | undefin
       Cmd: command,
       AttachStderr: true,
       AttachStdout: true,
+      User: getContainerUser(),
       HostConfig: {
         Binds: [`${tmpDir}:${getBindsLocation(image)}`],
         AutoRemove: true,
@@ -448,6 +460,7 @@ export async function runSrcSync(tmpDir: string, config: FarosConfig, srcOutputS
       // Default config: can be overridden by the docker options provided by users
       name: srcContainerName,
       Image: config.src.image,
+      User: getContainerUser(),
       ...config.src?.dockerOptions?.additionalOptions,
 
       // Default options: cannot be overridden by users
@@ -577,6 +590,7 @@ export async function runDstSync(tmpDir: string, config: FarosConfig, srcPassThr
       // Default config: can be overridden by the docker options provided by users
       name: dstContainerName,
       Image: config.dst.image,
+      User: getContainerUser(),
       ...config.dst?.dockerOptions?.additionalOptions,
 
       // Default options: cannot be overridden by users
@@ -739,6 +753,7 @@ export async function runWizard(tmpDir: string, image: string, spec: AirbyteSpec
       Cmd: cmd,
       AttachStderr: true,
       AttachStdout: true,
+      User: getContainerUser(),
       HostConfig: {
         Binds: [`${tmpDir}:${getBindsLocation(image)}`],
         AutoRemove: true,
