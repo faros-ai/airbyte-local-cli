@@ -66,10 +66,7 @@ describe('runDiscoverCatalog - user mapping', () => {
   beforeEach(() => {
     testTmpDir = mkdtempSync(`${tmpdir()}/`);
     chmodSync(testTmpDir, 0o700);
-    copyFileSync(
-      `${process.cwd()}/test/resources/${SRC_CONFIG_FILENAME}`,
-      `${testTmpDir}/${SRC_CONFIG_FILENAME}`,
-    );
+    copyFileSync(`${process.cwd()}/test/resources/${SRC_CONFIG_FILENAME}`, `${testTmpDir}/${SRC_CONFIG_FILENAME}`);
   });
 
   afterEach(() => {
