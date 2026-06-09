@@ -17,6 +17,12 @@ exports[`runDiscoverCatalog should success with example source 1`] = `
               "null",
             ],
           },
+          "__faros_heartbeat": {
+            "type": [
+              "boolean",
+              "null",
+            ],
+          },
           "fields": {
             "properties": {
               "command": {
@@ -99,6 +105,12 @@ exports[`runDiscoverCatalog should success with graphql source 1`] = `
             "additionalProperties": true,
             "type": [
               "object",
+              "null",
+            ],
+          },
+          "__faros_heartbeat": {
+            "type": [
+              "boolean",
               "null",
             ],
           },
@@ -392,6 +404,13 @@ exports[`runSpec should success with faros image 1`] = `
           "order": 7,
           "title": "Result model",
           "type": "string",
+        },
+        "source_heartbeat_interval_ms": {
+          "default": 60000,
+          "description": "Interval in milliseconds at which heartbeat records are emitted during idle periods to prevent the Airbyte platform from killing long-running syncs. Set to 0 to disable.",
+          "order": 1006,
+          "title": "Source Heartbeat Interval (ms)",
+          "type": "integer",
         },
         "stream_freshness_hours": {
           "default": "{}",

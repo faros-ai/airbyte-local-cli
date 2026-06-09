@@ -573,6 +573,11 @@ export function processSrcDataByLine(line: string, outputStream: Writable, cfg: 
       if (data?.record?.stream && cfg.dstStreamPrefix) {
         data.record.stream = `${cfg.dstStreamPrefix ?? ''}${data.record.stream}`;
       }
+      // Source emitted an ERRORED AirbyteSourceStatusMessage (e.g. PRE_READ_CHECK_FAILED)
+      // surface it visibly while still forwarding to the destination
+      if (data?.type === AirbyteMessageType.STATE && data?.sourceStatus?.status === 'ERRORED') {
+        logger.error(formatSrcMsg(data));
+      }
       outputStream.write(`${JSON.stringify(data)}\n`);
     }
   } catch (error: any) {
