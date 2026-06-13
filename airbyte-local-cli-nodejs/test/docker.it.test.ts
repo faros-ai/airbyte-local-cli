@@ -207,31 +207,45 @@ describe('runSrcSync', () => {
     ).resolves.not.toThrow();
   });
 
-  // Check stdout message is correctly redirect to process.stderr
+  // Check that a missing API key surfaces as a FAILED status (not an exception).
+  // The connector now exits with code 0 and emits an AirbyteSourceStatusMessage
+  // (type STATE, sourceStatus.status ERRORED, details.reason PRE_READ_CHECK_FAILED) to
+  // stdout. processSrcDataByLine writes it to the output stream and logs the full message
+  // via logger.error.
   it('should fail', async () => {
-    // Capture process.stderr
-    let stderrData = '';
-    const originalStderrWrite = process.stderr.write;
-    const stderrStream = new Writable({
+    const capturedLines: string[] = [];
+    const outputStream = new Writable({
       write(chunk, _encoding, callback) {
-        stderrData += chunk.toString();
+        capturedLines.push(chunk.toString());
         callback();
       },
     });
-    process.stderr.write = stderrStream.write.bind(stderrStream) as any;
 
-    try {
-      await expect(
-        runSrcSync(testTmpDir, {
+    await expect(
+      runSrcSync(
+        testTmpDir,
+        {
           ...testCfg,
           src: {image: 'farosai/airbyte-faros-graphql-source'},
-        }),
-      ).rejects.toThrow();
-    } finally {
-      process.stderr.write = originalStderrWrite;
-    }
+        },
+        outputStream,
+      ),
+    ).resolves.not.toThrow();
 
-    expect(stderrData).toContain(`Faros API key was not provided`);
+    const erroredLine = capturedLines.find((line) => {
+      try {
+        const parsed = JSON.parse(line.trim());
+        return parsed?.type === 'STATE' && parsed?.sourceStatus?.status === 'ERRORED';
+      } catch {
+        return false;
+      }
+    });
+
+    expect(erroredLine).toBeDefined();
+    const parsed = JSON.parse(erroredLine!.trim());
+    expect(parsed.sourceStatus.status).toBe('ERRORED');
+    expect(parsed.sourceStatus.message.summary).toContain('Faros API key was not provided');
+    expect(parsed.sourceStatus.message.details?.reason).toBe('PRE_READ_CHECK_FAILED');
   });
 });
 

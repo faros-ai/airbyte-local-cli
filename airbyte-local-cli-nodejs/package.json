@@ -1,6 +1,6 @@
 {
   "name": "@faros-ai/airbyte-local-cli-nodejs",
-  "version": "0.2.2",
+  "version": "0.2.3",
   "description": "Airbyte local cli node js version",
   "private": true,
   "packageManager": "^npm@11.10.0",
@@ -41,7 +41,7 @@
     "@types/node": "^24.12.2",
     "@typescript-eslint/eslint-plugin": "^8.19.1",
     "@typescript-eslint/parser": "^8.13.0",
-    "@yao-pkg/pkg": "^6.14.2",
+    "@yao-pkg/pkg": "^6.20.0",
     "eslint": "^8.57.1",
     "eslint-config-faros": "^0.1.0",
     "eslint-config-prettier": "^9.1.0",
@@ -55,15 +55,12 @@
     "cli-table3": "^0.6.5",
     "commander": "^14.0.3",
     "didyoumean2": "^7.0.4",
-    "dockerode": "^4.0.10",
-    "faros-js-client": "^0.8.7",
+    "dockerode": "^5.0.0",
+    "faros-js-client": "^0.8.9",
     "lodash": "^4.18.1",
     "pino": "^10.3.1",
     "pino-pretty": "^13.1.3",
     "ts-essentials": "^10.1.1"
-  },
-  "overrides": {
-    "tar": "^7.5.13"
   },
   "jest": {
     "silent": false,
