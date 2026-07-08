@@ -1,7 +1,7 @@
 {
   "edition_configs": {
     "edition": "cloud",
-    "graph": "jennie-test",
+    "graph": "default",
     "graphql_api": "v2",
     "api_url": "https://dev.api.faros.ai",
     "api_key": "test"
