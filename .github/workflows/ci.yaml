@@ -116,7 +116,7 @@ jobs:
       # We use Shellspec to run the tests in Bash
       - name: Install ShellSpec
         shell: bash
-        run: curl -fsSL https://git.io/shellspec | sh -s 0.28.1 --yes
+        run: curl -fsSL https://raw.githubusercontent.com/shellspec/shellspec/0.28.1/install.sh | sh -s 0.28.1 --yes
     
       # Run ALL e2e tests on Linux x64
       - name: Run Bash tests (Linux x64)
