@@ -265,7 +265,7 @@ Describe 'Tenant confirmation prompt' {
         $matchingLine | Should -Not -BeNullOrEmpty
         $matchingLine = $result | Where-Object { $_ -match "Tenant:    faros" }
         $matchingLine | Should -Not -BeNullOrEmpty
-        $matchingLine = $result | Where-Object { $_ -match "Workspace: jennie-test" }
+        $matchingLine = $result | Where-Object { $_ -match "Workspace: default" }
         $matchingLine | Should -Not -BeNullOrEmpty
         $matchingLine = $result | Where-Object { $_ -match "Would you like to proceed\?" }
         $matchingLine | Should -Not -BeNullOrEmpty

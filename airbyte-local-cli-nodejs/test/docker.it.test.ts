@@ -264,6 +264,19 @@ describe('runDstSync', () => {
   const dstConfigPath = `${testTmpDir}/${DST_CONFIG_FILENAME}`;
   const dstConfigPathTemplate = `${testTmpDir}/${DST_CONFIG_FILENAME}.template`;
 
+  function writeDstConfig(): void {
+    const farosApiKey = process.env['FAROS_API_KEY'];
+    if (!farosApiKey) {
+      throw new Error('FAROS_API_KEY environment variable is not set.');
+    }
+
+    const dstConfig = JSON.parse(readFileSync(dstConfigPathTemplate, 'utf8'));
+    dstConfig.edition_configs.api_key = farosApiKey;
+    dstConfig.edition_configs.graph = process.env['FAROS_GRAPH'] ?? dstConfig.edition_configs.graph;
+    dstConfig.edition_configs.api_url = process.env['FAROS_API_URL'] ?? dstConfig.edition_configs.api_url;
+    writeFileSync(dstConfigPath, JSON.stringify(dstConfig, null, 2));
+  }
+
   // remove config file that might contain credentials
   afterEach(() => {
     try {
@@ -283,11 +296,7 @@ describe('runDstSync', () => {
   });
 
   it('should success', async () => {
-    // check if the API key is provided
-    expect((process.env['FAROS_API_KEY'] ?? '').length > 0);
-    const dstConfig = JSON.parse(readFileSync(dstConfigPathTemplate, 'utf8'));
-    dstConfig.edition_configs.api_key = process.env['FAROS_API_KEY'];
-    writeFileSync(dstConfigPath, JSON.stringify(dstConfig, null, 2));
+    writeDstConfig();
 
     const passThrough = new PassThrough();
     const readStream = createReadStream(`${testTmpDir}/${SRC_OUTPUT_DATA_FILE}`);
@@ -301,11 +310,7 @@ describe('runDstSync', () => {
   }, 60000);
 
   it('should success with srcInputFile', async () => {
-    // check if the API key is provided
-    expect((process.env['FAROS_API_KEY'] ?? '').length > 0);
-    const dstConfig = JSON.parse(readFileSync(dstConfigPathTemplate, 'utf8'));
-    dstConfig.edition_configs.api_key = process.env['FAROS_API_KEY'];
-    writeFileSync(dstConfigPath, JSON.stringify(dstConfig, null, 2));
+    writeDstConfig();
 
     await expect(
       runDstSync(testTmpDir, {

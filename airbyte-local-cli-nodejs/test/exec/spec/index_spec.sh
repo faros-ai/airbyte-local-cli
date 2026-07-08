@@ -343,7 +343,7 @@ Describe 'Tenant confirmation prompt' 'docker'
     The output should include "!!! ATTENTION !!!"
     The output should include "You are about to write data into"
     The output should include "Tenant:    faros"
-    The output should include "Workspace: jennie-test"
+    The output should include "Workspace: default"
     The output should include "Would you like to proceed?"
     The output should include "Operation cancelled by user."
     The status should equal 0
