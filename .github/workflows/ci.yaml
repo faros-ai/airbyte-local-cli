@@ -150,7 +150,14 @@ jobs:
           export PATH="$HOME/.local/bin:$PATH"
           which shellspec
           shellspec --chdir ./test/exec --tag argvParsing
-    
+
+      - name: Start Docker (Windows)
+        if: matrix.os == 'windows-latest'
+        shell: pwsh
+        run: |
+          Start-Service docker
+          docker version
+
       # Run partial e2e tests on Windows bash (excluding docker tests)
       # - windows: requires to config the shellspec in PATH. Separete to its own step to run
       - name: Run Bash tests (Windows)
