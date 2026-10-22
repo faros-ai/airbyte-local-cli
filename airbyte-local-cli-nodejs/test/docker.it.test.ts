@@ -249,9 +249,7 @@ describe('runSrcSync', () => {
   });
 });
 
-const describeWithDevApi = process.env['FAROS_DEV_IT'] === 'true' ? describe : describe.skip;
-
-describeWithDevApi('runDstSync', () => {
+describe('runDstSync', () => {
   const testCfg: FarosConfig = {
     ...defaultConfig,
     dst: {
