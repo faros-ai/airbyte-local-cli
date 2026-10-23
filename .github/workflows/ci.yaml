@@ -56,12 +56,6 @@ jobs:
             -v "$PWD/airbyte-local.sh:/airbyte-local.sh" \
             farosai/shellspec:kcov
 
-      - name: SonarCloud Scan
-        uses: SonarSource/sonarqube-scan-action@v6
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-
   test:
     name: Test NodeJS Cli
     needs: [build]

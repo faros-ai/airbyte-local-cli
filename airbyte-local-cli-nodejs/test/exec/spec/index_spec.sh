@@ -332,6 +332,7 @@ Describe 'Run source sync only' 'docker'
 End
 
 Describe 'Tenant confirmation prompt' 'docker'
+  Skip if 'dev API tests need FAROS_DEV_IT=true' no_dev_api
   It 'should show tenant prompt when --assume-yes is not provided'
     airbyte_local_test() {
       echo "no" | ./airbyte-local \
@@ -351,6 +352,7 @@ Describe 'Tenant confirmation prompt' 'docker'
 End
 
 Describe 'Run destination sync' 'docker'
+  Skip if 'dev API tests need FAROS_DEV_IT=true' no_dev_api
   It 'should succeed with dstOnly'
     airbyte_local_test() {
       ./airbyte-local \
@@ -369,6 +371,7 @@ Describe 'Run destination sync' 'docker'
 End
 
 Describe 'Run source and destination sync' 'docker'
+  Skip if 'dev API tests need FAROS_DEV_IT=true' no_dev_api
   It 'should succeed with src and dst'
     airbyte_local_test() {
       ./airbyte-local \
