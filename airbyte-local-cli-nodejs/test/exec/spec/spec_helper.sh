@@ -38,3 +38,7 @@ ignore_stderr() {
 
   [ -z "$unexpected" ]
 }
+
+no_dev_api() {
+  [ "${FAROS_DEV_IT:-}" != "true" ]
+}
