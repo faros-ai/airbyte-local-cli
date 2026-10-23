@@ -256,7 +256,7 @@ Describe 'Run source sync only' {
     }
 }
 
-Describe 'Tenant confirmation prompt' {
+Describe 'Tenant confirmation prompt' -Skip:($env:FAROS_DEV_IT -ne 'true') {
     It 'should show tenant prompt when --assume-yes is not provided' {
         $result = "no" | & ./airbyte-local --config-file './resources/windows/test_config_file_dst_only.json' --dst-only './resources/dockerIt_runDstSync/faros_airbyte_cli_src_output' 2>&1
         $matchingLine = $result | Where-Object { $_ -match "!!! ATTENTION !!!" }
@@ -275,7 +275,7 @@ Describe 'Tenant confirmation prompt' {
     }
 }
 
-Describe 'Run destination sync' {
+Describe 'Run destination sync' -Skip:($env:FAROS_DEV_IT -ne 'true') {
     It 'should succeed with dstOnly' {
         $result = & ./airbyte-local --config-file './resources/windows/test_config_file_dst_only.json' --dst-only './resources/dockerIt_runDstSync/faros_airbyte_cli_src_output' --debug --assume-yes 2>&1
         $matchingLine = $result | Where-Object { $_ -match '\[DST\] - {"log":{"level":"INFO","message":"Errored 0 records"},"type":"LOG"}' }
@@ -288,7 +288,7 @@ Describe 'Run destination sync' {
     }
 }
 
-Describe 'Run source and destination sync' {
+Describe 'Run source and destination sync' -Skip:($env:FAROS_DEV_IT -ne 'true') {
     It 'should succeed with src and dst' {
         $result = & ./airbyte-local --config-file './resources/windows/test_config_file_graph_copy.json' --assume-yes 2>&1
         $matchingLine = $result | Where-Object { $_ -match "Source connector completed." }
