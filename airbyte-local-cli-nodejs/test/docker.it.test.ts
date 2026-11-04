@@ -34,12 +34,16 @@ import {createTestCfg} from './helpers';
 
 const defaultConfig = createTestCfg();
 
+// Keep the external connector schema stable for its snapshot.
+const DATABRICKS_SPEC_IMAGE =
+  'airbyte/destination-databricks@sha256:d644c1e738d5f0d36b9b2b1094607049802c32191e070f7cc7594c8971804c16';
+
 beforeAll(async () => {
   await pullDockerImage('farosai/airbyte-example-source');
   await pullDockerImage('farosai/airbyte-faros-graphql-source');
   await pullDockerImage('farosai/airbyte-faros-graphql-source:0.21.57');
   await pullDockerImage('farosai/airbyte-faros-destination');
-  await pullDockerImage('airbyte/destination-databricks');
+  await pullDockerImage(DATABRICKS_SPEC_IMAGE);
   await pullDockerImage('airbyte/source-faker');
 }, 120000);
 
@@ -341,7 +345,7 @@ describe('runSpec', () => {
   });
 
   it('should success with airbyte image', async () => {
-    const result = await runSpec('airbyte/destination-databricks');
+    const result = await runSpec(DATABRICKS_SPEC_IMAGE);
     expect(result.spec).toBeTruthy();
     expect(result).toMatchSnapshot();
   });
