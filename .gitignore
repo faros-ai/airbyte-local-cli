@@ -1,3 +1,5 @@
 *.json
+# Root-only tools must see the tracked npm manifest.
+!airbyte-local-cli-nodejs/package.json
 /.idea
 .envrc
